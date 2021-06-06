@@ -24,13 +24,19 @@ type lambda =
 
 let rec eval_par lhs rhs =
     match lhs, rhs with
-    | LList(EEta(a),l1), LList(EEta(b),l2) -> 
+    | LList(EEta(a),l1), LList(EEta(b),l2) ->
+        begin
         match a, b with
         | AIn(k), AOut(j) -> if k = j then LPar(l1, l2) else LChi([EEta(a);EEta(b)], l1::l2::[]) (* LChi([EEta(a);EEta(b)], [l1::[]; l2::[]]) *)
         | AOut(k), AIn(j) -> if k = j then LPar(l1, l2) else LChi([EEta(a);EEta(b)], l1::l2::[]) (* LChi([EEta(a);EEta(b)], [l1::[]; l2::[]]) *)
         | _, _ -> LChi([EEta(a);EEta(b)], l1::l2::[])
-        (*if e1 = e2 then eval_par l1 l2 else
-            if e1 != e2 then LChi([e1,e2],[l1,l2]) *)
+        end
+    | LList(EEta(_),l1), LChi([EEta(b); EEta(c)], [lb;lc]) ->
+        match b, c with
+        | AIn(k), AOut(j) when k = j ->
+            (match lb, lc with
+            | LNil, LChi(hd::tl, hd1::tl1) -> LPar(lhs, lc)
+            | LChi(hd::tl, hd1::tl1), LNil -> LPar(lhs, lb))
 ;;
 
 (*
@@ -96,8 +102,11 @@ let lhs = LList(EEta(AIn('a')), LList(EEta(AIn('b')), LNil))
 let rhs = LList(EEta(AOut('a')), LList(EEta(AOut('b')), LNil))
 let a = eval_par lhs rhs (* Tira os a's porque correspodem *)
 let b = LChi([EEta(AIn('a')); EEta(AOut('a'))], [LNil; LNil])
-;;
 
-print_lambdas Format.std_formatter b
+(* eval_par 2nd match *)
+let lhs1 = LList(EEta(AIn('b')), LNil) (* b?.0 *)
+let rhs1 = LChi([EEta(AIn('a'));EEta(AOut('a'))] , [LChi([EEta(AIn('b')); EEta(AOut('b'))] , [LNil; LNil]) ; LNil]) (* (a? | a!; (b? | b!; 0; 0); 0) *)
+let c = eval_par lhs1 rhs1;;
+print_lambdas Format.std_formatter c;;
 (*eval test_proc;;*)
 
