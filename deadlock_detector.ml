@@ -30,7 +30,7 @@ type lambda =
 (* Finds the index of elem in list *)
 let rec find list elem i =
     match list with
-    | [] -> 0
+    | [] -> -1 (* Not found *)
     | hd::tl -> if hd = elem then i else find list elem (i+1)
 
 (* Removes the first occurrence of elem in list *)
@@ -46,27 +46,52 @@ let rec subst_first list replaced replacer =
     | hd::tl -> if hd = replaced then replacer::tl else hd::(subst_first tl replaced replacer)
 
 (* Removes the EEta from a LChi's LList at index i_at *)
-let rec correct_chi_lambda chi curr_i i_at =
-    match chi with
-    | LChi(et, hd::tl) -> if curr_i = i_at then 
+let rec correct_chi_lambda ll curr_i i_at =
+    match ll with
+    | hd::tl -> if curr_i = i_at then 
         (match hd with
-        | LList(EEta(_), LList(EEta(a), l)) -> LList(EEta(a), l))::tl
-        else hd::(correct_chi_lambda (LChi(et, tl)) (curr_i+1) i_at)
+        | LList(EEta(_), LList(EEta(a), l)) -> LList(EEta(a), l)::tl
+        | LList(EEta(_), LNil) -> LNil::tl)
+        else hd::(correct_chi_lambda tl (curr_i+1) i_at)
 
 (* Similar to correct_chi_lambda, but returns EEta at index i_at instead of removing it *)
 let rec find_chi_lambda chi curr_i i_at =
     match chi with
     | LChi(et, hd::tl) -> if curr_i = i_at then
         (match hd with
-        | LList(a, LList(b, l)) -> a)
+        | LList(a, LList(b, l)) -> a
+        | LList(a, LNil) -> a)
         else find_chi_lambda (LChi(et, tl)) (curr_i+1) i_at
 
-let rec build_chi elem chi =
+let build_chi elem chi =
     match chi with
     | LChi(el, ll) -> 
         let at_index = find el elem 0 in
             let nth_elem = List.nth el at_index in
-                LChi(subst_first el nth_elem (find_chi_lambda chi 0 at_index), correct_chi_lambda chi 0 at_index)
+                LChi(subst_first el nth_elem (find_chi_lambda chi 0 at_index), correct_chi_lambda ll 0 at_index)
+
+(* Finds the indexes of the first pair of corresponding actions *)
+let rec find_corres list dlist i j = 
+    match list, dlist with
+    | [], [] -> (-1, -1) (* Not found *)
+    | [], dhd::dtl -> find_corres dtl dtl (j+1) (j+1)
+    | hd::tl, dhd::dtl ->
+        (match hd, dhd with
+        | EEta(AIn(a)), EEta(AOut(b)) when a = b -> if i < j then (i,j) else (j,i)
+        | EEta(AOut(a)), EEta(AIn(b)) when a = b -> if i < j then (i,j) else (j,i)
+        | _, _ -> find_corres tl dlist (i+1) j)
+
+let next_etas_chi chi =
+    match chi with
+    | LChi(el, ll) ->
+        let at_indexes = find_corres el el 0 0 in
+        match at_indexes with
+        | (a, b) -> 
+            let nth_elemA = List.nth el a in 
+                let nth_elemB = List.nth el b in
+                    let chi_lambdaA = find_chi_lambda chi 0 a in
+                        let chi_lambdaB = find_chi_lambda chi 0 b in
+                            LChi(subst_first (subst_first el nth_elemA chi_lambdaA) nth_elemB chi_lambdaB , correct_chi_lambda (correct_chi_lambda ll 0 a) 0 b)
     
 (* Falta fazer todos os casos com lhs e rhs trocados *)
 let rec eval_par lhs rhs =
@@ -153,9 +178,15 @@ let lhs2 = LList(EEta(AOut('a')), LList(EEta(AIn('b')), LNil))
 let rhs2 = LChi([EEta(AIn('a')); EEta(AOut('b'))], 
                 [LList(EEta(AOut('c')), LList(EEta(AIn('d')), LNil)); LList(EEta(AOut('b')), LList(EEta(AOut('b')), LNil))])
 let elem = EEta(AIn('a'))                
-(* let d = build_chi elem rhs2;; *)
-let d = eval_par lhs2 rhs2;; 
-print_lambdas Format.std_formatter d;; 
+(*let d = build_chi elem rhs2;; *)
+(*let d = eval_par lhs2 rhs2;; *)
+(*print_lambdas Format.std_formatter d;;  *)
 
-(*eval test_proc;;*)
+let chi_ex = LChi(
+    [EEta(AIn('a')); EEta(AIn('b')); EEta(AOut('c')); EEta(AOut('b'))] , 
+    [LList(EEta(AOut('a')), LNil) ;  LList(EEta(AIn('d')), LNil); LList(EEta(AIn('z')), LNil) ;  LList(EEta(AOut('d')), LNil)])
+let chi_ex_test = next_etas_chi chi_ex;;
+print_lambdas Format.std_formatter chi_ex_test;;
+
+
 
