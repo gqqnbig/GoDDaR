@@ -114,8 +114,8 @@ let rec eval_par lhs rhs =
                 (match lb, lc with
                 | LNil, LChi(hd::tl, hd1::tl1) -> LPar(lhs, lc)
                 | LChi(hd::tl, hd1::tl1), LNil -> LPar(lhs, lb))
-            | AOut(k), AIn(j), _, _ when k = j -> LPar(l1, build_chi (EEta(AIn(k))) (LChi(EEta(b)::l2, l3)))
-            | AIn(k), AOut(j), _, _ when k = j -> LPar(l1, build_chi (EEta(AOut(k))) (LChi(EEta(b)::l2, l3)))
+            | AOut(k), AIn(j), _, _ when k = j -> LPar(l1, build_chi (EEta(AIn(k))) (LChi(EEta(b)::EEta(c)::l2, l3)))
+            | AIn(k), AOut(j), _, _ when k = j -> LPar(l1, build_chi (EEta(AOut(k))) (LChi(EEta(b)::EEta(c)::l2, l3)))
         end
     | _, _ -> LPar(lhs, rhs)
 (*
@@ -179,14 +179,15 @@ let rhs2 = LChi([EEta(AIn('a')); EEta(AOut('b'))],
                 [LList(EEta(AOut('c')), LList(EEta(AIn('d')), LNil)); LList(EEta(AOut('b')), LList(EEta(AOut('b')), LNil))])
 let elem = EEta(AIn('a'))                
 (*let d = build_chi elem rhs2;; *)
-(*let d = eval_par lhs2 rhs2;; *)
-(*print_lambdas Format.std_formatter d;;  *)
+let d = eval_par lhs2 rhs2;; 
+print_lambdas Format.std_formatter d;;  
 
+(*
 let chi_ex = LChi(
     [EEta(AIn('a')); EEta(AIn('b')); EEta(AOut('c')); EEta(AOut('b'))] , 
     [LList(EEta(AOut('a')), LNil) ;  LList(EEta(AIn('d')), LNil); LList(EEta(AIn('z')), LNil) ;  LList(EEta(AOut('d')), LNil)])
 let chi_ex_test = next_etas_chi chi_ex;;
 print_lambdas Format.std_formatter chi_ex_test;;
-
+*)
 
 
