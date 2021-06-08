@@ -1,0 +1,9 @@
+(* a?b?0 || a!b!0 -> SUCCESSO *)
+;;
+print_lambdas Format.std_formatter (eval ( LPar(LList(EEta(AIn('a')), LList(EEta(AIn('b')), LNil)), LList(EEta(AOut('a')), LList(EEta(AOut('b')), LNil)))));;
+
+(* a?b?0 || a!b!c!0 -> SUCCESSO *)
+print_lambdas Format.std_formatter (eval ( LPar(LList(EEta(AIn('a')), LList(EEta(AIn('b')), LNil)), LList(EEta(AOut('a')), LList(EEta(AOut('b')), LList(EEta(AOut('c')), LNil))))));;
+
+(* a?b!0 || a!0 || b?0 -> SUCESSO*)
+print_lambdas Format.std_formatter (eval (LPar( LPar(LList(EEta(AIn('a')), LList(EEta(AOut('b')), LNil)), LList(EEta(AOut('a')), LNil)), LList(EEta(AIn('b')), LNil))));;
