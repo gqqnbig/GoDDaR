@@ -64,7 +64,7 @@ and print_lambdalist fmt lst =
 (* Finds the index of elem in list *)
 let rec find list elem i =
     match list with
-    | [] -> raise(RuntimeException "find function failed") (* Not found *)
+    | [] -> -1 (* Not found *)
     | hd::tl -> if hd = elem then i else find tl elem (i+1)
 
 (* Removes the first occurrence of elem in list *)
@@ -101,7 +101,7 @@ let rec find_chi_lambda chi curr_i i_at =
         else find_chi_lambda (LChi(et, tl)) (curr_i+1) i_at
 
 (* Pulls the next Eta and arranges Chi's ll*)
-let build_chi elem chi =
+let case_e elem chi =
     match chi with
     | LChi(el, ll) -> 
         let at_index = find el elem 0 in
@@ -121,7 +121,7 @@ let rec find_corres list dlist i j =
 
 (* Assuming two Etas in a Chi's el are equal, this function pulls the two next Etas and arranges the Chi's ll *)
 (* Example case: chi = (a? | b? | c! | b!; a!, d?, z?, d!) *)
-let next_etas_chi chi =
+let case_f chi =
     match chi with
     | LChi(el, ll) ->
         let at_indexes = find_corres el el 0 0 in
@@ -133,6 +133,7 @@ let next_etas_chi chi =
                         let chi_lambdaB = find_chi_lambda chi 0 b in
                             LChi(subst_first (subst_first el nth_elemA chi_lambdaA) nth_elemB chi_lambdaB , correct_chi_lambda (correct_chi_lambda ll 0 a) 0 b)
 
+(* Checks whether there are corresponding actions in list *)
 let rec exist_corres list =
     match list with
     | [] -> false
@@ -141,43 +142,85 @@ let rec exist_corres list =
         | EEta(AIn(a)) -> List.exists ((=) (EEta(AOut(a)))) tl || exist_corres tl
         | EEta(AOut(a)) -> List.exists ((=) (EEta(AIn(a)))) tl || exist_corres tl
 
+(* Defines the joining of two LChi *)
+let join_chis lchi rchi = 
+    match lchi, rchi with
+    | LChi(le, ll), LChi(re, rl) -> LChi(le@re, ll@rl)
+    | _, _ -> raise(RuntimeException "join_chi failed: Not a chi.")
+
+(* Checks if elem exists in el by trying to get its index. If so, also checks if there is a LChi at i_at in ll. *)
+(* Returns true if both conditions are met, otherwise returns false. *)
+let exists_and_chi elem chi =
+    match chi with
+    | LChi(el, ll) -> 
+        let i_at = find el elem 0 in
+            if i_at = -1 then false else
+                let res = List.filteri(
+                    fun i a -> 
+                        if i = i_at then 
+                            match a with
+                            | LChi(_, _) -> true
+                            | _ -> false
+                        else false) ll in 
+                            if List.length res = 1 then true else false
+
+(* Retrieves the LChi at position i_at in list *)
+let get_chi_at list i_at =
+    let f_list = List.filteri (fun i _ -> if i = i_at then true else false) list in (List.hd f_list)
+
+(* Defines the case when there are two correspondent actions and a Chi must be pulled from the level below *)
+(* Example case: a?0 x (b! | a!; 0, (c! | d?; 0, 0)) -> 0 x (b! | c! | d?; 0; 0; 0) *)
+let case_g elem chi =
+    match chi with
+    | LChi(el, ll) ->
+        let i_at = find el elem 0 in
+            let f_el = List.filteri ( fun i _ -> if i!=i_at then true else false) el in
+                let f_ll = List.filteri ( fun i _ -> if i!=i_at then true else false) ll in
+                    join_chis (LChi(f_el, f_ll)) (get_chi_at ll i_at)
+
 (* Function that contains all the reduction cases *)
 (* Falta fazer todos os casos com lhs e rhs trocados *)
-let rec eval_par lhs rhs =
+let eval_par lhs rhs =
     match lhs, rhs with
     | LList(EEta(a),l1), LList(EEta(b),l2) ->
         begin
             match a, b with
-            | AIn(k), AOut(j) -> if k = j then LPar(l1, l2) else LChi([EEta(a);EEta(b)], l1::l2::[]) (* LChi([EEta(a);EEta(b)], [l1::[]; l2::[]]) *)
-            | AOut(k), AIn(j) -> if k = j then LPar(l1, l2) else LChi([EEta(a);EEta(b)], l1::l2::[]) (* LChi([EEta(a);EEta(b)], [l1::[]; l2::[]]) *)
-            | _, _ -> LChi([EEta(a);EEta(b)], l1::l2::[])
+            | AIn(k), AOut(j) -> if k = j then LPar(l1, l2) else LChi([EEta(a);EEta(b)], l1::l2::[]) (* Case A and Case B*)
+            | AOut(k), AIn(j) -> if k = j then LPar(l1, l2) else LChi([EEta(a);EEta(b)], l1::l2::[]) (* Case A and Case B *)
+            | _, _ -> LChi([EEta(a);EEta(b)], l1::l2::[])                                            (* Case B *)
         end
     | LList(EEta(a), l1), LChi(EEta(b)::EEta(c)::l2, l3) ->
         begin
             match a, b, c, l3 with
             | _, AIn(k), AOut(j), [lb; lc] when k = j && List.length l2 = 0 ->
                 (match lb, lc with
-                | LNil, LChi(hd::tl, hd1::tl1) -> LPar(lhs, lc)
-                | LChi(hd::tl, hd1::tl1), LNil -> LPar(lhs, lb))
+                | LNil, LChi(hd::tl, hd1::tl1) -> LPar(lhs, lc)                                      (* Case C *)
+                | LChi(hd::tl, hd1::tl1), LNil -> LPar(lhs, lb))                                     (* Case D *)
             | _, AOut(k), AIn(j), [lb; lc] when k = j && List.length l2 = 0 ->
                 (match lb, lc with
-                | LNil, LChi(hd::tl, hd1::tl1) -> LPar(lhs, lc)
-                | LChi(hd::tl, hd1::tl1), LNil -> LPar(lhs, lb))
-            | AOut(k), _ , _, _ when List.exists ((=) (EEta(AIn(k)))) (EEta(b)::EEta(c)::l2) -> LPar(l1, build_chi (EEta(AIn(k))) (LChi(EEta(b)::EEta(c)::l2, l3))) (* Preciso de verificar para l2 todo e não apenas 1º elemento *)
-            | AIn(k), _ , _, _ when List.exists ((=) (EEta(AOut(k)))) (EEta(b)::EEta(c)::l2) -> LPar(l1, build_chi (EEta(AOut(k))) (LChi(EEta(b)::EEta(c)::l2, l3)))
-            | _, _, _, _ when exist_corres (EEta(b)::EEta(c)::l2) -> LPar(LList(EEta(a), l1), next_etas_chi (LChi(EEta(b)::EEta(c)::l2, l3)))
+                | LNil, LChi(hd::tl, hd1::tl1) -> LPar(lhs, lc)                                      (* Case C *)
+                | LChi(hd::tl, hd1::tl1), LNil -> LPar(lhs, lb))                                     (* Case D *)
+            | AOut(k), _, _, _ when exists_and_chi (EEta(AIn(k))) rhs -> LPar(l1, case_g (EEta(AIn(k))) rhs)    (* Case G *)
+            | AIn(k), _, _, _ when exists_and_chi (EEta(AOut(k))) rhs -> LPar(l1, case_g (EEta(AOut(k))) rhs)   (* Case G *)
+            | AOut(k), _ , _, _ when List.exists ((=) (EEta(AIn(k)))) (EEta(b)::EEta(c)::l2) -> LPar(l1, case_e (EEta(AIn(k))) (LChi(EEta(b)::EEta(c)::l2, l3))) (* Case E *)
+            | AIn(k), _ , _, _ when List.exists ((=) (EEta(AOut(k)))) (EEta(b)::EEta(c)::l2) -> LPar(l1, case_e (EEta(AOut(k))) (LChi(EEta(b)::EEta(c)::l2, l3))) (* Case E *)
+            | _, _, _, _ when exist_corres (EEta(b)::EEta(c)::l2) -> LPar(LList(EEta(a), l1), case_f (LChi(EEta(b)::EEta(c)::l2, l3))) (* Case F *)
         end
-    | _, _ -> LPar(lhs, rhs)
+    | _, _ -> LPar(lhs, rhs) (* Results in infinite loop *)
 
+let print_return exp = print_lambdas Format.std_formatter exp; printf " aa\n"; exp
 
 let rec eval exp =
     print_lambdas Format.std_formatter exp; printf "\n";
     match exp with
-    | LNil -> LNil
-    | LList(e, l) -> LList(e, l)
-    | LPar(LNil, l2) -> l2
-    | LPar(l1, LNil) -> l1
-    | LPar(l1, l2) -> eval (let e1 = eval l1 in let e2 = eval l2 in eval_par e1 e2) 
+    | LNil -> print_return (LNil)
+    | LList(e, l) -> exp
+    | LPar(LNil, LNil) -> LNil
+    | LPar(LNil, LPar(l3, l4)) -> eval (let e3 = eval l3 in let e4 = eval l4 in eval_par e3 e4)
+    | LPar(LNil, l2) -> print_return l2
+    | LPar(LPar(l3,l4), LNil) -> eval (let e3 = eval l3 in let e4 = eval l4 in eval_par e3 e4)
+    | LPar(l1, LNil) -> print_return l1
+    | LPar(l1, l2) -> eval (let e1 = eval l1 in let e2 = eval l2 in eval_par e1 e2)
     | LChi(el, ll) -> LChi(el, ll)
 
 (* ------------------- TESTING -------------------- *)
@@ -216,7 +259,6 @@ let chi_ex = LChi(
 print_lambdas Format.std_formatter chi_ex_test;; *)
 ;;
 
-(* a?b!0 || a!0 || b?0  *)
-print_lambdas Format.std_formatter (eval (LPar( LPar(LList(EEta(AIn('a')), LList(EEta(AOut('b')), LNil)), LList(EEta(AOut('a')), LNil)), LList(EEta(AIn('b')), LNil))))
+print_lambdas Format.std_formatter (eval (LPar(LList(EEta(AOut('a')), LPar(LList(EEta(AOut('b')), LNil) , LList(EEta(AIn('b')), LNil))), LList(EEta(AIn('a')), LNil))));;
 
 
