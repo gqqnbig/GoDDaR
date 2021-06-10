@@ -142,11 +142,13 @@ let rec exist_corres list =
         | EEta(AIn(a)) -> List.exists ((=) (EEta(AOut(a)))) tl || exist_corres tl
         | EEta(AOut(a)) -> List.exists ((=) (EEta(AIn(a)))) tl || exist_corres tl
 
-(* Defines the joining of two LChi *)
-let join_chis lchi rchi = 
-    match lchi, rchi with
+(* Defines the joining of two LChi or between a LList and a LChi *)
+let join_chis lhs rhs = 
+    match lhs, rhs with
     | LChi(le, ll), LChi(re, rl) -> LChi(le@re, ll@rl)
-    | _, _ -> raise(RuntimeException "join_chi failed: Not a chi.")
+    | LChi(le, ll), LList(e, lst) -> LChi(le@[e], ll@[lst])
+    | LList(e, lst), LChi(le, ll) -> LChi(le@[e], ll@[lst])
+    | _, _ -> raise(RuntimeException "join_chi failed: Not a chi or list.")
 
 (* Checks if elem exists in el by trying to get its index. If so, also checks if there is a LChi at i_at in ll. *)
 (* Returns true if both conditions are met, otherwise returns false. *)
@@ -202,9 +204,34 @@ let eval_par lhs rhs =
                 | LChi(hd::tl, hd1::tl1), LNil -> LPar(lhs, lb))                                     (* Case D *)
             | AOut(k), _, _, _ when exists_and_chi (EEta(AIn(k))) rhs -> LPar(l1, case_g (EEta(AIn(k))) rhs)    (* Case G *)
             | AIn(k), _, _, _ when exists_and_chi (EEta(AOut(k))) rhs -> LPar(l1, case_g (EEta(AOut(k))) rhs)   (* Case G *)
-            | AOut(k), _ , _, _ when List.exists ((=) (EEta(AIn(k)))) (EEta(b)::EEta(c)::l2) -> LPar(l1, case_e (EEta(AIn(k))) (LChi(EEta(b)::EEta(c)::l2, l3))) (* Case E *)
-            | AIn(k), _ , _, _ when List.exists ((=) (EEta(AOut(k)))) (EEta(b)::EEta(c)::l2) -> LPar(l1, case_e (EEta(AOut(k))) (LChi(EEta(b)::EEta(c)::l2, l3))) (* Case E *)
             | _, _, _, _ when exist_corres (EEta(b)::EEta(c)::l2) -> LPar(LList(EEta(a), l1), case_f (LChi(EEta(b)::EEta(c)::l2, l3))) (* Case F *)
+            | AOut(k), _ , _, _ -> if List.exists ((=) (EEta(AIn(k)))) (EEta(b)::EEta(c)::l2) 
+                                   then LPar(l1, case_e (EEta(AIn(k))) (LChi(EEta(b)::EEta(c)::l2, l3))) (* Case E *)
+                                   else join_chis lhs rhs
+            | AIn(k), _ , _, _  -> if List.exists ((=) (EEta(AOut(k)))) (EEta(b)::EEta(c)::l2)
+                                   then LPar(l1, case_e (EEta(AOut(k))) (LChi(EEta(b)::EEta(c)::l2, l3))) (* Case E *)
+                                   else join_chis lhs rhs
+        end
+    | LChi(EEta(b)::EEta(c)::l2, l3), LList(EEta(a), l1) ->
+        begin
+            match a, b, c, l3 with
+            | _, AIn(k), AOut(j), [lb; lc] when k = j && List.length l2 = 0 ->
+                (match lb, lc with
+                | LNil, LChi(hd::tl, hd1::tl1) -> LPar(lc, rhs)
+                | LChi(hd::tl, hd1::tl1), LNil -> LPar(lb, rhs))
+            | _, AOut(k), AIn(j), [lb; lc] when k = j && List.length l2 = 0 ->
+                (match lb, lc with
+                | LNil, LChi(hd::tl, hd1::tl1) -> LPar(lc, rhs)
+                | LChi(hd::tl, hd1::tl1), LNil -> LPar(lb, rhs))
+            | AOut(k), _, _, _ when exists_and_chi (EEta(AIn(k))) lhs -> LPar(case_g (EEta(AIn(k))) lhs, l1)
+            | AIn(k), _, _, _ when exists_and_chi (EEta(AOut(k))) lhs -> LPar(case_g (EEta(AOut(k))) lhs, l1)
+            | _, _, _, _ when exist_corres (EEta(b)::EEta(c)::l2) -> LPar(case_f (LChi(EEta(b)::EEta(c)::l2, l3)), LList(EEta(a), l1))
+            | AOut(k), _, _, _ -> if List.exists ((=) (EEta(AIn(k)))) (EEta(b)::EEta(c)::l2) 
+                                  then LPar(case_e (EEta(AIn(k))) (LChi(EEta(b)::EEta(c)::l2, l3)), l1)
+                                  else join_chis lhs rhs
+            | AIn(k), _, _, _ -> if List.exists ((=) (EEta(AOut(k)))) (EEta(b)::EEta(c)::l2)
+                                 then LPar(case_e (EEta(AOut(k))) (LChi(EEta(b)::EEta(c)::l2, l3)), l1)
+                                 else join_chis lhs rhs
         end
     | _, _ -> LPar(lhs, rhs) (* Results in infinite loop *)
 
@@ -215,7 +242,6 @@ let rec eval exp =
     match exp with
     | LNil -> print_return (LNil)
     | LList(e, l) -> exp
-    | LPar(LNil, LNil) -> LNil
     | LPar(LNil, LPar(l3, l4)) -> eval (let e3 = eval l3 in let e4 = eval l4 in eval_par e3 e4)
     | LPar(LNil, l2) -> print_return l2
     | LPar(LPar(l3,l4), LNil) -> eval (let e3 = eval l3 in let e4 = eval l4 in eval_par e3 e4)
@@ -225,40 +251,8 @@ let rec eval exp =
 
 (* ------------------- TESTING -------------------- *)
 
-(*let test_proc = PPar(PPref(AIn('a'), PNil), PPref(AOut('a'), PNil)) *)
-let test_proc = LPar(LNil, LNil)
-let lhs = LList(EEta(AIn('a')), LList(EEta(AIn('b')), LNil))
-let rhs = LList(EEta(AOut('a')), LList(EEta(AOut('b')), LNil))
-(* let a = eval_par lhs rhs (* Tira os a's porque correspodem *) *)
-let b = LChi([EEta(AIn('a')); EEta(AOut('a'))], [LNil; LNil])
-
-(* eval_par 2nd match *)
-let lhs1 = LList(EEta(AIn('b')), LNil) (* b?.0 *)
-let rhs1 = LChi([EEta(AIn('a'));EEta(AOut('a'))] , [LChi([EEta(AIn('b')); EEta(AOut('b'))] , [LNil; LNil]) ; LNil]) (* (a? | a!; (b? | b!; 0; 0); 0) *)
-(* let c = eval_par lhs1 rhs1;; *)
-(* print_lambdas Format.std_formatter c;; *)
-
-(* findInChi for 3rd match *)
-(* chi = (a? | b! ; c!d?; b!b!) *)
-let lhs2 = LList(EEta(AOut('a')), LList(EEta(AIn('b')), LNil))
-let rhs2 = LChi([EEta(AIn('a')); EEta(AOut('b'))], 
-                [LList(EEta(AOut('c')), LList(EEta(AIn('d')), LNil)); LList(EEta(AOut('b')), LList(EEta(AOut('b')), LNil))])
-let elem = EEta(AIn('a'))                
-(*let d = build_chi elem rhs2;; *)
-(* let d = eval_par lhs2 rhs2;; *)
-(* print_lambdas Format.std_formatter d;;  *)
-
-let lhs_ex = LList(EEta(AIn('c')), LNil)
-let chi_ex = LChi(
-    [EEta(AIn('a')); EEta(AIn('b')); EEta(AOut('c')); EEta(AOut('b'))] , 
-    [LList(EEta(AOut('a')), LNil) ;  LList(EEta(AIn('d')), LNil); LList(EEta(AIn('z')), LNil) ;  LList(EEta(AOut('d')), LNil)])
-(* let chi_ex_test = next_etas_chi chi_ex;; *)
-(* let chi_ex_test = eval_par lhs_ex chi_ex;; *)
-(* let chi_ex_test = build_chi (EEta(AIn('b'))) chi_ex;; *)
-(* let chi_ex_test = eval (LPar(lhs_ex, chi_ex));;
-print_lambdas Format.std_formatter chi_ex_test;; *)
 ;;
 
-print_lambdas Format.std_formatter (eval (LPar(LList(EEta(AOut('a')), LPar(LList(EEta(AOut('b')), LNil) , LList(EEta(AIn('b')), LNil))), LList(EEta(AIn('a')), LNil))));;
+print_lambdas Format.std_formatter (eval (LPar( LPar(LList(EEta(AIn('a')), LList(EEta(AOut('b')), LNil)), LList(EEta(AOut('d')), LNil)), LList(EEta(AIn('c')), LNil))));;
 
 
