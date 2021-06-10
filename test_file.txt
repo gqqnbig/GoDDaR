@@ -1,18 +1,17 @@
 (* a?b?0 || a!b!0 -> SUCCESSO *)
-;;
-print_lambdas Format.std_formatter (eval ( LPar(LList(EEta(AIn('a')), LList(EEta(AIn('b')), LNil)), LList(EEta(AOut('a')), LList(EEta(AOut('b')), LNil)))));;
+main ( LPar(LList(EEta(AIn('a')), LList(EEta(AIn('b')), LNil)), LList(EEta(AOut('a')), LList(EEta(AOut('b')), LNil))));;
 
 (* a?b?0 || a!b!c!0 -> SUCCESSO *)
-print_lambdas Format.std_formatter (eval ( LPar(LList(EEta(AIn('a')), LList(EEta(AIn('b')), LNil)), LList(EEta(AOut('a')), LList(EEta(AOut('b')), LList(EEta(AOut('c')), LNil))))));;
+main ( LPar(LList(EEta(AIn('a')), LList(EEta(AIn('b')), LNil)), LList(EEta(AOut('a')), LList(EEta(AOut('b')), LList(EEta(AOut('c')), LNil)))));;
 
 (* a?b!0 || a!0 || b?0 -> SUCESSO *)
-print_lambdas Format.std_formatter (eval (LPar( LPar(LList(EEta(AIn('a')), LList(EEta(AOut('b')), LNil)), LList(EEta(AOut('a')), LNil)), LList(EEta(AIn('b')), LNil))));;
+main (LPar( LPar(LList(EEta(AIn('a')), LList(EEta(AOut('b')), LNil)), LList(EEta(AOut('a')), LNil)), LList(EEta(AIn('b')), LNil)));;
 
 (* a?b!0 || a!0 || c?0 -> SUCESSO *)
-print_lambdas Format.std_formatter (eval (LPar( LPar(LList(EEta(AIn('a')), LList(EEta(AOut('b')), LNil)), LList(EEta(AOut('a')), LNil)), LList(EEta(AIn('c')), LNil))));;
+main (LPar( LPar(LList(EEta(AIn('a')), LList(EEta(AOut('b')), LNil)), LList(EEta(AOut('a')), LNil)), LList(EEta(AIn('c')), LNil)));;
 
-(* a?b!0 || d!0 || c?0 -> FALHOU -> Porque fica com o Chi à esquerda e ainda não tratei disso *)
-print_lambdas Format.std_formatter (eval (LPar( LPar(LList(EEta(AIn('a')), LList(EEta(AOut('b')), LNil)), LList(EEta(AOut('d')), LNil)), LList(EEta(AIn('c')), LNil))));;
+(* a?b!0 || d!0 || c?0 -> SUCESSO *)
+main (LPar( LPar(LList(EEta(AIn('a')), LList(EEta(AOut('b')), LNil)), LList(EEta(AOut('d')), LNil)), LList(EEta(AIn('c')), LNil)));;
 
 (* a!(b!0 || b?0) || a?0 -> SUCESSO *)
-print_lambdas Format.std_formatter (eval (LPar(LList(EEta(AOut('a')), LPar(LList(EEta(AOut('b')), LNil) , LList(EEta(AIn('b')), LNil))), LList(EEta(AIn('a')), LNil))));;
+main (LPar(LList(EEta(AOut('a')), LPar(LList(EEta(AOut('b')), LNil) , LList(EEta(AIn('b')), LNil))), LList(EEta(AIn('a')), LNil)));;

@@ -30,6 +30,8 @@ type lambda =
 
 (* ------------------- PRINTER -------------------- *)
 
+let fmt = Format.std_formatter
+
 let print_action fmt a =
     match a with
     | AIn(a) -> fprintf fmt "AIn(%c)" a 
@@ -42,9 +44,8 @@ let print_eta fmt e =
 let rec print_etalist fmt lst =
     match lst with
     | [] -> ()
-    | hd::[] -> fprintf fmt " %a" print_eta hd
-    | hd::tl -> fprintf fmt "%a |" print_eta hd; print_etalist fmt tl
-
+    | hd::[] -> fprintf fmt "%a" print_eta hd
+    | hd::tl -> fprintf fmt "%a | " print_eta hd; print_etalist fmt tl
 
 let rec print_lambdas fmt l =
     match l with
@@ -233,26 +234,26 @@ let eval_par lhs rhs =
                                  then LPar(case_e (EEta(AOut(k))) (LChi(EEta(b)::EEta(c)::l2, l3)), l1)
                                  else join_chis lhs rhs
         end
+    | LNil, _ -> rhs
+    | _, LNil -> lhs
     | _, _ -> LPar(lhs, rhs) (* Results in infinite loop *)
 
-let print_return exp = print_lambdas Format.std_formatter exp; printf " aa\n"; exp
+let print_return exp = printf "\n"; exp
 
 let rec eval exp =
-    print_lambdas Format.std_formatter exp; printf "\n";
+    print_lambdas fmt exp; printf "\n";
     match exp with
-    | LNil -> print_return (LNil)
+    | LNil -> LNil
     | LList(e, l) -> exp
-    | LPar(LNil, LPar(l3, l4)) -> eval (let e3 = eval l3 in let e4 = eval l4 in eval_par e3 e4)
-    | LPar(LNil, l2) -> print_return l2
-    | LPar(LPar(l3,l4), LNil) -> eval (let e3 = eval l3 in let e4 = eval l4 in eval_par e3 e4)
-    | LPar(l1, LNil) -> print_return l1
+    | LPar(LNil, LPar(l3, l4)) -> eval (let e3 = eval l3 in let e4 = eval l4 in eval_par e3 e4) (* These cases exist to remove the prints *)
+    | LPar(LPar(l3,l4), LNil) -> eval (let e3 = eval l3 in let e4 = eval l4 in eval_par e3 e4)  (* of redudant LNil evaluations *)
     | LPar(l1, l2) -> eval (let e1 = eval l1 in let e2 = eval l2 in eval_par e1 e2)
-    | LChi(el, ll) -> LChi(el, ll)
+    | LChi(el, ll) -> exp
+
+let main exp = ignore(eval exp);;
 
 (* ------------------- TESTING -------------------- *)
 
-;;
-
-print_lambdas Format.std_formatter (eval (LPar( LPar(LList(EEta(AIn('a')), LList(EEta(AOut('b')), LNil)), LList(EEta(AOut('d')), LNil)), LList(EEta(AIn('c')), LNil))));;
+main ( LPar(LList(EEta(AIn('a')), LList(EEta(AIn('b')), LNil)), LList(EEta(AOut('a')), LList(EEta(AOut('b')), LNil))));;
 
 
