@@ -1,63 +1,25 @@
 open Format
+open Types
+open Printer
 
 (* ------------------- EXCEPTIONS -------------------- *)
 
 exception RuntimeException of string
 
-(* ------------------- TYPES -------------------- *)
+(* ------------------- COMMAND LINE ARGUMENTS -------------------- *)
 
-type chan = char
+let usage_msg = "Usage: ./dlock [-v | -s] <file1> [<file2>] ... -o <output>"
+let verbose = ref false
+let simplified = ref false
+let procInput = ref false
 
-type action =
-    | AIn of chan
-    | AOut of chan
+let speclist =
+    [("-v", Arg.Set verbose, "Output debug information");
+     ("-s", Arg.Set simplified, "Output a simpler representation of the process");
+     ("-p", Arg.Set procInput, "Input is a Proc type, which is translated to a Lamba type");
+     ("  ", Arg.Unit (fun () -> ()), "Output the verdict only")]
 
-(*  
-type proc = 
-    | PNil
-    | PPref of action * proc
-    | PPar of proc * proc
-*)
-
-type eta = 
-    | EEta of action
-
-type lambda = 
-    | LNil
-    | LList of eta * lambda
-    | LChi of eta list * lambda list
-    | LPar of lambda * lambda
-
-(* ------------------- PRINTER -------------------- *)
-
-let fmt = Format.std_formatter
-
-let print_action fmt a =
-    match a with
-    | AIn(a) -> fprintf fmt "AIn(%c)" a 
-    | AOut(a) -> fprintf fmt "AOut(%c)" a 
-
-let print_eta fmt e = 
-    match e with
-    | EEta(a) -> fprintf fmt "EEta(%a)" print_action a
-
-let rec print_etalist fmt lst =
-    match lst with
-    | [] -> ()
-    | hd::[] -> fprintf fmt "%a" print_eta hd
-    | hd::tl -> fprintf fmt "%a | " print_eta hd; print_etalist fmt tl
-
-let rec print_lambdas fmt l =
-    match l with
-    | LNil -> fprintf fmt "LNil"
-    | LList(e1, l1) -> fprintf fmt "LList(%a, %a)" print_eta e1 print_lambdas l1
-    | LPar(l1, l2) -> fprintf fmt "LPar(%a, %a)" print_lambdas l1 print_lambdas l2
-    | LChi(el, ll) -> fprintf fmt "LChi(%a; %a)" print_etalist el print_lambdalist ll
-and print_lambdalist fmt lst =
-    match lst with
-    | [] -> ()
-    | hd::[] -> fprintf fmt "%a" print_lambdas hd
-    | hd::tl -> fprintf fmt "%a, " print_lambdas hd; print_lambdalist fmt tl
+let () = Arg.parse speclist (fun x -> raise (Arg.Bad ("Bad argument: " ^ x))) usage_msg
 
 
 (* ------------------- AUXILIARY FUNCTIONS -------------------- *)
@@ -238,10 +200,12 @@ let eval_par lhs rhs =
     | _, LNil -> lhs
     | _, _ -> LPar(lhs, rhs) (* Results in infinite loop *)
 
-let print_return exp = printf "\n"; exp
-
 let rec eval exp =
-    print_lambdas fmt exp; printf "\n";
+    if !verbose then
+        let _ = print_lambdas fmt exp in let _ = printf " ---> " in let _ = print_proc_simple fmt (toProc exp) in printf "\n"
+    else if !simplified then
+        let _ = print_proc_simple fmt (toProc exp) in printf "\n"
+    else ();
     match exp with
     | LNil -> LNil
     | LList(e, l) -> exp
@@ -250,10 +214,14 @@ let rec eval exp =
     | LPar(l1, l2) -> eval (let e1 = eval l1 in let e2 = eval l2 in eval_par e1 e2)
     | LChi(el, ll) -> exp
 
-let main exp = ignore(eval exp);;
+let main exp =
+    let res = eval exp in
+    match res with
+    | LNil -> printf "The process is deadlock-free.\n"
+    | _ -> printf "The process has a deadlock.\n"
+;;
 
 (* ------------------- TESTING -------------------- *)
-
-main ( LPar(LList(EEta(AIn('a')), LList(EEta(AIn('b')), LNil)), LList(EEta(AOut('a')), LList(EEta(AOut('b')), LNil))));;
+main (LPar(LList(EEta(AOut('a')), LPar(LList(EEta(AOut('b')), LNil) , LList(EEta(AIn('b')), LNil))), LList(EEta(AIn('a')), LNil)));;
 
 

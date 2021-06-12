@@ -1,3 +1,6 @@
+(* a.0 -> SUCCESSO *)
+main (LList(EEta(AIn('a')), LNil))
+
 (* a?b?0 || a!b!0 -> SUCCESSO *)
 main ( LPar(LList(EEta(AIn('a')), LList(EEta(AIn('b')), LNil)), LList(EEta(AOut('a')), LList(EEta(AOut('b')), LNil))));;
 
