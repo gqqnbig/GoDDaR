@@ -18,3 +18,7 @@ main (LPar( LPar(LList(EEta(AIn('a')), LList(EEta(AOut('b')), LNil)), LList(EEta
 
 (* a!(b!0 || b?0) || a?0 -> SUCESSO *)
 main (LPar(LList(EEta(AOut('a')), LPar(LList(EEta(AOut('b')), LNil) , LList(EEta(AIn('b')), LNil))), LList(EEta(AIn('a')), LNil)));;
+
+let arr = permut [] (lparToArray (LPar(LPar(LPar(LList(EEta(AIn('a')), LNil), LList(EEta(AIn('b')), LList(EEta(AOut('a')), LNil))) , LList(EEta(AIn('c')), LList(EEta(AIn('d')), LNil))), LList(EEta(AOut('c')), LNil))));;
+
+let i = ref 0 in List.map (fun x -> List.map (fun y -> print_lambdas fmt y; printf "\n") x; i := !i+1 ; printf "%d\n" !i) arr;;

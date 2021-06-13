@@ -143,6 +143,20 @@ let case_g elem chi =
                 let f_ll = List.filteri ( fun i _ -> if i!=i_at then true else false) ll in
                     join_chis (LChi(f_el, f_ll)) (get_chi_at ll i_at)
 
+let rec lparToList exp = 
+    match exp with
+    | LPar(l, r) -> lparToList l @ lparToList r
+    | _ -> [exp]
+
+let ( ^^ ) e ll = List.map (fun x -> e::x) ll
+
+let rec permut l r = 
+    match r with 
+    | [] -> [[]]
+    | [x] -> x ^^ (permut [] l)
+    | x::t -> let s = permut (x::l) t in 
+              (x ^^ (permut [] (l@t))) @ s;;
+
 (* Function that contains all the reduction cases *)
 (* Falta fazer todos os casos com lhs e rhs trocados *)
 let eval_par lhs rhs =
@@ -214,14 +228,43 @@ let rec eval exp =
     | LPar(l1, l2) -> eval (let e1 = eval l1 in let e2 = eval l2 in eval_par e1 e2)
     | LChi(el, ll) -> exp
 
+let rec assign_eval expLst =
+    if !verbose then
+        let i = ref 0 in List.map (fun x -> i := !i+1; printf "---- %d ----\n" !i;List.map (fun y -> print_lambdas fmt y; printf "\n") x; printf "\n\n") expLst
+    else ()::[];
+    match expLst with
+    | [] -> []
+    | hd::tl ->
+        let rec currExp exp =
+            begin
+            match exp with
+            | [x; t] -> LPar(x, t) 
+            | x::t -> LPar(currExp t, x)
+            end
+        in (eval (currExp hd))::(assign_eval tl)
+
+
 let main exp =
-    let res = eval exp in
-    match res with
-    | LNil -> printf "The process is deadlock-free.\n"
-    | _ -> printf "The process has a deadlock.\n"
+    let toList = lparToList exp in
+    let res = if List.length toList <= 2 
+              then (eval exp)::[] 
+              else assign_eval (permut [] toList) 
+    in
+    let findings = List.filter (fun y -> if y = -1 then false else true) (List.map (fun x -> if x = LNil then -1 else find res x 1) res) in
+    if List.length findings = List.length res
+    then printf "\nThe process has a deadlock: every process permutation is blocked.\n"
+    else if List.length findings = 0 
+        then printf "\nThe process is deadlock-free.\n"
+        else print_findings findings;
+    if !verbose then let _ = printf "\n" in print_list fmt res else ()
 ;;
 
 (* ------------------- TESTING -------------------- *)
-main (LPar(LList(EEta(AOut('a')), LPar(LList(EEta(AOut('b')), LNil) , LList(EEta(AIn('b')), LNil))), LList(EEta(AIn('a')), LNil)));;
+(*
+let arr = permut [] (lparToList (LPar( LPar(LList(EEta(AIn('a')), LList(EEta(AOut('b')), LNil)), LList(EEta(AOut('d')), LNil)), LList(EEta(AIn('c')), LNil))));;
 
+let i = ref 0 in List.map (fun x -> List.map (fun y -> print_lambdas fmt y; printf "\n") x; i := !i+1 ; printf "%d\n" !i) arr;;
+*)
+
+main (LPar( LPar(LList(EEta(AIn('a')), LList(EEta(AOut('b')), LNil)), LList(EEta(AOut('d')), LNil)), LList(EEta(AIn('c')), LNil)));;
 

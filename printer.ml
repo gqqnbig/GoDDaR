@@ -54,3 +54,28 @@ let rec print_proc_simple fmt p =
     | PNil -> fprintf fmt "0"
     | PPref(a, pp) -> fprintf fmt "%a.%a" print_action_simple a print_proc_simple pp
     | PPar(p1, p2) -> fprintf fmt "(%a || %a)" print_proc_simple p1 print_proc_simple p2
+
+(* ----------- Misc ----------- *)
+
+let rec print_list fmt lst =
+    let rec lambda_list lst =
+        match lst with
+        | [] -> ()
+        | hd::[] -> print_lambdas fmt hd
+        | hd::tl -> print_lambdas fmt hd; printf "; "; lambda_list tl
+    in
+    printf "[";
+    lambda_list lst;
+    printf "]\n"
+
+let rec print_findings lst =
+    let rec find_list lst =
+        match lst with
+        | [] -> ()
+        | hd::[] -> printf "%d" hd
+        | hd::tl -> printf "%d" hd; printf ", "; find_list tl
+    in 
+    printf "\nThe process has a deadlock: Permutation(s) ";
+    find_list lst;
+    printf " lead to a deadlock.\n";
+
