@@ -1,11 +1,51 @@
-(* a.0 -> SUCCESSO *)
+(* 
+    Templates 
+
+3 Parallel: main ( LPar(LPar( , ) ,  ))
+
+
+
+*)
+
+
+(* a?.0 -> SUCCESSO --------------------------- DEADLOCK *) 
 main (LList(EEta(AIn('a')), LNil))
 
-(* a?b?0 || a!b!0 -> SUCCESSO *)
-main ( LPar(LList(EEta(AIn('a')), LList(EEta(AIn('b')), LNil)), LList(EEta(AOut('a')), LList(EEta(AOut('b')), LNil))));;
+(* a?.a!.0 -> SUCCESSO --------------------------- DEADLOCK *)
+main (LList(EEta(AIn('a')), LList(EEta(AOut('a')), LNil)))
 
-(* a?b?0 || a!b!c!0 -> SUCCESSO *)
-main ( LPar(LList(EEta(AIn('a')), LList(EEta(AIn('b')), LNil)), LList(EEta(AOut('a')), LList(EEta(AOut('b')), LList(EEta(AOut('c')), LNil)))));;
+(* 0 || 0 -> SUCESSO *)
+main (LPar(LNil, LNil))
+
+(* a?.0 || a!.0 -> SUCESSO *)
+main (LPar(LList(EEta(AIn('a')), LNil), LList(EEta(AOut('a')), LNil)))
+
+(* a?.0 || b!.0 -> SUCCESSO --------------------------- DEADLOCK *)
+main (LPar(LList(EEta(AIn('a')), LNil), LList(EEta(AOut('b')), LNil)))
+
+(* a?.b!.0 || a!.b?.0 -> SUCCESSO *)
+main ( LPar( LList(EEta(AIn('a')) , LList(EEta(AOut('b')), LNil) ) , LList(EEta(AOut('a')), LList(EEta(AIn('b')), LNil))) )
+
+(* a?.b!.c?.0 || a!.b?.c!.0 -> SUCESSO *)
+main ( LPar( LList(EEta(AIn('a')), LList(EEta(AOut('b')), LList(EEta(AIn('c')), LNil))), LList(EEta(AOut('a')), LList(EEta(AIn('b')), LList(EEta(AOut('c')), LNil))) ))
+
+(* a?.b!.c?.0 || a!.c!.b?.0 -> SUCESSO --------------------------- DEADLOCK *)
+main ( LPar( LList(EEta(AIn('a')), LList(EEta(AOut('b')), LList(EEta(AIn('c')), LNil))), LList(EEta(AOut('a')), LList(EEta(AOut('c')), LList(EEta(AIn('b')), LNil))) ))
+
+(* a?.b?.0 || a!.b!.c!.0 -> SUCCESSO --------------------------- DEADLOCK *)
+main ( LPar(LList(EEta(AIn('a')), LList(EEta(AIn('b')), LNil)), LList(EEta(AOut('a')), LList(EEta(AOut('b')), LList(EEta(AOut('c')), LNil)))))
+
+(* a?.0 || a!.b!.c!.0 -> SUCCESSO --------------------------- DEADLOCK *)
+main ( LPar(LList(EEta(AIn('a')), LNil), LList(EEta(AOut('a')), LList(EEta(AOut('b')), LList(EEta(AOut('c')), LNil)))))
+
+(* 0 || a!.b!.c!.0 -> SUCESSO --------------------------- DEADLOCK *)
+main ( LPar(LNil, LList(EEta(AOut('a')), LList(EEta(AOut('b')), LList(EEta(AOut('c')), LNil)))))
+
+(* (a!.b?.c?.0 || a?.b!.0) || c!.0 -> SUCESSO *)
+main ( LPar( LPar( LList(EEta(AOut('a')), LList(EEta(AIn('b')), LList(EEta(AIn('c')), LNil))) , LList(EEta(AIn('a')), LList(EEta(AOut('b')), LNil))), LList(EEta(AOut('c')), LNil)))
+
+(* a!.b?.0 || a?.0 || a?.a!.b!.0 -> SUCESSO --------------------------- DEADLOCK *)
+main ( LPar(LPar(LList(EEta(AOut('a')), LList(EEta(AIn('b')), LNil)) , LList(EEta(AIn('a')), LNil) ) , LList( EEta(AIn('a')), LList(EEta(AOut('a')), LList( EEta(AOut('b')), LNil)))  ))
 
 (* a?b!0 || a!0 || b?0 -> SUCESSO *)
 main (LPar( LPar(LList(EEta(AIn('a')), LList(EEta(AOut('b')), LNil)), LList(EEta(AOut('a')), LNil)), LList(EEta(AIn('b')), LNil)));;

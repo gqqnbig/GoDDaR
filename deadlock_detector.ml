@@ -24,11 +24,24 @@ let () = Arg.parse speclist (fun x -> raise (Arg.Bad ("Bad argument: " ^ x))) us
 
 (* ------------------- AUXILIARY FUNCTIONS -------------------- *)
 
-(* Finds the index of elem in list *)
-let rec find list elem i =
+(* Enumerates the elements of a list by transforming them into pairs *)
+let rec enumerate list i =
     match list with
-    | [] -> -1 (* Not found *)
-    | hd::tl -> if hd = elem then i else find tl elem (i+1)
+    | [] -> []
+    | hd::tl -> (i, hd)::(enumerate tl (i+1))
+
+(* Returns the index of the permutations of the inital process that lead to a deadlock *)
+let proc_findings lst = 
+    List.filter (fun y -> if y = -1 then false else true) 
+        (List.map (fun x -> 
+            match x with 
+            | (a,b) -> if b = LNil then -1 else a) (enumerate lst 0))
+
+(* Finds the index of elem in list *)
+let rec find list elem =
+    match list with
+    | [] -> raise (RuntimeException "find failed: Element not in list.") (* Not found *)
+    | hd::tl -> if hd = elem then 0 else 1 + find tl elem 
 
 (* Removes the first occurrence of elem in list *)
 let rec filter_first list elem = 
@@ -50,7 +63,8 @@ let rec correct_chi_lambda ll curr_i i_at =
         (match hd with
         | LList(EEta(_), LList(EEta(a), l)) -> LList(EEta(a), l)::tl
         | LList(EEta(_), LNil) -> LNil::tl
-        | _ -> raise (RuntimeException "correct_chi_lambda failed: No match"))
+        | LNil -> tl
+        | _ -> print_lambdas fmt hd ;raise (RuntimeException "correct_chi_lambda failed: No match "))
         else hd::(correct_chi_lambda tl (curr_i+1) i_at)
 
 (* Similar to correct_chi_lambda, but returns EEta at index i_at instead of removing it *)
@@ -60,16 +74,18 @@ let rec find_chi_lambda chi curr_i i_at =
         (match hd with
         | LList(a, LList(b, l)) -> a
         | LList(a, LNil) -> a
-        | _ -> raise (RuntimeException "find_chi_lambda failed: Unexpected match")) (* Pode ser preciso para o 3º caso*)
+        | _ -> print_lambdas fmt hd ;raise (RuntimeException "find_chi_lambda failed: Unexpected match")) (* Pode ser preciso para o 3º caso*)
         else find_chi_lambda (LChi(et, tl)) (curr_i+1) i_at
 
 (* Pulls the next Eta and arranges Chi's ll*)
 let case_e elem chi =
     match chi with
     | LChi(el, ll) -> 
-        let at_index = find el elem 0 in
+        let at_index = find el elem in
             let nth_elem = List.nth el at_index in
-                LChi(subst_first el nth_elem (find_chi_lambda chi 0 at_index), correct_chi_lambda ll 0 at_index)
+                if List.nth ll at_index = (LNil) 
+                then LChi(List.filteri (fun i _ -> if i!=at_index then true else false) el, List.filteri (fun i _ -> if i!=at_index then true else false) ll)
+                else LChi(subst_first el nth_elem (find_chi_lambda chi 0 at_index), correct_chi_lambda ll 0 at_index)
 
 (* Finds the indexes of the first pair of corresponding actions *)
 let rec find_corres list dlist i j = 
@@ -118,7 +134,7 @@ let join_chis lhs rhs =
 let exists_and_chi elem chi =
     match chi with
     | LChi(el, ll) -> 
-        let i_at = find el elem 0 in
+        let i_at = find el elem in
             if i_at = -1 then false else
                 let res = List.filteri(
                     fun i a -> 
@@ -138,18 +154,19 @@ let get_chi_at list i_at =
 let case_g elem chi =
     match chi with
     | LChi(el, ll) ->
-        let i_at = find el elem 0 in
+        let i_at = find el elem in
             let f_el = List.filteri ( fun i _ -> if i!=i_at then true else false) el in
                 let f_ll = List.filteri ( fun i _ -> if i!=i_at then true else false) ll in
                     join_chis (LChi(f_el, f_ll)) (get_chi_at ll i_at)
 
+(* Retrieves the lambdas from a LPar type and adds them to a list *)
 let rec lparToList exp = 
     match exp with
     | LPar(l, r) -> lparToList l @ lparToList r
     | _ -> [exp]
 
+(* Source: https://stackoverflow.com/questions/46121765/generating-all-permutations-in-a-functional-language *)
 let ( ^^ ) e ll = List.map (fun x -> e::x) ll
-
 let rec permut l r = 
     match r with 
     | [] -> [[]]
@@ -195,11 +212,15 @@ let eval_par lhs rhs =
             | _, AIn(k), AOut(j), [lb; lc] when k = j && List.length l2 = 0 ->
                 (match lb, lc with
                 | LNil, LChi(hd::tl, hd1::tl1) -> LPar(lc, rhs)
-                | LChi(hd::tl, hd1::tl1), LNil -> LPar(lb, rhs))
+                | LChi(hd::tl, hd1::tl1), LNil -> LPar(lb, rhs)
+                | LList(d,e), LNil -> LPar(lb, rhs)
+                | LNil, LList(d,e) -> LPar(lc, rhs))
             | _, AOut(k), AIn(j), [lb; lc] when k = j && List.length l2 = 0 ->
                 (match lb, lc with
                 | LNil, LChi(hd::tl, hd1::tl1) -> LPar(lc, rhs)
-                | LChi(hd::tl, hd1::tl1), LNil -> LPar(lb, rhs))
+                | LChi(hd::tl, hd1::tl1), LNil -> LPar(lb, rhs)
+                | LList(d,e), LNil -> LPar(lb, rhs)
+                | LNil, LList(d,e) -> LPar(lc, rhs))
             | AOut(k), _, _, _ when exists_and_chi (EEta(AIn(k))) lhs -> LPar(case_g (EEta(AIn(k))) lhs, l1)
             | AIn(k), _, _, _ when exists_and_chi (EEta(AOut(k))) lhs -> LPar(case_g (EEta(AOut(k))) lhs, l1)
             | _, _, _, _ when exist_corres (EEta(b)::EEta(c)::l2) -> LPar(case_f (LChi(EEta(b)::EEta(c)::l2, l3)), LList(EEta(a), l1))
@@ -210,9 +231,54 @@ let eval_par lhs rhs =
                                  then LPar(case_e (EEta(AOut(k))) (LChi(EEta(b)::EEta(c)::l2, l3)), l1)
                                  else join_chis lhs rhs
         end
+    (* Cases where one side is a Chi and the other is LNil *)
+    (* May need to add cases where they dont match *)
+    | LChi(EEta(b)::EEta(c)::l2, l3), LNil ->
+        begin
+            match b, c, l3 with
+            | AIn(k), AOut(j), [lb; lc] when k = j && List.length l2 = 0 ->
+                (match lb, lc with
+                | LNil, LChi(hd::tl, hd1::tl1) -> LPar(lc, rhs)
+                | LChi(hd::tl, hd1::tl1), LNil -> LPar(lb, rhs)
+                | LNil, LNil -> LPar(LNil, LNil))
+            | AOut(k), AIn(j), [lb; lc] when k = j && List.length l2 = 0 ->
+                (match lb, lc with
+                | LNil, LChi(hd::tl, hd1::tl1) -> LPar(lc, rhs)
+                | LChi(hd::tl, hd1::tl1), LNil -> LPar(lb, rhs)
+                | LNil, LNil -> LPar(LNil, LNil))
+        end
+    | LNil, LChi(EEta(b)::EEta(c)::l2, l3) ->
+        begin
+            match b, c, l3 with
+            | AIn(k), AOut(j), [lb; lc] when k = j && List.length l2 = 0 ->
+                (match lb, lc with
+                | LNil, LChi(hd::tl, hd1::tl1) -> LPar(lhs, lc)                                      
+                | LChi(hd::tl, hd1::tl1), LNil -> LPar(lhs, lb)
+                | LNil, LNil -> LPar(LNil, LNil))                                     
+            | AOut(k), AIn(j), [lb; lc] when k = j && List.length l2 = 0 ->
+                (match lb, lc with
+                | LNil, LChi(hd::tl, hd1::tl1) -> LPar(lhs, lc)                                      
+                | LChi(hd::tl, hd1::tl1), LNil -> LPar(lhs, lb)
+                | LNil, LNil -> LPar(LNil, LNil))                                     
+        end
+    (* Cases where lhs is a LChi with only one Eta and rhs is a LList *)
+    | LChi([a], ll), LList(e, l) ->
+        begin
+            match a, ll, e, l with
+            | _, [LNil], _, _ -> LPar(LList(a, LNil), rhs)
+            | EEta(AOut(j)), _, EEta(AIn(k)), _ ->  if k = j then LPar(case_e (EEta(AOut(k))) lhs, l) else join_chis lhs rhs
+            | EEta(AIn(j)), _, EEta(AOut(k)), _ -> if k = j then  LPar(case_e (EEta(AIn(k))) lhs, l) else join_chis lhs rhs
+            | _, _, _, _ -> join_chis lhs rhs
+        end
+    | LList(e, l), LChi([a], ll) ->
+        begin
+            match a, ll, e, l with
+            | _, [LNil], _, _ -> LPar(lhs, LList(a, LNil))
+        end
+    (* Probably only works for LLists now *)
     | LNil, _ -> rhs
     | _, LNil -> lhs
-    | _, _ -> LPar(lhs, rhs) (* Results in infinite loop *)
+    | _, _ -> raise (RuntimeException "No match in eval_par\n") (* Results in infinite loop *)
 
 let rec eval exp =
     if !verbose then
@@ -228,17 +294,15 @@ let rec eval exp =
     | LPar(l1, l2) -> eval (let e1 = eval l1 in let e2 = eval l2 in eval_par e1 e2)
     | LChi(el, ll) -> exp
 
+(* Receives a list of process permutations and calls eval on each one *)
 let rec assign_eval expLst =
-    if !verbose then
-        let i = ref 0 in List.map (fun x -> i := !i+1; printf "---- %d ----\n" !i;List.map (fun y -> print_lambdas fmt y; printf "\n") x; printf "\n\n") expLst
-    else ()::[];
     match expLst with
     | [] -> []
     | hd::tl ->
         let rec currExp exp =
             begin
             match exp with
-            | [x; t] -> LPar(x, t) 
+            | [x; t] -> printf "\n\n"; LPar(x, t) 
             | x::t -> LPar(currExp t, x)
             end
         in (eval (currExp hd))::(assign_eval tl)
@@ -248,9 +312,12 @@ let main exp =
     let toList = lparToList exp in
     let res = if List.length toList <= 2 
               then (eval exp)::[] 
-              else assign_eval (permut [] toList) 
+              else let perm_lst = permut [] toList in    
+                  if !verbose then
+                      let i = ref 0 in List.map (fun x -> i := !i+1; printf "---- %d ----\n" !i;List.map (fun y -> print_lambdas fmt y; printf "\n") x; printf "\n\n") perm_lst
+                  else ()::[]; List.rev (assign_eval perm_lst)
     in
-    let findings = List.filter (fun y -> if y = -1 then false else true) (List.map (fun x -> if x = LNil then -1 else find res x 1) res) in
+    let findings = proc_findings res in
     if List.length findings = List.length res
     then printf "\nThe process has a deadlock: every process permutation is blocked.\n"
     else if List.length findings = 0 
@@ -260,11 +327,6 @@ let main exp =
 ;;
 
 (* ------------------- TESTING -------------------- *)
-(*
-let arr = permut [] (lparToList (LPar( LPar(LList(EEta(AIn('a')), LList(EEta(AOut('b')), LNil)), LList(EEta(AOut('d')), LNil)), LList(EEta(AIn('c')), LNil))));;
+(* a.0 -> SUCCESSO *)
 
-let i = ref 0 in List.map (fun x -> List.map (fun y -> print_lambdas fmt y; printf "\n") x; i := !i+1 ; printf "%d\n" !i) arr;;
-*)
-
-main (LPar( LPar(LList(EEta(AIn('a')), LList(EEta(AOut('b')), LNil)), LList(EEta(AOut('d')), LNil)), LList(EEta(AIn('c')), LNil)));;
-
+main (LPar( LPar(LList(EEta(AIn('a')), LList(EEta(AOut('b')), LNil)), LList(EEta(AOut('a')), LNil)), LList(EEta(AIn('b')), LNil)));;
