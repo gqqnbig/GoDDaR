@@ -42,6 +42,7 @@ let rec toProc lambda =
     | LChi(et, ll) -> chi_to_proc lambda
 and chi_to_proc chi =
     match chi with
+    | LChi([], []) -> PNil
     | LChi(ehd::[], lhd::[]) -> PPref(toAction ehd, toProc lhd)
     | LChi(ehd::etl, lhd::ltl) -> 
         let c_ehd = toAction ehd in

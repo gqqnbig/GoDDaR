@@ -1,6 +1,8 @@
 open Format
 open Types
 open Printer
+open Auxfunctions
+
 
 (* ------------------- EXCEPTIONS -------------------- *)
 
@@ -24,36 +26,18 @@ let () = Arg.parse speclist (fun x -> raise (Arg.Bad ("Bad argument: " ^ x))) us
 
 (* ------------------- AUXILIARY FUNCTIONS -------------------- *)
 
-(* Enumerates the elements of a list by transforming them into pairs *)
-let rec enumerate list i =
-    match list with
-    | [] -> []
-    | hd::tl -> (i, hd)::(enumerate tl (i+1))
+(* Defines the joining of two LChi or between a LList and a LChi *)
+let join_chis lhs rhs = 
+    match lhs, rhs with
+    | LChi(le, ll), LChi(re, rl) -> LChi(le@re, ll@rl)
+    | LChi(le, ll), LList(e, lst) -> LChi(le@[e], ll@[lst])
+    | LList(e, lst), LChi(le, ll) -> LChi(le@[e], ll@[lst])
+    | _, _ -> raise(RuntimeException "join_chi failed: Not a chi or list.")
 
-(* Returns the index of the permutations of the inital process that lead to a deadlock *)
-let proc_findings lst = 
-    List.filter (fun y -> if y = -1 then false else true) 
-        (List.map (fun x -> 
-            match x with 
-            | (a,b) -> if b = LNil then -1 else a) (enumerate lst 0))
-
-(* Finds the index of elem in list *)
-let rec find list elem =
-    match list with
-    | [] -> raise (RuntimeException "find failed: Element not in list.") (* Not found *)
-    | hd::tl -> if hd = elem then 0 else 1 + find tl elem 
-
-(* Removes the first occurrence of elem in list *)
-let rec filter_first list elem = 
-    match list with
-    | [] -> []
-    | hd::tl -> if hd != elem then hd::(filter_first tl elem) else tl
-
-(* Substitutes the first element in a list equal to replaced with replacer *)
-let rec subst_first list replaced replacer =
-    match list with
-    | [] -> []
-    | hd::tl -> if hd = replaced then replacer::tl else hd::(subst_first tl replaced replacer)
+let rec reduceChi chi i_at i =
+    match chi with
+    | LChi(hd::tl, hd1::tl1) ->
+        if i = i_at then (LChi(tl, tl1)) else join_chis (LChi([hd],[hd1])) (reduceChi (LChi(tl, tl1)) i_at (i+1))
 
 (* Removes the EEta from a LChi's LList at index i_at *)
 let rec correct_chi_lambda ll curr_i i_at =
@@ -83,9 +67,10 @@ let case_e elem chi =
     | LChi(el, ll) -> 
         let at_index = find el elem in
             let nth_elem = List.nth el at_index in
-                if List.nth ll at_index = (LNil) 
-                then LChi(List.filteri (fun i _ -> if i!=at_index then true else false) el, List.filteri (fun i _ -> if i!=at_index then true else false) ll)
-                else LChi(subst_first el nth_elem (find_chi_lambda chi 0 at_index), correct_chi_lambda ll 0 at_index)
+                let nth_ll = List.nth ll at_index in
+                    match nth_ll with
+                    | LNil -> LChi(List.filteri (fun i _ -> if i!=at_index then true else false) el, List.filteri (fun i _ -> if i!=at_index then true else false) ll) 
+                    | _ -> LChi(subst_first el nth_elem (find_chi_lambda chi 0 at_index), correct_chi_lambda ll 0 at_index)
 
 (* Finds the indexes of the first pair of corresponding actions *)
 let rec find_corres list dlist i j = 
@@ -107,10 +92,24 @@ let case_f chi =
         match at_indexes with
         | (a, b) -> 
             let nth_elemA = List.nth el a in 
-                let nth_elemB = List.nth el b in
-                    let chi_lambdaA = find_chi_lambda chi 0 a in
-                        let chi_lambdaB = find_chi_lambda chi 0 b in
-                            LChi(subst_first (subst_first el nth_elemA chi_lambdaA) nth_elemB chi_lambdaB , correct_chi_lambda (correct_chi_lambda ll 0 a) 0 b)
+            let nth_elemB = List.nth el b in
+            let elemA_isNil = List.nth ll a in
+            let elemB_isNil = List.nth ll b in
+            if elemA_isNil = LNil || elemB_isNil = LNil then
+                match elemA_isNil, elemB_isNil with
+                | LNil, LNil -> if a < b then reduceChi (reduceChi chi a 0) (b-1) 0 else reduceChi (reduceChi chi a 0) b 0
+                | LNil, _ -> let r_chi = reduceChi chi a 0 in
+                             (match r_chi with
+                             | LChi(el1, ll1) when a < b -> let chi_lambdaB = find_chi_lambda r_chi 0 (b-1) in (LChi(subst_first el1 nth_elemB chi_lambdaB, correct_chi_lambda ll1 0 (b-1)))
+                             | LChi(el1, ll1) when a > b -> let chi_lambdaB = find_chi_lambda r_chi 0 b in (LChi(subst_first el1 nth_elemB chi_lambdaB, correct_chi_lambda ll1 0 b)))
+                | _, LNil -> let r_chi = reduceChi chi b 0 in
+                             (match r_chi with
+                             | LChi (el1, ll1) when a < b -> let chi_lambdaA = find_chi_lambda r_chi 0 a in (LChi(subst_first el1 nth_elemA chi_lambdaA, correct_chi_lambda ll1 0 a))
+                             | LChi (el1, ll1) when a > b -> let chi_lambdaA = find_chi_lambda r_chi 0 (a-1) in (LChi(subst_first el1 nth_elemA chi_lambdaA, correct_chi_lambda ll1 0 (a-1))))
+            else
+            let chi_lambdaA = find_chi_lambda chi 0 a in
+            let chi_lambdaB = find_chi_lambda chi 0 b in
+            LChi(subst_first (subst_first el nth_elemA chi_lambdaA) nth_elemB chi_lambdaB , correct_chi_lambda (correct_chi_lambda ll 0 a) 0 b)
 
 (* Checks whether there are corresponding actions in list *)
 let rec exist_corres list =
@@ -120,14 +119,6 @@ let rec exist_corres list =
         match hd with
         | EEta(AIn(a)) -> List.exists ((=) (EEta(AOut(a)))) tl || exist_corres tl
         | EEta(AOut(a)) -> List.exists ((=) (EEta(AIn(a)))) tl || exist_corres tl
-
-(* Defines the joining of two LChi or between a LList and a LChi *)
-let join_chis lhs rhs = 
-    match lhs, rhs with
-    | LChi(le, ll), LChi(re, rl) -> LChi(le@re, ll@rl)
-    | LChi(le, ll), LList(e, lst) -> LChi(le@[e], ll@[lst])
-    | LList(e, lst), LChi(le, ll) -> LChi(le@[e], ll@[lst])
-    | _, _ -> raise(RuntimeException "join_chi failed: Not a chi or list.")
 
 (* Checks if elem exists in el by trying to get its index. If so, also checks if there is a LChi at i_at in ll. *)
 (* Returns true if both conditions are met, otherwise returns false. *)
@@ -158,6 +149,51 @@ let case_g elem chi =
             let f_el = List.filteri ( fun i _ -> if i!=i_at then true else false) el in
                 let f_ll = List.filteri ( fun i _ -> if i!=i_at then true else false) ll in
                     join_chis (LChi(f_el, f_ll)) (get_chi_at ll i_at)
+
+let exists_and_par elem chi =
+    match chi with
+    | LChi(el, ll) -> 
+        let i_at = find el elem in
+            if i_at = -1 then false else
+                let res = List.filteri(
+                    fun i a -> 
+                        if i = i_at then 
+                            match a with
+                            | LPar(_, _) -> true
+                            | _ -> false
+                        else false) ll in 
+                            if List.length res = 1 then true else false
+
+(* Used for cases where a LPar is nested inside a LChi *)
+let rec lparToChi lpar =
+    match lpar with
+    | LPar(m1, m2) ->
+            (match m1, m2 with
+            | LNil, LNil -> LNil
+            | LList(e1, l1), LList(e2, l2) -> LChi([e1;e2], [l1; l2])
+            | LChi(_, _), LList(_, _) | LList(_, _), LChi(_, _) -> join_chis m1 m2
+            | LPar(m11, m22), LList(e2, l2) -> 
+                let currExp exp =
+                        lparToChi m1
+                in if (currExp m1) = LNil then m2 else join_chis (currExp m1) m2
+            | LList(e2, l2), LPar(m11, m22) ->
+                let currExp exp =
+                        lparToChi m2
+                in if (currExp m2) = LNil then m1 else join_chis m1 (currExp m2)
+            | LNil, LPar(_, _) -> lparToChi m2
+            | LPar(_,_), LNil -> lparToChi m1
+            | LNil, _ -> m2
+            | _, LNil -> m1)
+    | _ -> raise (RuntimeException "lparToChi failed: Not a LPar.")
+
+let case_h elem chi =
+    match chi with
+    | LChi(el, ll) ->
+        let i_at = find el elem in
+            let f_el = List.filteri ( fun i _ -> if i!=i_at then true else false) el in
+                let f_ll = List.filteri ( fun i _ -> if i!=i_at then true else false) ll in
+                    join_chis (LChi(f_el, f_ll)) (lparToChi (get_chi_at ll i_at))
+
 
 (* Retrieves the lambdas from a LPar type and adds them to a list *)
 let rec lparToList exp = 
@@ -198,6 +234,8 @@ let eval_par lhs rhs =
                 | LChi(hd::tl, hd1::tl1), LNil -> LPar(lhs, lb))                                     (* Case D *)
             | AOut(k), _, _, _ when exists_and_chi (EEta(AIn(k))) rhs -> LPar(l1, case_g (EEta(AIn(k))) rhs)    (* Case G *)
             | AIn(k), _, _, _ when exists_and_chi (EEta(AOut(k))) rhs -> LPar(l1, case_g (EEta(AOut(k))) rhs)   (* Case G *)
+            | AOut(k), _, _, _ when exists_and_par (EEta(AIn(k))) rhs -> LPar(l1, case_h (EEta(AIn(k))) rhs)
+            | AIn(k), _, _, _ when exists_and_par (EEta(AOut(k))) rhs -> LPar(l1, case_h (EEta(AOut(k))) rhs)
             | _, _, _, _ when exist_corres (EEta(b)::EEta(c)::l2) -> LPar(LList(EEta(a), l1), case_f (LChi(EEta(b)::EEta(c)::l2, l3))) (* Case F *)
             | AOut(k), _ , _, _ -> if List.exists ((=) (EEta(AIn(k)))) (EEta(b)::EEta(c)::l2) 
                                    then LPar(l1, case_e (EEta(AIn(k))) (LChi(EEta(b)::EEta(c)::l2, l3))) (* Case E *)
@@ -223,6 +261,8 @@ let eval_par lhs rhs =
                 | LNil, LList(d,e) -> LPar(lc, rhs))
             | AOut(k), _, _, _ when exists_and_chi (EEta(AIn(k))) lhs -> LPar(case_g (EEta(AIn(k))) lhs, l1)
             | AIn(k), _, _, _ when exists_and_chi (EEta(AOut(k))) lhs -> LPar(case_g (EEta(AOut(k))) lhs, l1)
+            | AOut(k), _, _ ,_ when exists_and_par (EEta(AIn(k))) lhs -> LPar(case_h (EEta(AIn(k))) lhs, l1)
+            | AIn(k), _, _, _ when exists_and_par (EEta(AOut(k))) lhs -> LPar(case_h (EEta(AOut(k))) lhs, l1)
             | _, _, _, _ when exist_corres (EEta(b)::EEta(c)::l2) -> LPar(case_f (LChi(EEta(b)::EEta(c)::l2, l3)), LList(EEta(a), l1))
             | AOut(k), _, _, _ -> if List.exists ((=) (EEta(AIn(k)))) (EEta(b)::EEta(c)::l2) 
                                   then LPar(case_e (EEta(AIn(k))) (LChi(EEta(b)::EEta(c)::l2, l3)), l1)
@@ -231,34 +271,35 @@ let eval_par lhs rhs =
                                  then LPar(case_e (EEta(AOut(k))) (LChi(EEta(b)::EEta(c)::l2, l3)), l1)
                                  else join_chis lhs rhs
         end
-    (* Cases where one side is a Chi and the other is LNil *)
+    (* Cases where one side is a Chi with two top levels and the other is LNil *)
     (* May need to add cases where they dont match *)
     | LChi(EEta(b)::EEta(c)::l2, l3), LNil ->
         begin
             match b, c, l3 with
             | AIn(k), AOut(j), [lb; lc] when k = j && List.length l2 = 0 ->
                 (match lb, lc with
-                | LNil, LChi(hd::tl, hd1::tl1) -> LPar(lc, rhs)
-                | LChi(hd::tl, hd1::tl1), LNil -> LPar(lb, rhs)
+                | LNil, _ -> LPar(lc, rhs)
+                | _ , LNil -> LPar(lb, rhs)
                 | LNil, LNil -> LPar(LNil, LNil))
             | AOut(k), AIn(j), [lb; lc] when k = j && List.length l2 = 0 ->
                 (match lb, lc with
-                | LNil, LChi(hd::tl, hd1::tl1) -> LPar(lc, rhs)
-                | LChi(hd::tl, hd1::tl1), LNil -> LPar(lb, rhs)
+                | LNil, _ -> LPar(lc, rhs)
+                | _, LNil -> LPar(lb, rhs)
                 | LNil, LNil -> LPar(LNil, LNil))
+            | AIn(k), AOut(j), _ | AOut(k), AIn(j), _ when k!=j && List.length l2 = 0 -> lhs
         end
     | LNil, LChi(EEta(b)::EEta(c)::l2, l3) ->
         begin
             match b, c, l3 with
             | AIn(k), AOut(j), [lb; lc] when k = j && List.length l2 = 0 ->
                 (match lb, lc with
-                | LNil, LChi(hd::tl, hd1::tl1) -> LPar(lhs, lc)                                      
-                | LChi(hd::tl, hd1::tl1), LNil -> LPar(lhs, lb)
+                | LNil, _ -> LPar(lhs, lc)                                      
+                | _ , LNil -> LPar(lhs, lb)
                 | LNil, LNil -> LPar(LNil, LNil))                                     
             | AOut(k), AIn(j), [lb; lc] when k = j && List.length l2 = 0 ->
                 (match lb, lc with
-                | LNil, LChi(hd::tl, hd1::tl1) -> LPar(lhs, lc)                                      
-                | LChi(hd::tl, hd1::tl1), LNil -> LPar(lhs, lb)
+                | LNil, _ -> LPar(lhs, lc)                                      
+                | _ , LNil -> LPar(lhs, lb)
                 | LNil, LNil -> LPar(LNil, LNil))                                     
         end
     (* Cases where lhs is a LChi with only one Eta and rhs is a LList *)
@@ -276,9 +317,23 @@ let eval_par lhs rhs =
             | _, [LNil], _, _ -> LPar(lhs, LList(a, LNil))
         end
     (* Probably only works for LLists now *)
+    | LChi(el1, ll1), LChi(el2, ll2) -> 
+        let rec calcChi chi =
+            if !verbose then 
+                let _ = print_lambdas fmt chi in let _ = printf " ---> " in let _ = print_proc_simple fmt (toProc chi) in printf "\n"
+            else if !simplified then
+                let _ = print_proc_simple fmt (toProc chi) in printf "\n"
+            else ();
+            match chi with
+            | LChi(el3, ll3) -> 
+            if exist_corres el3 then calcChi (case_f chi) else 
+                match chi with
+                | LChi([], []) -> LNil
+                | LChi(_, _) -> chi
+        in calcChi (join_chis lhs rhs)
     | LNil, _ -> rhs
     | _, LNil -> lhs
-    | _, _ -> raise (RuntimeException "No match in eval_par\n") (* Results in infinite loop *)
+    | _, _ -> print_lambdas fmt (LPar(lhs,rhs));printf "\n";raise (RuntimeException "No match in eval_par\n") (* Results in infinite loop *)
 
 let rec eval exp =
     if !verbose then
@@ -295,6 +350,7 @@ let rec eval exp =
     | LChi(el, ll) -> exp
 
 (* Receives a list of process permutations and calls eval on each one *)
+(* Note: It assumes LPar is left associative. Any previous associations are discarded in permut.*)
 let rec assign_eval expLst =
     match expLst with
     | [] -> []
@@ -306,7 +362,6 @@ let rec assign_eval expLst =
             | x::t -> LPar(currExp t, x)
             end
         in (eval (currExp hd))::(assign_eval tl)
-
 
 let main exp =
     let toList = lparToList exp in
@@ -327,6 +382,20 @@ let main exp =
 ;;
 
 (* ------------------- TESTING -------------------- *)
-(* a.0 -> SUCCESSO *)
 
-main (LPar( LPar(LList(EEta(AIn('a')), LList(EEta(AOut('b')), LNil)), LList(EEta(AOut('a')), LNil)), LList(EEta(AIn('b')), LNil)));;
+(* print_lambdas fmt ( lparToChi ( LPar(LList(EEta(AOut('b')), LNil), LNil) )  ) *)
+
+
+ main (LPar( LPar( LList(EEta(AIn('a')), LPar(LList(EEta(AOut('b')), LNil) , LList( EEta(AIn('c')), LList(EEta(AIn('d')), LNil)))) , LList(EEta(AIn('b')), LNil)) ,
+LList(EEta(AOut('a')), LPar(LList(EEta(AOut('c')), LNil) , LList(EEta(AOut('d')), LNil))) ))  
+
+(* )
+print_lambdas fmt (reduceChi (reduceChi (LChi([EEta(AIn('b')) ; EEta(AOut('b')) ; EEta(AIn('c')) ; EEta(AOut('c')) ; EEta(AOut('d'))], [LNil; LNil; LList(EEta(AIn('d')), LNil); LNil; LNil])) 0 0) 0 0 ); printf "\n";
+print_lambdas fmt (case_f (LChi([EEta(AIn('b')) ; EEta(AOut('b')) ; EEta(AIn('c')) ; EEta(AOut('c')) ; EEta(AOut('d'))], [LNil; LNil; LList(EEta(AIn('d')), LNil); LNil; LNil])))
+*)
+
+(*)
+let (x,y) = find_corres [EEta(AOut('c')); EEta(AOut('d')) ; EEta(AOut('b')) ; EEta(AIn('c'))] [EEta(AOut('c')); EEta(AOut('d')) ; EEta(AOut('b')) ; EEta(AIn('c'))] 0 0
+in printf "(%d, %d)" x y
+*)
+
