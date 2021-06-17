@@ -29,6 +29,7 @@ let rec reduceChi chi i_at i =
         if i = i_at then (LChi(tl, tl1)) else join_chis (LChi([hd],[hd1])) (reduceChi (LChi(tl, tl1)) i_at (i+1))
 
 (* Removes the EEta from a LChi's LList at index i_at *)
+(* -> Pode ser condensado <-*)
 let rec correct_chi_lambda ll curr_i i_at =
     match ll with
     | [] -> raise (RuntimeException "correct_chi_lambda failed: Empty lambda list")
@@ -36,6 +37,7 @@ let rec correct_chi_lambda ll curr_i i_at =
         (match hd with
         | LList(EEta(_), LList(EEta(a), l)) -> LList(EEta(a), l)::tl
         | LList(EEta(_), LNil) -> LNil::tl
+        | LList(EEta(_), LPar(m1, m2)) -> LPar(m1,m2)::tl
         | LNil -> tl
         | _ -> print_lambdas fmt hd ;raise (RuntimeException "correct_chi_lambda failed: No match "))
         else hd::(correct_chi_lambda tl (curr_i+1) i_at)
@@ -47,6 +49,7 @@ let rec find_chi_lambda chi curr_i i_at =
         (match hd with
         | LList(a, LList(b, l)) -> a
         | LList(a, LNil) -> a
+        | LList(a, LPar(_, _)) -> a
         | _ -> print_lambdas fmt hd ;raise (RuntimeException "find_chi_lambda failed: Unexpected match")) (* Pode ser preciso para o 3º caso*)
         else find_chi_lambda (LChi(et, tl)) (curr_i+1) i_at
 
@@ -343,7 +346,7 @@ let rec assign_eval expLst =
             begin
             match exp with
             | [x; t] -> printf "\n\n"; LPar(x, t) 
-            | x::t -> LPar(currExp t, x)
+            | x::t -> LPar(x, currExp t)
             end
         in (eval (currExp hd))::(assign_eval tl)
 
@@ -351,20 +354,22 @@ let main exp =
     let toList = lparToList exp in
     let res = if List.length toList <= 2 
               then (eval exp)::[] 
-              else let perm_lst = permut [] toList in printFinalArr fmt perm_lst; List.rev (assign_eval perm_lst)
+              else let perm_lst = permut [] toList in 
+              printFinalArr fmt perm_lst; assign_eval (List.rev perm_lst) (* List reversed because assign_eval evaluates the tail first *)
     in
-    let findings = proc_findings res in
+    let findings = proc_findings (List.rev res) in
     if List.length findings = List.length res
     then printf "\nThe process has a deadlock: every process permutation is blocked.\n"
     else if List.length findings = 0 
         then printf "\nThe process is deadlock-free.\n"
         else print_findings findings;
-    if !verbose then let _ = printf "\n" in print_list fmt res else ()
+    if !verbose then let _ = printf "\n" in print_list fmt (List.rev res) else ()
 ;;
 
 (* ------------------- TESTING -------------------- *)
+(* main ( LPar(LPar(LList(EEta(AOut('b')), LPar(LNil, LNil)), LList(EEta(AIn('b')), LNil) ), LList(EEta(AIn('b')), LList(EEta(AOut('b')), LPar(LList(EEta(AOut('a')) , LNil) , LList(EEta(AIn('a')) , LNil))))) ) *)
 
-main (LPar( LPar( LList(EEta(AIn('a')), LPar(LList(EEta(AOut('b')), LNil) , LList( EEta(AIn('c')), LList(EEta(AIn('d')), LNil)))) , LList(EEta(AIn('b')), LNil)) ,
-LList(EEta(AOut('a')), LPar(LList(EEta(AOut('c')), LNil) , LList(EEta(AOut('d')), LNil))) ))
+(* assign_eval (List.rev (permut [] (lparToList  ( LPar( LPar( LList(EEta(AIn('a')) , LList(EEta(AIn('a')), LNil)) , LNil) , LList(EEta(AIn('a')) , LList(EEta(AOut('b')), LNil)))))))*)
+main ( LPar(LPar(LList(EEta(AOut('b')), LPar(LNil, LNil)), LList(EEta(AIn('b')), LNil) ), LList(EEta(AIn('b')), LList(EEta(AOut('b')), LPar(LList(EEta(AOut('a')) , LNil) , LList(EEta(AIn('a')) , LNil))))) )
 
 

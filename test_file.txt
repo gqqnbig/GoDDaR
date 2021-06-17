@@ -76,8 +76,10 @@ main ( LPar( LList(EEta(AIn('a')) , LList(EEta(AIn('a')), LNil)) , LPar( LList(E
 
 (* 22. a?.(b!.0 || c?.d?.0) || b?.0 || a!.(c!.0 || d!.0) -> SUCESSO *)
 main (LPar( LPar( LList(EEta(AIn('a')), LPar(LList(EEta(AOut('b')), LNil) , LList( EEta(AIn('c')), LList(EEta(AIn('d')), LNil)))) , LList(EEta(AIn('b')), LNil)) ,
-LList(EEta(AOut('a')), LPar(LList(EEta(AOut('c')), LNil) , LList(EEta(AOut('d')), LNil))) ))
+LList(EEta(AOut('a')), LPar(LList(EEta(AOut('c')), LNil) , LList(EEta(AOut('d')), LNil))) ));
 
+(* 23. 0 || 0 || 0  -> SUCESSO *)
+main ( LPar(LPar(LNil, LNil), LNil) )
 
 
 
