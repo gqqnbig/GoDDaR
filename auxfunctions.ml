@@ -34,3 +34,20 @@ let rec subst_first list replaced replacer =
     match list with
     | [] -> []
     | hd::tl -> if hd = replaced then replacer::tl else hd::(subst_first tl replaced replacer)
+
+
+
+(* ------------------- COMMAND LINE ARGUMENTS -------------------- *)
+
+let usage_msg = "Usage: ./dlock [-v | -s] <file1> [<file2>] ... -o <output>"
+let verbose = ref false
+let simplified = ref false
+let procInput = ref false
+
+let speclist =
+    [("-v", Arg.Set verbose, "Output debug information");
+     ("-s", Arg.Set simplified, "Output a simpler representation of the process");
+     ("-p", Arg.Set procInput, "Input is a Proc type, which is translated to a Lamba type");
+     ("  ", Arg.Unit (fun () -> ()), "Output the verdict only")]
+
+let cmdParse = Arg.parse speclist (fun x -> raise (Arg.Bad ("Bad argument: " ^ x))) usage_msg

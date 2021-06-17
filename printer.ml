@@ -2,6 +2,7 @@
 
 open Format
 open Types
+open Auxfunctions
 
 let fmt = Format.std_formatter
 
@@ -56,6 +57,18 @@ let rec print_proc_simple fmt p =
     | PPar(p1, p2) -> fprintf fmt "(%a || %a)" print_proc_simple p1 print_proc_simple p2
 
 (* ----------- Misc ----------- *)
+
+let printFinalArr fmt lst =
+    if !verbose then
+        let i = ref 0 in List.map (fun x -> i := !i+1; printf "---- %d ----\n" !i;List.map (fun y -> print_lambdas fmt y; printf "\n") x; printf "\n\n") lst
+    else ()::[]
+
+let printMode fmt exp =
+    if !verbose then
+        let _ = print_lambdas fmt exp in let _ = printf " ---> " in let _ = print_proc_simple fmt (toProc exp) in printf "\n"
+    else if !simplified then
+        let _ = print_proc_simple fmt (toProc exp) in printf "\n"
+    else ()
 
 let rec print_list fmt lst =
     let rec lambda_list lst =
