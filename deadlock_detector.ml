@@ -221,12 +221,12 @@ let eval_par lhs rhs =
             match a, b, c, l3 with
             | _, AIn(k), AOut(j), [lb; lc] when k = j && List.length l2 = 0 ->
                 (match lb, lc with
-                | LNil, LChi(hd::tl, hd1::tl1) -> LPar(lhs, lc)                                      (* Case C *)
-                | LChi(hd::tl, hd1::tl1), LNil -> LPar(lhs, lb))                                     (* Case D *)
+                | LNil, _ -> LPar(lhs, lc)                                      (* Case C *)
+                | _, LNil -> LPar(lhs, lb))                                     (* Case D *)
             | _, AOut(k), AIn(j), [lb; lc] when k = j && List.length l2 = 0 ->
                 (match lb, lc with
-                | LNil, LChi(hd::tl, hd1::tl1) -> LPar(lhs, lc)                                      (* Case C *)
-                | LChi(hd::tl, hd1::tl1), LNil -> LPar(lhs, lb))                                     (* Case D *)
+                | LNil, _ -> LPar(lhs, lc)                                      (* Case C *)
+                | _, LNil -> LPar(lhs, lb))                                     (* Case D *)
             | AOut(k), _, _, _ when exists_and_chi (EEta(AIn(k))) rhs -> LPar(l1, case_g (EEta(AIn(k))) rhs)    (* Case G *)
             | AIn(k), _, _, _ when exists_and_chi (EEta(AOut(k))) rhs -> LPar(l1, case_g (EEta(AOut(k))) rhs)   (* Case G *)
             | AOut(k), _, _, _ when exists_and_par (EEta(AIn(k))) rhs -> LPar(l1, case_h (EEta(AIn(k))) rhs)
@@ -303,21 +303,23 @@ let eval_par lhs rhs =
             match a, ll, e, l with
             | _, [LNil], _, _ -> LPar(LList(a, LNil), rhs)
             | EEta(AOut(j)), _, EEta(AIn(k)), _ ->  if k = j then LPar(case_e (EEta(AOut(k))) lhs, l) else join_chis lhs rhs
-            | EEta(AIn(j)), _, EEta(AOut(k)), _ -> if k = j then  LPar(case_e (EEta(AIn(k))) lhs, l) else join_chis lhs rhs
+            | EEta(AIn(j)), _, EEta(AOut(k)), _ -> if k = j then LPar(case_e (EEta(AIn(k))) lhs, l) else join_chis lhs rhs
             | _, _, _, _ -> join_chis lhs rhs
         end
     | LList(e, l), LChi([a], ll) ->
         begin
             match a, ll, e, l with
             | _, [LNil], _, _ -> LPar(lhs, LList(a, LNil))
+            | EEta(AOut(j)), _, EEta(AIn(k)), _ -> if k = j then LPar(l, case_e (EEta(AOut(k))) rhs) else join_chis lhs rhs
+            | EEta(AIn(j)), _, EEta(AOut(k)), _ -> if k = j then LPar(l, case_e (EEta(AIn(k))) rhs) else join_chis lhs rhs
+            | _, _, _, _ -> join_chis lhs rhs
         end
     (* Probably only works for LLists now *)
     | LChi(el1, ll1), LChi(el2, ll2) -> 
         let rec calcChi chi =
-            printMode fmt chi;
             match chi with
             | LChi(el3, ll3) -> 
-            if exist_corres el3 then calcChi (case_f chi) else 
+            if exist_corres el3 then (printMode fmt chi; calcChi (case_f chi)) else 
                 match chi with
                 | LChi([], []) -> LNil
                 | LChi(_, _) -> chi
@@ -341,21 +343,18 @@ let rec eval exp =
 let rec assign_eval expLst =
     match expLst with
     | [] -> []
-    | hd::tl ->
-        let rec currExp exp =
-            begin
-            match exp with
-            | [x; t] -> printf "\n\n"; LPar(x, t) 
-            | x::t -> LPar(x, currExp t)
-            end
-        in (eval (currExp hd))::(assign_eval tl)
+    | hd::tl -> let r_hd = List.rev hd in (eval (arrange_perms r_hd))::(assign_eval tl)
+and arrange_perms exp =
+    match exp with
+    | [h; t] -> printf "\n\n";LPar(t, h)
+    | h::t -> LPar(arrange_perms t, h)
 
 let main exp =
     let toList = lparToList exp in
     let res = if List.length toList <= 2 
               then (eval exp)::[] 
               else let perm_lst = permut [] toList in 
-              printFinalArr fmt perm_lst; assign_eval (List.rev perm_lst) (* List reversed because assign_eval evaluates the tail first *)
+              printFinalArr fmt perm_lst; assign_eval (List.rev perm_lst)
     in
     let findings = proc_findings (List.rev res) in
     if List.length findings = List.length res
@@ -370,6 +369,8 @@ let main exp =
 (* main ( LPar(LPar(LList(EEta(AOut('b')), LPar(LNil, LNil)), LList(EEta(AIn('b')), LNil) ), LList(EEta(AIn('b')), LList(EEta(AOut('b')), LPar(LList(EEta(AOut('a')) , LNil) , LList(EEta(AIn('a')) , LNil))))) ) *)
 
 (* assign_eval (List.rev (permut [] (lparToList  ( LPar( LPar( LList(EEta(AIn('a')) , LList(EEta(AIn('a')), LNil)) , LNil) , LList(EEta(AIn('a')) , LList(EEta(AOut('b')), LNil)))))))*)
-main ( LPar(LPar(LList(EEta(AOut('b')), LPar(LNil, LNil)), LList(EEta(AIn('b')), LNil) ), LList(EEta(AIn('b')), LList(EEta(AOut('b')), LPar(LList(EEta(AOut('a')) , LNil) , LList(EEta(AIn('a')) , LNil))))) )
+
+main (LPar( LPar( LList(EEta(AIn('a')), LPar(LList(EEta(AOut('b')), LNil) , LList( EEta(AIn('c')), LList(EEta(AIn('d')), LNil)))) , LList(EEta(AIn('b')), LNil)) ,
+LList(EEta(AOut('a')), LPar(LList(EEta(AOut('c')), LNil) , LList(EEta(AOut('d')), LNil))) ));
 
 

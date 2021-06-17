@@ -79,7 +79,10 @@ main (LPar( LPar( LList(EEta(AIn('a')), LPar(LList(EEta(AOut('b')), LNil) , LLis
 LList(EEta(AOut('a')), LPar(LList(EEta(AOut('c')), LNil) , LList(EEta(AOut('d')), LNil))) ));
 
 (* 23. 0 || 0 || 0  -> SUCESSO *)
-main ( LPar(LPar(LNil, LNil), LNil) )
+main ( LPar(LPar(LNil, LNil), LNil) );
+
+(* 24. b!.(0 || 0) || b?.0 || b?.b!.(a!.0 || a?.0) SUCESSO --------------------------- DEADLOCK *)
+main ( LPar(LPar(LList(EEta(AOut('b')), LPar(LNil, LNil)), LList(EEta(AIn('b')), LNil) ), LList(EEta(AIn('b')), LList(EEta(AOut('b')), LPar(LList(EEta(AOut('a')) , LNil) , LList(EEta(AIn('a')) , LNil))))) )
 
 
 
