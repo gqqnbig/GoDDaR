@@ -244,16 +244,12 @@ let eval_par lhs rhs =
             match a, b, c, l3 with
             | _, AIn(k), AOut(j), [lb; lc] when k = j && List.length l2 = 0 ->
                 (match lb, lc with
-                | LNil, LChi(hd::tl, hd1::tl1) -> LPar(lc, rhs)
-                | LChi(hd::tl, hd1::tl1), LNil -> LPar(lb, rhs)
-                | LList(d,e), LNil -> LPar(lb, rhs)
-                | LNil, LList(d,e) -> LPar(lc, rhs))
+                | LNil, _ -> LPar(lc, rhs)
+                | _, LNil -> LPar(lb, rhs))
             | _, AOut(k), AIn(j), [lb; lc] when k = j && List.length l2 = 0 ->
                 (match lb, lc with
-                | LNil, LChi(hd::tl, hd1::tl1) -> LPar(lc, rhs)
-                | LChi(hd::tl, hd1::tl1), LNil -> LPar(lb, rhs)
-                | LList(d,e), LNil -> LPar(lb, rhs)
-                | LNil, LList(d,e) -> LPar(lc, rhs))
+                | LNil, _ -> LPar(lc, rhs)
+                | _, LNil -> LPar(lb, rhs))
             | AOut(k), _, _, _ when exists_and_chi (EEta(AIn(k))) lhs -> LPar(case_g (EEta(AIn(k))) lhs, l1)
             | AIn(k), _, _, _ when exists_and_chi (EEta(AOut(k))) lhs -> LPar(case_g (EEta(AOut(k))) lhs, l1)
             | AOut(k), _, _ ,_ when exists_and_par (EEta(AIn(k))) lhs -> LPar(case_h (EEta(AIn(k))) lhs, l1)
@@ -370,7 +366,62 @@ let main exp =
 
 (* assign_eval (List.rev (permut [] (lparToList  ( LPar( LPar( LList(EEta(AIn('a')) , LList(EEta(AIn('a')), LNil)) , LNil) , LList(EEta(AIn('a')) , LList(EEta(AOut('b')), LNil)))))))*)
 
-main (LPar( LPar( LList(EEta(AIn('a')), LPar(LList(EEta(AOut('b')), LNil) , LList( EEta(AIn('c')), LList(EEta(AIn('d')), LNil)))) , LList(EEta(AIn('b')), LNil)) ,
-LList(EEta(AOut('a')), LPar(LList(EEta(AOut('c')), LNil) , LList(EEta(AOut('d')), LNil))) ));
+(*)
+let rec combinations head tail list toAdd =
+    match tail, toAdd with
+    | hd::tl, [] -> (head::hd::tl)@(combinations head tl list (hd::toAdd))
+    | hd::[], _ -> head::hd::toAdd
+    | hd::tl, _ -> head::hd::(toAdd@tl)@(combinations head tl list toAdd@[hd])
+*)
 
 
+
+let rec combinations head tail toAdd =
+    match tail, toAdd with
+    | [], _ -> []
+    | hd::tl, [] -> (head::hd::tl)::(combinations head tl (hd::toAdd))
+    | hd::tl, _ -> (head::hd::(toAdd@tl))::(combinations head tl (toAdd@[hd]))
+
+let rec comb list toAdd = 
+    match list, toAdd with
+    | [], _ -> []
+    | hd::tl, [] -> (combinations hd tl [])::(comb tl (hd::toAdd))
+    | hd::tl, _ -> (combinations hd tl toAdd)::(comb tl (toAdd@[hd]))
+
+let rec concatStrings strings =
+    match strings with
+    | [] -> []
+    | hd::tl -> 
+        (match hd with
+        | [] -> []
+        | h::m::t -> ((h ^ m)::t)::(concatStrings tl))
+
+let rec loopl cStrings =
+    match cStrings with
+    | [] -> []
+    | hd::tl -> 
+        (match hd with
+        | [x;t] -> (loopl tl)@(concatStrings [hd])
+        | [x;m;t] -> (loopl tl@(loopl (concatStrings (combinations x [m;t] []))))
+        | x::t -> (loopl tl@(loopl (List.map (fun z -> x::z) (concatStrings (List.flatten (comb t [])))))))    
+
+
+let rec topComb list =
+    let comb_res = List.flatten (comb list []) in
+        let concStrings = concatStrings comb_res in
+            loopl concStrings
+
+
+(* concatStrings (combinations "ab" ["c";"d"] [])  *)
+
+
+(*        in 
+        let comb_res = List.flatten (comb list []) in
+
+        in
+        let concStrings = concatStrings comb_res in
+        let rec loopi arr =
+            match arr with
+            | [] -> []
+            | hd::tl -> topComb hd
+        in loopi concStrings*)
