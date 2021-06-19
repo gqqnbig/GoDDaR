@@ -362,66 +362,44 @@ let main exp =
 ;;
 
 (* ------------------- TESTING -------------------- *)
-(* main ( LPar(LPar(LList(EEta(AOut('b')), LPar(LNil, LNil)), LList(EEta(AIn('b')), LNil) ), LList(EEta(AIn('b')), LList(EEta(AOut('b')), LPar(LList(EEta(AOut('a')) , LNil) , LList(EEta(AIn('a')) , LNil))))) ) *)
 
-(* assign_eval (List.rev (permut [] (lparToList  ( LPar( LPar( LList(EEta(AIn('a')) , LList(EEta(AIn('a')), LNil)) , LNil) , LList(EEta(AIn('a')) , LList(EEta(AOut('b')), LNil)))))))*)
-
-(*)
-let rec combinations head tail list toAdd =
-    match tail, toAdd with
-    | hd::tl, [] -> (head::hd::tl)@(combinations head tl list (hd::toAdd))
-    | hd::[], _ -> head::hd::toAdd
-    | hd::tl, _ -> head::hd::(toAdd@tl)@(combinations head tl list toAdd@[hd])
-*)
-
-
-
+(* Outputs the possible combinations, with the head being fixed at the lhs *)
+(* Given combinations 'a' ['b';'c'] [], outputs [['a';'b';'c']; ['a';'c';'b']] *)
 let rec combinations head tail toAdd =
     match tail, toAdd with
     | [], _ -> []
     | hd::tl, [] -> (head::hd::tl)::(combinations head tl (hd::toAdd))
     | hd::tl, _ -> (head::hd::(toAdd@tl))::(combinations head tl (toAdd@[hd]))
 
+(* Iterates the list and applies the combinations function to every element, returning the combinations for the entire list *)
+(* Given comb ['a';'b';'c'] [], outputs [[['a'; 'b'; 'c']; ['a'; 'c'; 'b']]; [['b'; 'c'; 'a']]; []] (which is then flattened) *)
 let rec comb list toAdd = 
     match list, toAdd with
     | [], _ -> []
     | hd::tl, [] -> (combinations hd tl [])::(comb tl (hd::toAdd))
     | hd::tl, _ -> (combinations hd tl toAdd)::(comb tl (toAdd@[hd]))
 
-let rec concatStrings strings =
-    match strings with
+(* Given a list of combinations, this function pairs the first two elements every time it is called *)
+let rec pairExprs exp =
+    match exp with
     | [] -> []
     | hd::tl -> 
         (match hd with
         | [] -> []
-        | h::m::t -> ((h ^ m)::t)::(concatStrings tl))
+        | h::m::t -> (((LPar(h,m))::t))::(pairExprs tl))
 
-let rec loopl cStrings =
-    match cStrings with
+(* Loops the entire procedure of combining the elements and pairing *)
+let rec loopl pExprs =
+    match pExprs with
     | [] -> []
     | hd::tl -> 
         (match hd with
-        | [x;t] -> (loopl tl)@(concatStrings [hd])
-        | [x;m;t] -> (loopl tl@(loopl (concatStrings (combinations x [m;t] []))))
-        | x::t -> (loopl tl@(loopl (List.map (fun z -> x::z) (concatStrings (List.flatten (comb t [])))))))    
+        | [x;t] -> (loopl tl)@(pairExprs [hd])
+        | [x;m;t] -> (loopl tl@(loopl (pairExprs (combinations x [m;t] []))))
+        | x::t -> (loopl tl@(loopl (List.map (fun z -> x::z) (pairExprs (List.flatten (comb t [])))))))    
 
-
+(* Top-level function for the combination of functions *)
 let rec topComb list =
     let comb_res = List.flatten (comb list []) in
-        let concStrings = concatStrings comb_res in
-            loopl concStrings
-
-
-(* concatStrings (combinations "ab" ["c";"d"] [])  *)
-
-
-(*        in 
-        let comb_res = List.flatten (comb list []) in
-
-        in
-        let concStrings = concatStrings comb_res in
-        let rec loopi arr =
-            match arr with
-            | [] -> []
-            | hd::tl -> topComb hd
-        in loopi concStrings*)
+        let prdExprs = pairExprs comb_res in
+            loopl prdExprs
