@@ -35,6 +35,46 @@ let rec subst_first list replaced replacer =
     | [] -> []
     | hd::tl -> if hd = replaced then replacer::tl else hd::(subst_first tl replaced replacer)
 
+(* Outputs the possible combinations, with the head being fixed at the lhs *)
+(* Given combinations 'a' ['b';'c'] [], outputs [['a';'b';'c']; ['a';'c';'b']] *)
+let rec combinations head tail toAdd =
+    match tail, toAdd with
+    | [], _ -> []
+    | hd::tl, [] -> (head::hd::tl)::(combinations head tl (hd::toAdd))
+    | hd::tl, _ -> (head::hd::(toAdd@tl))::(combinations head tl (toAdd@[hd]))
+
+(* Iterates the list and applies the combinations function to every element, returning the combinations for the entire list *)
+(* Given comb ['a';'b';'c'] [], outputs [[['a'; 'b'; 'c']; ['a'; 'c'; 'b']]; [['b'; 'c'; 'a']]; []] (which is then flattened) *)
+let rec comb list toAdd = 
+    match list, toAdd with
+    | [], _ -> []
+    | hd::tl, [] -> (combinations hd tl [])::(comb tl (hd::toAdd))
+    | hd::tl, _ -> (combinations hd tl toAdd)::(comb tl (toAdd@[hd]))
+
+(* Given a list of combinations, this function pairs the first two elements every time it is called *)
+let rec pairExprs exp =
+    match exp with
+    | [] -> []
+    | hd::tl -> 
+        (match hd with
+        | [] -> []
+        | h::m::t -> (((LPar(h,m))::t))::(pairExprs tl))
+
+(* Loops the entire procedure of combining the elements and pairing *)
+let rec loopl pExprs =
+    match pExprs with
+    | [] -> []
+    | hd::tl -> 
+        (match hd with
+        | [x;t] -> (pairExprs [hd])@(loopl tl)
+        | [x;m;t] -> ((loopl (pairExprs (combinations x [m;t] [])))@loopl tl)
+        | x::t -> ((loopl (List.map (fun z -> x::z) (pairExprs (List.flatten (comb t []))))@(loopl tl))))    
+
+(* Top-level function for the combination of functions *)
+let rec topComb list =
+    let comb_res = List.flatten (comb list []) in
+        let prdExprs = pairExprs comb_res in
+            loopl prdExprs
 
 
 (* ------------------- COMMAND LINE ARGUMENTS -------------------- *)

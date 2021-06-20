@@ -6,6 +6,12 @@ open Auxfunctions
 
 let fmt = Format.std_formatter
 
+type print_ctx =
+{
+    print   :   bool;
+    level   :   string;
+}
+
 (* ----------- Action ----------- *)
 
 let print_action fmt a =

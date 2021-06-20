@@ -10,7 +10,7 @@ exception RuntimeException of string
 
 (* ------------------- COMMAND LINE -------------------- *)
 
-let () = cmdParse
+(* let () = cmdParse *)
 
 (* ------------------- AUXILIARY FUNCTIONS -------------------- *)
 
@@ -322,7 +322,7 @@ let eval_par lhs rhs =
         in calcChi (join_chis lhs rhs)
     | LNil, _ -> rhs
     | _, LNil -> lhs
-    | _, _ -> print_lambdas fmt (LPar(lhs,rhs));printf "\n";raise (RuntimeException "No match in eval_par\n")
+    | _, _ -> print_lambdas fmt (LPar(lhs,rhs));printf "-> ";raise (RuntimeException "No match in eval_par\n")
 
 let rec eval exp =
     printMode fmt exp;
@@ -333,6 +333,39 @@ let rec eval exp =
     | LPar(LPar(l3,l4), LNil) -> eval (let e3 = eval l3 in let e4 = eval l4 in eval_par e3 e4)  (* of redudant LNil evaluations *)
     | LPar(l1, l2) -> eval (let e1 = eval l1 in let e2 = eval l2 in eval_par e1 e2)
     | LChi(el, ll) -> exp
+
+let rec sStepEval exp =
+    match exp with
+    | LNil -> LNil
+    | LList(e, l) -> exp
+    | LPar(l1, l2) -> let e1 = sStepEval l1 in let e2 = sStepEval l2 in eval_par e1 e2
+    | LChi(el, ll) -> exp
+
+let rec new_eval expInArr =
+    (* List.iter (fun x -> print_lambdas fmt x; printf "             -> new_eval ITER\n") expInArr; *)
+    match expInArr with
+    | [] -> []
+    | hd::tl -> 
+        (match hd with
+        | (LPar(l1, l2), ctx) ->
+            printf "\n---- %s ----\n" ctx.level;
+            printMode fmt (LPar(l1, l2));
+            let e1 = sStepEval l1 in
+            let e2 = sStepEval l2 in
+            let toList = lparToList (LPar(e1,e2)) in
+            if List.length toList <= 2
+            then 
+                (printf "new_eval THEN: %d\n" (List.length toList);
+                let n_ctx = {ctx with level = ctx.level ^ ".1"} in 
+                printf "\n---- %s ----\n" n_ctx.level;(new_eval tl)@[[((eval (LPar(e1,e2))), n_ctx)]])
+            else (printf "new_eval ELSE: ";
+                printMode fmt (LPar(l1, l2));
+                let flatList = List.flatten (topComb toList) in
+                let i = ref 0 in
+                let lst = List.map ( fun x -> i:=!i+1; (x, {ctx with level = ctx.level ^ "." ^string_of_int !i})) flatList in 
+                (new_eval tl)@(new_eval lst))
+        )
+        
 
 (* Receives a list of process permutations and calls eval on each one *)
 (* Note: It assumes LPar is left associative. Any previous associations are discarded in permut.*)
@@ -346,9 +379,10 @@ and arrange_perms exp =
     | h::t -> LPar(arrange_perms t, h)
 
 let main exp =
-    let toList = lparToList exp in
+    let lamExp = toLambda exp in
+    let toList = lparToList lamExp  in
     let res = if List.length toList <= 2 
-              then (eval exp)::[] 
+              then (eval lamExp)::[] 
               else let perm_lst = permut [] toList in 
               printFinalArr fmt perm_lst; assign_eval (List.rev perm_lst)
     in
@@ -361,45 +395,34 @@ let main exp =
     if !verbose then let _ = printf "\n" in print_list fmt (List.rev res) else ()
 ;;
 
+
 (* ------------------- TESTING -------------------- *)
 
-(* Outputs the possible combinations, with the head being fixed at the lhs *)
-(* Given combinations 'a' ['b';'c'] [], outputs [['a';'b';'c']; ['a';'c';'b']] *)
-let rec combinations head tail toAdd =
-    match tail, toAdd with
-    | [], _ -> []
-    | hd::tl, [] -> (head::hd::tl)::(combinations head tl (hd::toAdd))
-    | hd::tl, _ -> (head::hd::(toAdd@tl))::(combinations head tl (toAdd@[hd]))
 
-(* Iterates the list and applies the combinations function to every element, returning the combinations for the entire list *)
-(* Given comb ['a';'b';'c'] [], outputs [[['a'; 'b'; 'c']; ['a'; 'c'; 'b']]; [['b'; 'c'; 'a']]; []] (which is then flattened) *)
-let rec comb list toAdd = 
-    match list, toAdd with
-    | [], _ -> []
-    | hd::tl, [] -> (combinations hd tl [])::(comb tl (hd::toAdd))
-    | hd::tl, _ -> (combinations hd tl toAdd)::(comb tl (toAdd@[hd]))
+let lres = 
+    let flatList = List.flatten (topComb [LList(EEta(AOut('a')), LNil); LList(EEta(AIn('a')), LNil); LNil; LNil]) in
+    let i = ref 0 in
+    let lst = List.map ( fun x -> i:=!i+1; (x, {print= true; level = string_of_int !i})) flatList in
+        new_eval lst
 
-(* Given a list of combinations, this function pairs the first two elements every time it is called *)
-let rec pairExprs exp =
-    match exp with
-    | [] -> []
-    | hd::tl -> 
-        (match hd with
-        | [] -> []
-        | h::m::t -> (((LPar(h,m))::t))::(pairExprs tl))
 
-(* Loops the entire procedure of combining the elements and pairing *)
-let rec loopl pExprs =
-    match pExprs with
-    | [] -> []
-    | hd::tl -> 
-        (match hd with
-        | [x;t] -> (loopl tl)@(pairExprs [hd])
-        | [x;m;t] -> (loopl tl@(loopl (pairExprs (combinations x [m;t] []))))
-        | x::t -> (loopl tl@(loopl (List.map (fun z -> x::z) (pairExprs (List.flatten (comb t [])))))))    
+let _ = printf "["; List.iter( fun x -> 
+    match x with
+    | (lam, ctx) -> 
+        printf "(";
+        print_lambdas fmt lam; 
+        printf ", ";
+        printf "%s" ctx.level;
+        printf "); ") (List.flatten lres); printf "]\n";;
 
-(* Top-level function for the combination of functions *)
-let rec topComb list =
-    let comb_res = List.flatten (comb list []) in
-        let prdExprs = pairExprs comb_res in
-            loopl prdExprs
+printf "\n %d" (List.length (lparToList (LPar(LPar(LPar(LNil, LNil), LList(EEta(AIn('a')), LNil)), LList(EEta(AOut('a')), LNil)))))
+
+(* main (PPar(PPar(PPref(AOut('a'), PNil), PPref(AIn('a'), PNil)), PNil)) *)
+
+ (* List.iter (fun x -> printMode fmt x) (List.flatten (topComb [LList(EEta(AOut('a')), LNil); LList(EEta(AIn('a')), LNil); LNil; LNil])) *)
+
+(*
+let res = sStepEval (LPar(LList(EEta(AIn('a')), LNil), LList(EEta(AOut('a')), LNil)));;
+let res_1 = eval res;;
+print_lambdas fmt res;
+*)
