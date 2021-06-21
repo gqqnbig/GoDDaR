@@ -22,6 +22,13 @@ type lambda =
     | LChi of eta list * lambda list
     | LPar of lambda * lambda
 
+(* Print_context *)
+type print_ctx =
+{
+    print   :   bool;
+    level   :   string;
+}
+
 (* ---------- Functions ----------  *)
 
 let rec toLambda proc =
@@ -47,3 +54,7 @@ and chi_to_proc chi =
     | LChi(ehd::etl, lhd::ltl) -> 
         let c_ehd = toAction ehd in
         let c_lhd = toProc lhd in PPar(PPref(c_ehd, c_lhd), chi_to_proc (LChi(etl, ltl)))
+
+let assign_ctx lst =
+    let i = ref 0 in
+        List.map (fun x -> i:=!i+1; (x, {print = true; level = string_of_int !i})) lst

@@ -278,6 +278,7 @@ let eval_par lhs rhs =
                 | _, LNil -> LPar(lb, rhs)
                 | LNil, LNil -> LPar(LNil, LNil))
             | AIn(k), AOut(j), _ | AOut(k), AIn(j), _ when k!=j && List.length l2 = 0 -> lhs
+            | _, _, _ -> lhs
         end
     | LNil, LChi(EEta(b)::EEta(c)::l2, l3) ->
         begin
@@ -291,7 +292,8 @@ let eval_par lhs rhs =
                 (match lb, lc with
                 | LNil, _ -> LPar(lhs, lc)                                      
                 | _ , LNil -> LPar(lhs, lb)
-                | LNil, LNil -> LPar(LNil, LNil))                                     
+                | LNil, LNil -> LPar(LNil, LNil))
+            | _, _, _ -> rhs                                     
         end
     (* Cases where lhs is a LChi with only one Eta and rhs is a LList *)
     | LChi([a], ll), LList(e, l) ->
@@ -322,6 +324,8 @@ let eval_par lhs rhs =
         in calcChi (join_chis lhs rhs)
     | LNil, _ -> rhs
     | _, LNil -> lhs
+    | LPar(LNil, LNil), _ -> rhs (* Added just for new_eval *)
+    | _, LPar(LNil, LNil) -> lhs (* Added just for new_eval *)
     | _, _ -> print_lambdas fmt (LPar(lhs,rhs));printf "-> ";raise (RuntimeException "No match in eval_par\n")
 
 let rec eval exp =
@@ -342,28 +346,28 @@ let rec sStepEval exp =
     | LChi(el, ll) -> exp
 
 let rec new_eval expInArr =
-    (* List.iter (fun x -> print_lambdas fmt x; printf "             -> new_eval ITER\n") expInArr; *)
     match expInArr with
     | [] -> []
     | hd::tl -> 
         (match hd with
         | (LPar(l1, l2), ctx) ->
-            printf "\n---- %s ----\n" ctx.level;
+            printCtxLevel ctx.level;
             printMode fmt (LPar(l1, l2));
             let e1 = sStepEval l1 in
             let e2 = sStepEval l2 in
             let toList = lparToList (LPar(e1,e2)) in
             if List.length toList <= 2
-            then 
-                (printf "new_eval THEN: %d\n" (List.length toList);
+            then (
                 let n_ctx = {ctx with level = ctx.level ^ ".1"} in 
-                printf "\n---- %s ----\n" n_ctx.level;(new_eval tl)@[[((eval (LPar(e1,e2))), n_ctx)]])
-            else (printf "new_eval ELSE: ";
+                printCtxLevel n_ctx.level;
+                (new_eval tl)@[[((eval (LPar(e1,e2))), n_ctx)]])
+            else (
                 printMode fmt (LPar(l1, l2));
                 let flatList = List.flatten (topComb toList) in
                 let i = ref 0 in
                 let lst = List.map ( fun x -> i:=!i+1; (x, {ctx with level = ctx.level ^ "." ^string_of_int !i})) flatList in 
                 (new_eval tl)@(new_eval lst))
+        | (_ as l, ctx) -> printCtxLevel ctx.level; [(eval l, ctx)]::(new_eval tl)
         )
         
 
@@ -378,6 +382,25 @@ and arrange_perms exp =
     | [h; t] -> printf "\n\n";LPar(t, h)
     | h::t -> LPar(arrange_perms t, h)
 
+
+let main exp =
+    let lamExp = toLambda exp in
+    let toList = lparToList lamExp  in
+    let res = if List.length toList <= 2 
+              then (new_eval [(lamExp, {print=true; level="1"})])
+              else let comb_lst = List.flatten (topComb toList) in 
+              printFinalArrComb fmt comb_lst; new_eval (assign_ctx comb_lst)
+    in
+    let findings = proc_findings_comb (List.flatten res) in
+    if List.length findings = List.length res
+    then printf "\nThe process has a deadlock: every process permutation is blocked.\n"
+    else if List.length findings = 0 
+        then printf "\nThe process is deadlock-free.\n"
+        else print_findings_comb findings;
+    if !verbose then let _ = printf "\n" in print_list_comb fmt (List.rev (List.flatten res)) else ()
+;;
+
+(*
 let main exp =
     let lamExp = toLambda exp in
     let toList = lparToList lamExp  in
@@ -394,35 +417,7 @@ let main exp =
         else print_findings findings;
     if !verbose then let _ = printf "\n" in print_list fmt (List.rev res) else ()
 ;;
-
+*)
 
 (* ------------------- TESTING -------------------- *)
-
-
-let lres = 
-    let flatList = List.flatten (topComb [LList(EEta(AOut('a')), LNil); LList(EEta(AIn('a')), LNil); LNil; LNil]) in
-    let i = ref 0 in
-    let lst = List.map ( fun x -> i:=!i+1; (x, {print= true; level = string_of_int !i})) flatList in
-        new_eval lst
-
-
-let _ = printf "["; List.iter( fun x -> 
-    match x with
-    | (lam, ctx) -> 
-        printf "(";
-        print_lambdas fmt lam; 
-        printf ", ";
-        printf "%s" ctx.level;
-        printf "); ") (List.flatten lres); printf "]\n";;
-
-printf "\n %d" (List.length (lparToList (LPar(LPar(LPar(LNil, LNil), LList(EEta(AIn('a')), LNil)), LList(EEta(AOut('a')), LNil)))))
-
-(* main (PPar(PPar(PPref(AOut('a'), PNil), PPref(AIn('a'), PNil)), PNil)) *)
-
- (* List.iter (fun x -> printMode fmt x) (List.flatten (topComb [LList(EEta(AOut('a')), LNil); LList(EEta(AIn('a')), LNil); LNil; LNil])) *)
-
-(*
-let res = sStepEval (LPar(LList(EEta(AIn('a')), LNil), LList(EEta(AOut('a')), LNil)));;
-let res_1 = eval res;;
-print_lambdas fmt res;
-*)
+main ( PPar( PPar( PPref(AOut('a'), PPref(AIn('b'), PNil)) , PPref(AIn('a'), PNil)) , PPref(AIn('a'), PPref(AOut('a'), PPref(AOut('b'), PNil))) ) )

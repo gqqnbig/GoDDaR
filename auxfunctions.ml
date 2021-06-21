@@ -76,6 +76,14 @@ let rec topComb list =
         let prdExprs = pairExprs comb_res in
             loopl prdExprs
 
+let proc_findings_comb lst =
+    List.filter (fun y -> if y = None then false else true)
+    (List.map ( fun x -> 
+        match x with
+        | (LNil, _) -> None
+        | (_, ctx) -> Some ctx.level
+    ) lst)
+
 
 (* ------------------- COMMAND LINE ARGUMENTS -------------------- *)
 

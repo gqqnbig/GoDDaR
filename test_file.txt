@@ -10,45 +10,60 @@
 
 (* 1. a?.0 -> SUCCESSO --------------------------- DEADLOCK *) 
 main (LList(EEta(AIn('a')), LNil));
+main (PPref(AIn('a'), PNil));
 
 (* 2. a?.a!.0 -> SUCCESSO --------------------------- DEADLOCK *)
 main (LList(EEta(AIn('a')), LList(EEta(AOut('a')), LNil)));
+main (PPref(AIn('a'), PPref(AOut('a'), PNil)));
 
 (* 3. 0 || 0 -> SUCESSO *)
 main (LPar(LNil, LNil));
+main (PPar(PNil, PNil));
 
 (* 4. a?.0 || a!.0 -> SUCESSO *)
 main (LPar(LList(EEta(AIn('a')), LNil), LList(EEta(AOut('a')), LNil)));
+main (PPar(PPref(AIn('a'), PNil) , PPref(AOut('a'), PNil)));
 
 (* 5. a?.0 || b!.0 -> SUCCESSO --------------------------- DEADLOCK *)
 main (LPar(LList(EEta(AIn('a')), LNil), LList(EEta(AOut('b')), LNil)));
+main (PPar(PPref(AIn('a'), PNil), PPref(AOut('b'), PNil)));
 
 (* 6. a?.b!.0 || a!.b?.0 -> SUCCESSO *)
 main ( LPar( LList(EEta(AIn('a')) , LList(EEta(AOut('b')), LNil) ) , LList(EEta(AOut('a')), LList(EEta(AIn('b')), LNil))) );
+main ( PPar( PPref(AIn('a'), PPref(AOut('b'), PNil)), PPref(AOut('a'), PPref(AIn('b'), PNil)) ));
 
 (* 7. a?.b!.c?.0 || a!.b?.c!.0 -> SUCESSO *)
 main ( LPar( LList(EEta(AIn('a')), LList(EEta(AOut('b')), LList(EEta(AIn('c')), LNil))), LList(EEta(AOut('a')), LList(EEta(AIn('b')), LList(EEta(AOut('c')), LNil))) ));
+main ( PPar( PPref(AIn('a'), PPref(AOut('b'), PPref(AIn('c'), PNil))) , PPref(AOut('a'), PPref(AIn('b'), PPref(AOut('c'), PNil)))))
 
 (* 8. a?.b!.c?.0 || a!.c!.b?.0 -> SUCESSO --------------------------- DEADLOCK *)
 main ( LPar( LList(EEta(AIn('a')), LList(EEta(AOut('b')), LList(EEta(AIn('c')), LNil))), LList(EEta(AOut('a')), LList(EEta(AOut('c')), LList(EEta(AIn('b')), LNil))) ));
+main ( PPar( PPref(AIn('a'), PPref(AOut('b'), PPref(AIn('c'), PNil))) , PPref(AOut('a'), PPref(AOut('c'), PPref(AIn('b'), PNil)))))
 
 (* 9. a?.b?.0 || a!.b!.c!.0 -> SUCCESSO --------------------------- DEADLOCK *)
 main ( LPar(LList(EEta(AIn('a')), LList(EEta(AIn('b')), LNil)), LList(EEta(AOut('a')), LList(EEta(AOut('b')), LList(EEta(AOut('c')), LNil)))));
+main ( PPar(PPref(AIn('a'), PPref(AIn('b'), PNil)), PPref(AOut('a'), PPref(AOut('b'), PPref(AOut('c'), PNil)))))
 
 (* 10. a?.0 || a!.b!.c!.0 -> SUCCESSO --------------------------- DEADLOCK *)
 main ( LPar(LList(EEta(AIn('a')), LNil), LList(EEta(AOut('a')), LList(EEta(AOut('b')), LList(EEta(AOut('c')), LNil)))));
+main ( PPar(PPref(AIn('a'), PNil) , PPref(AOut('a'), PPref(AOut('b'), PPref(AOut('c'), PNil)))))
 
 (* 11. 0 || a!.b!.c!.0 -> SUCESSO --------------------------- DEADLOCK *)
 main ( LPar(LNil, LList(EEta(AOut('a')), LList(EEta(AOut('b')), LList(EEta(AOut('c')), LNil)))));
+main ( PPar(PNil, PPref(AOut('a'), PPref(AOut('b'), PPref(AOut('c'), PNil)))) )
 
 (* 12. a!.(0 || 0) || b!.0 *)
 main ( LPar(LList(EEta(AOut('a')), LPar(LNil, LNil)) , LList(EEta(AOut('b')), LNil)) );
+main ( PPar(PPref(AOut('a'), PPar(PNil, PNil)) , PPref(AOut('b'), PNil)) )
 
 (* 12. (a!.b?.c?.0 || a?.b!.0) || c!.0 -> SUCESSO *)
 main ( LPar( LPar( LList(EEta(AOut('a')), LList(EEta(AIn('b')), LList(EEta(AIn('c')), LNil))) , LList(EEta(AIn('a')), LList(EEta(AOut('b')), LNil))), LList(EEta(AOut('c')), LNil)));
+main ( PPar( PPar( PPref(AOut('a'), PPref(AIn('b'), PPref(AIn('c'), PNil))) , PPref(AIn('a'), PPref(AOut('b'), PNil))) , PPref(AOut('c'), PNil)) )
 
+(* Caso especial em que temos de verificar o LChi -> falta fazer *)
 (* 13. a!.b?.0 || a?.0 || a?.a!.b!.0 -> SUCESSO --------------------------- DEADLOCK *)
 main ( LPar(LPar(LList(EEta(AOut('a')), LList(EEta(AIn('b')), LNil)) , LList(EEta(AIn('a')), LNil) ) , LList( EEta(AIn('a')), LList(EEta(AOut('a')), LList( EEta(AOut('b')), LNil)))  ));
+main ( PPar( PPar( PPref(AOut('a'), PPref(AIn('b'), PNil)) , PPref(AIn('a'), PNil)) , PPref(AIn('a'), PPref(AOut('a'), PPref(AOut('b'), PNil))) ) )
 
 (* 14. a!.0 || a?.0 || a?.a!.b!.0 -> SUCESSO --------------------------- DEADLOCK *)
 main ( LPar(LPar(LList(EEta(AOut('a')), LNil) , LList(EEta(AIn('a')), LNil) ) , LList( EEta(AIn('a')), LList(EEta(AOut('a')), LList( EEta(AOut('b')), LNil)))  ));
