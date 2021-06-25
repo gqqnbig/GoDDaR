@@ -35,6 +35,11 @@ let rec subst_first list replaced replacer =
     | [] -> []
     | hd::tl -> if hd = replaced then replacer::tl else hd::(subst_first tl replaced replacer)
 
+let rec subst_at list replacer curr_i i_at =
+    match list with
+    | [] -> []
+    | hd::tl -> if curr_i = i_at then replacer::tl else hd::(subst_at tl replacer (curr_i+1) i_at)
+
 (* Outputs the possible combinations, with the head being fixed at the lhs *)
 (* Given combinations 'a' ['b';'c'] [], outputs [['a';'b';'c']; ['a';'c';'b']] *)
 let rec combinations head tail toAdd =
@@ -84,6 +89,21 @@ let proc_findings_comb lst =
         | (_, ctx) -> Some ctx.level
     ) lst)
 
+let rec find_all_corres list dlist i j = 
+    match list, dlist with
+    | [], [] -> [] 
+    | [], dhd::dtl -> find_all_corres dtl dtl (j+1) (j+1)
+    | hd::tl, dhd::dtl ->
+        (match hd, dhd with
+        | EEta(AIn(a)), EEta(AOut(b)) when a = b -> if i < j then (i,j)::(find_all_corres tl dlist (i+1) j) else (j,i)::(find_all_corres tl dlist (i+1) j)
+        | EEta(AOut(a)), EEta(AIn(b)) when a = b -> if i < j then (i,j)::(find_all_corres tl dlist (i+1) j) else (j,i)::(find_all_corres tl dlist (i+1) j)
+        | _, _ -> find_all_corres tl dlist (i+1) j)
+
+let rec find_corres_list el eta i =
+    match el with
+    | [] -> []
+    | hd::tl -> if hd = eta then i::(find_corres_list tl eta (i+1)) else find_corres_list tl eta (i+1)
+    
 
 (* ------------------- COMMAND LINE ARGUMENTS -------------------- *)
 

@@ -58,3 +58,10 @@ and chi_to_proc chi =
 let assign_ctx lst =
     let i = ref 0 in
         List.map (fun x -> i:=!i+1; (x, {print = true; level = string_of_int !i})) lst
+
+let next_ctx ctx = {ctx with level = ctx.level ^ ".1"}
+
+let compl_eta eta =
+    match eta with
+    | EEta(AIn(k)) -> EEta(AOut(k))
+    | EEta(AOut(k)) -> EEta(AIn(k))

@@ -58,45 +58,12 @@ let rec print_proc_simple fmt p =
 
 (* ----------- Misc ----------- *)
 
-let printFinalArrComb fmt lst =
-    if !verbose then
-        (printf "Initial Combinations:\n";
-        let i = ref 0 in List.iter (fun x -> i:= !i+1; printf "---- %d ----\n" !i; print_lambdas fmt x; printf "\n\n") lst)
-    else ()
-
-let printFinalArr fmt lst =
-    if !verbose then
-        let i = ref 0 in List.map (fun x -> i := !i+1; printf "---- %d ----\n" !i;List.map (fun y -> print_lambdas fmt y; printf "\n") x; printf "\n\n") lst
-    else ()::[]
-
 let printMode fmt exp =
     if !verbose then
         let _ = print_lambdas fmt exp in let _ = printf " ---> " in let _ = print_proc_simple fmt (toProc exp) in printf "\n"
     else if !simplified then
         let _ = print_proc_simple fmt (toProc exp) in printf "\n"
     else ()
-
-let rec print_list fmt lst =
-    let rec lambda_list lst =
-        match lst with
-        | [] -> ()
-        | hd::[] -> print_lambdas fmt hd
-        | hd::tl -> print_lambdas fmt hd; printf "; "; lambda_list tl
-    in
-    printf "[";
-    lambda_list lst;
-    printf "]\n"
-
-let rec print_findings lst =
-    let rec find_list lst =
-        match lst with
-        | [] -> ()
-        | hd::[] -> printf "%d" hd
-        | hd::tl -> printf "%d" hd; printf ", "; find_list tl
-    in 
-    printf "\nThe process has a deadlock: Permutation(s) ";
-    find_list lst;
-    printf " lead to a deadlock.\n"
 
 let rec print_findings_comb lst = 
     let rec find_list lst =
@@ -105,7 +72,7 @@ let rec print_findings_comb lst =
         | hd::[] -> (match hd with | Some c -> printf "%s" c)
         | hd::tl -> (match hd with | Some c -> printf "%s" c; printf ", "; find_list tl)
     in
-    printf "\nThe process has a deadlock: Permutation(s) ";
+    printf "\nThe process has a deadlock: Combination(s) ";
     find_list lst;
     printf " lead to a deadlock.\n"
 
@@ -113,12 +80,25 @@ let rec print_list_comb fmt lst =
     let rec find_list lst =
         match lst with
         | [] -> ()
-        | hd::[] -> (match hd with | l, c -> printf "("; print_lambdas fmt l; printf ", %s)" c.level)
-        | hd::tl -> (match hd with | l, c -> printf "("; print_lambdas fmt l; printf ", %s)" c.level; printf "; "; find_list tl)
+        | hd::[] -> (match hd with | l, c -> printf "("; print_lambdas fmt l; printf ", %s)" c.level; printf "]";printf " ---> ";print_proc_simple fmt (toProc l))
+        | hd::tl -> (match hd with | l, c -> printf "("; print_lambdas fmt l; printf ", %s)" c.level; printf "; ---> ";print_proc_simple fmt (toProc l);printf "\n"; find_list tl)
     in
     printf "[";
     find_list lst;
-    printf "]\n"
+    printf "\n"
+
+let printFinalArrComb fmt lst =
+    if !verbose then
+        (printf "Initial Combinations:\n";
+        let i = ref 0 in List.iter (fun x -> i:= !i+1; printf "---- %d ----\n" !i; printMode fmt x; printf "\n") lst)
+    else ()
 
 let printCtxLevel lvl =
     if !verbose || !simplified then printf "\n---- %s ----\n" lvl else ()
+
+let printCtxLevel1 lvl eta et i =
+    if !verbose || !simplified then (printf "\n---- %s ---- -> between " lvl; print_eta fmt eta; printf " at i = %d and " i; print_eta fmt et; printf "\n") else ()
+
+let printCtxLevel2 lvl el p =
+    match p with
+    | (a,b) -> if !verbose || !simplified then (printf "\n---- %s ---- -> between " lvl; print_eta fmt (List.nth el a); printf " at i = %d and " a; print_eta fmt (List.nth el b);printf " at j = %d" b;printf "\n") else ()

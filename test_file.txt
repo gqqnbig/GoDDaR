@@ -67,6 +67,7 @@ main ( PPar( PPar( PPref(AOut('a'), PPref(AIn('b'), PNil)) , PPref(AIn('a'), PNi
 
 (* 14. a!.0 || a?.0 || a?.a!.b!.0 -> SUCESSO --------------------------- DEADLOCK *)
 main ( LPar(LPar(LList(EEta(AOut('a')), LNil) , LList(EEta(AIn('a')), LNil) ) , LList( EEta(AIn('a')), LList(EEta(AOut('a')), LList( EEta(AOut('b')), LNil)))  ));
+main ( PPar( PPar(PPref(AOut('a'), PNil) , PPref(AIn('a'), PNil)) , PPref( AIn('a') , PPref(AOut('a') , PPref(AOut('b') , PNil)))) )
 
 (* 15. b!.a!.0 || a?.0 || b?.0 -> SUCESSO --------------------------- DEADLOCK *)
 main ( LPar(LPar(LList(EEta(AOut('b')), LList(EEta(AOut('a')), LNil)) , LList(EEta(AIn('a')), LNil)) , LList(EEta(AIn('b')), LNil)) );
