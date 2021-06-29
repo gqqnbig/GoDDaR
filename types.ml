@@ -65,3 +65,20 @@ let compl_eta eta =
     match eta with
     | EEta(AIn(k)) -> EEta(AOut(k))
     | EEta(AOut(k)) -> EEta(AIn(k))
+
+let isLChi exp =
+    match exp with
+    | LChi(_, _) -> true
+    | _ -> false
+
+let getEl chi =
+    match chi with
+    | LChi(el, ll) -> el
+
+let getL1 lpar =
+    match lpar with
+    | LPar(l1, l2) -> l1
+
+let getL2 lpar =
+    match lpar with
+    | LPar(l1, l2) -> l2

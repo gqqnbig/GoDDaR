@@ -103,7 +103,54 @@ let rec find_corres_list el eta i =
     match el with
     | [] -> []
     | hd::tl -> if hd = eta then i::(find_corres_list tl eta (i+1)) else find_corres_list tl eta (i+1)
+
+(* Retrieves the lambdas from a LPar type and adds them to a list *)
+let rec lparToList exp = 
+    match exp with
+    | LPar(l, r) -> lparToList l @ lparToList r
+    | _ -> [exp]
     
+let assocLeft exp =
+    let toList = lparToList exp in
+    let rec assoc list =
+        match list with
+        | [hd] -> hd
+        | hd::tl::[] -> LPar(tl, hd)
+        | hd::md::tl -> LPar(LPar(assoc tl, md), hd)
+    in assoc (List.rev toList)
+
+let assocLeftList list =
+    let rec assoc list =
+        match list with
+        | [hd] -> hd
+        | hd::tl::[] -> LPar(hd, tl)
+        | hd::md::tl -> LPar(LPar(hd, md), assoc tl)
+    in assoc list
+
+let rec getNestedLeft exp =
+    match exp with
+    | LPar(LNil, _) | LPar(LList(_, _), _) | LPar(LChi(_,_), _) -> exp
+    | LPar(l1, _) -> getNestedLeft l1
+
+let rec getParNum exp =
+    match exp with
+    | LPar(LNil, _) | LPar(LList(_, _), _) | LPar(LChi(_,_), _) -> 2
+    | LPar(l1, _) -> 1 + getParNum l1
+    | _ -> 0
+
+let rec getRestPars list =
+    let i = ref 0 in List.filter (fun x -> i:= !i+1; if !i < 3 then false else true) list
+
+let addAfterChiEval2 pair exp =
+    match pair with
+    | (a, ctx) -> (LPar(a, exp), ctx)
+
+let addAfterChiEval list exp =
+    List.map (
+        fun x -> 
+            match x with
+            | (a, ctx) -> ((LPar(a,exp)), ctx)
+    ) list
 
 (* ------------------- COMMAND LINE ARGUMENTS -------------------- *)
 
