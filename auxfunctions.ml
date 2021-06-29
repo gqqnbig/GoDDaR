@@ -152,6 +152,28 @@ let addAfterChiEval list exp =
             | (a, ctx) -> ((LPar(a,exp)), ctx)
     ) list
 
+let rec hasLNil exp =
+    match exp with
+    | LNil -> true
+    | LPar(l1, l2) -> hasLNil l1 || hasLNil l2
+    | _ -> false
+
+let rec remLNils exp =
+    let rec rem exp =
+    match exp with
+    | LPar(LNil, LNil) -> LNil
+    | LPar(_ as a, LNil) -> rem a
+    | LPar(LNil, (_ as b)) -> rem b 
+    | LPar(a, b) -> LPar(rem a, rem b)
+    | _ -> exp
+    in
+    let currExp = ref exp in
+    while hasLNil !currExp && !currExp != LNil do
+        currExp := rem !currExp
+    done; 
+    !currExp
+        
+
 (* ------------------- COMMAND LINE ARGUMENTS -------------------- *)
 
 let usage_msg = "Usage: ./dlock [-v | -s] <file1> [<file2>] ... -o <output>"
