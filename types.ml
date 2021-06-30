@@ -59,6 +59,12 @@ let assign_ctx lst =
     let i = ref 0 in
         List.map (fun x -> i:=!i+1; (x, {print = true; level = string_of_int !i})) lst
 
+let assign_ctx2 lst =
+    let i = ref 0 in
+        List.map ( fun x -> 
+            List.map ( fun y -> i:=!i+1; (y, {print = true; level = string_of_int !i})) x
+        ) lst
+
 let next_ctx ctx = {ctx with level = ctx.level ^ ".1"}
 
 let compl_eta eta =
