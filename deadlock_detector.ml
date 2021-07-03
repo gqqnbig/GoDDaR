@@ -334,7 +334,6 @@ let eval_par lhs rhs =
     | _, _ -> printMode fmt (LPar(lhs,rhs));printf "-> ";raise (RuntimeException "No match in eval_par\n")
 
 let rec sStepEval exp =
-    printf "sstepeval: ";
     match exp with
     | LNil -> LNil
     | LList(e, l) -> exp
@@ -355,11 +354,29 @@ let rec has_nested_chi exp =
 
 let rec can_chi_progress exp =
     match exp with
-    | LPar(LChi(el,ll), LList(et, l)) 
-    | LPar(LList(et, l), LChi(el, ll)) -> if find_corres_list el et 0 != [] || find_all_corres el el 0 0 != [] then true else false
+    | LPar(LChi(el,ll), LList(EEta(AIn(j)), l)) 
+    | LPar(LList(EEta(AIn(j)), l), LChi(el, ll)) -> if find_corres_list el (EEta(AOut(j))) 0 != [] || find_all_corres el el 0 0 != [] then true else false
+    | LPar(LChi(el,ll), LList(EEta(AOut(j)), l)) 
+    | LPar(LList(EEta(AOut(j)), l), LChi(el, ll)) -> if find_corres_list el (EEta(AIn(j))) 0 != [] || find_all_corres el el 0 0 != [] then true else false
     | LChi(el, ll) | LPar(LChi(el, ll), _) | LPar(_, LChi(el, ll)) -> if find_all_corres el el 0 0 != [] then true else false
     | LPar(l1, _) -> can_chi_progress l1
     | _ -> false
+
+let rec can_chi_list_progress exp =
+    match exp with
+    | LPar(LChi(el, ll), LList(EEta(AIn(j)), l))
+    | LPar(LList(EEta(AIn(j)), l), LChi(el, ll)) -> if find_corres_list el (EEta(AOut(j))) 0 != [] then true else false
+    | LPar(LChi(el,ll), LList(EEta(AOut(j)), l)) 
+    | LPar(LList(EEta(AOut(j)), l), LChi(el, ll)) -> if find_corres_list el (EEta(AIn(j))) 0 != [] then true else false
+    | LPar(l1, _) -> can_chi_list_progress l1
+    | _ -> false
+
+let rec can_chi_nested_progress exp =
+    match exp with
+    | LChi(el, ll) | LPar(LChi(el, ll), _) | LPar(_, LChi(el, ll)) -> if find_all_corres el el 0 0 != [] then true else false
+    | LPar(l1, _) -> can_chi_nested_progress l1
+    | _ -> false
+
 
 let rec eval_chi exp =
     match exp with
@@ -419,6 +436,66 @@ let rec eval_chi exp =
         end
     | (_ as err, ctx) -> printMode fmt err; raise (RuntimeException "No match in eval_chi")
 
+let rec eval_chi_list exp =
+    match exp with
+    | (LPar(l1, l2), ctx) ->
+        begin
+        match l1, l2 with
+        | LChi(el, ll), LList(et, l) | LList(et,l), LChi(el,ll) when (List.exists ((=) (compl_eta et)) el) ->
+            (*printf "eval_chi case 1: "; *)
+            let rec iter il e i =
+                (match il with
+                | [] -> []
+                | hd::tl -> 
+                    let n_ctx = {ctx with level = ctx.level ^ "." ^ string_of_int i} in 
+                    printCtxLevel1 n_ctx.level (List.nth el hd) et hd;
+                    printMode fmt (LPar(l1,l2));
+                    match l1, l2 with
+                    | LChi(_, _), LList(_, _) ->
+                        if has_lpar_in_chi l1
+                        then ((*printf "Eval_chi case_h: ";*)([[(remLNils (LPar(case_h e l1 hd, l)), n_ctx)]])@(iter tl e (i+1)))
+                        else ((*printf "Eval_chi case_e: ";*)([[(remLNils (LPar(case_e e l1 hd, l)), n_ctx)]])@(iter tl e (i+1)))
+                    | LList(_, _), LChi(_, _) ->
+                        if has_lpar_in_chi l2
+                        then ((*printf "Eval_chi case_h: ";*)([[(remLNils (LPar(l, case_h e l2 hd)), n_ctx)]])@(iter tl e (i+1)))
+                        else ((*printf "Eval_chi case_e: ";*)([[(remLNils (LPar(l, case_e e l2 hd)), n_ctx)]])@(iter tl e (i+1)))
+                    )
+            in
+            (match et with
+            | EEta(AOut(k)) when List.exists((=) (EEta(AIn(k)))) el -> let inds = find_corres_list el (EEta(AIn(k))) 0 in iter inds (EEta(AIn(k))) 1
+            | EEta(AIn(k)) when List.exists((=) (EEta(AOut(k)))) el -> let inds = find_corres_list el (EEta(AOut(k))) 0 in iter inds (EEta(AOut(k))) 1
+            )
+        end
+
+let rec eval_chi_nested exp =
+    match exp with
+    | (LPar(l1, l2), ctx) ->
+        begin
+        match l1, l2 with
+        | LChi(el, ll), _  | _, LChi(el, ll) ->
+            let rec iter l i =
+                match l with
+                | [] -> []
+                | hd::tl -> 
+                    let n_ctx = {ctx with level = ctx.level ^ "." ^ string_of_int i} in 
+                    if isLChi l1 && isLChi l2 
+                    then printCtxLevel2 n_ctx.level (getEl (join_chis l1 l2)) hd 
+                    else printCtxLevel2 n_ctx.level el hd;
+                    printMode fmt (LPar(l1,l2));(*printf "Eval_chi case_f: \n"; *)
+                    match l1, l2 with
+                    | LChi(_, _), LChi(_, _) -> (iter tl (i+1))@([[(case_f (join_chis l1 l2) hd, n_ctx)]]) 
+                    | LChi(_,_), _ -> (iter tl (i+1))@([[(remLNils (LPar((case_f l1 hd), l2)), n_ctx)]])
+                    | _, LChi(_, _) ->  (iter tl (i+1))@([[(remLNils (LPar(l1, (case_f l2 hd))), n_ctx)]])
+            in
+            (match l1, l2 with
+            | LChi(_,_), LChi(_,_) -> 
+                let joined = join_chis l1 l2 in
+                    (match joined with
+                    | LChi(el1, ll) -> if exist_corres el1 then let corres_l = find_all_corres el1 el1 0 0 in iter corres_l 1 else [[(joined, ctx)]])
+            | LChi(_,_),  _ | _, LChi(_,_) when exist_corres el -> let corres_l = find_all_corres el el 0 0 in iter corres_l 1
+            | _, _ -> print_lambdas fmt (LPar(l1,l2));raise (RuntimeException "No match in eval_chi inside LChi(), _ \n"))
+        end
+
 let rec eval arr =
     let rec new_eval expInArr =
         match expInArr with
@@ -431,7 +508,6 @@ let rec eval arr =
                 let ass_lp = assocLeft lp in
                 if has_nested_chi ass_lp = false
                 then (
-                    printf "Entrei caso 1\n";
                     printCtxLevel ctx.level;
                     printMode fmt ass_lp;
                     let oneEval = sStepEval ass_lp in
@@ -443,64 +519,89 @@ let rec eval arr =
                     let i = ref 0 in
                     let combs_ctx = List.map (fun x -> i:=!i+1; (x, {ctx with level = ctx.level ^ "." ^string_of_int !i})) combs in
                     (new_eval tl)@(new_eval combs_ctx))
-                ) else 
-                if has_nested_chi ass_lp && can_chi_progress ass_lp = false 
-                then (
-                    printf "Entrei caso 2\n";
+                ) else (
                     printCtxLevel ctx.level; 
                     printMode fmt ass_lp;
-                    if getParNum ass_lp <= 2
-                    then (printf "primeiro menor que 2\n";(new_eval tl)@(new_eval (List.flatten (eval_chi (ass_lp, ctx)))))
-                    else let chi_eval = List.flatten (eval_chi (getNestedLeft ass_lp, ctx)) in
-                    List.flatten (List.map (fun x ->
-                        printf "primeiro maior que 2\n";
-                        let add_after = addAfterChiEval2 x (assocLeftList (getRestPars (lparToList ass_lp))) in
-                        match add_after with
-                        | (lp, ctx) ->
-                        if getParNum lp <= 2
-                        then (printf "menor que 2\n";(new_eval tl)@(new_eval [add_after]))
-                        else (
-                            printf "maior que 2\n";
-                            let toList = lparToList lp in
-                            let combs = List.flatten(topComb toList) in
-                            let i = ref 0 in
-                            let combs_pairs = List.map (fun y -> i:=!i+1; (y, {ctx with level = ctx.level ^ "." ^string_of_int !i})) combs in
-                            (new_eval tl)@(new_eval combs_pairs)
+                    let chi_l_prog = can_chi_list_progress ass_lp in
+                    let chi_n_prog = can_chi_nested_progress ass_lp in
+                    match chi_l_prog, chi_n_prog with
+                    | true, true ->
+                        let chi_nested = List.flatten (eval_chi_nested (getNestedLeft ass_lp, ctx)) in
+                        let add_after1 = if getParNum ass_lp <= 2 then chi_nested else List.map ( fun x -> addAfterChiEval2 x (assocLeftList (getRestPars (lparToList ass_lp))) ) chi_nested in
+                        let chi_list = List.flatten ( eval_chi_list (getNestedLeft ass_lp, ctx)) in
+                        let add_after2 = if getParNum ass_lp <= 2 then chi_list else List.map ( fun x -> addAfterChiEval2 x (assocLeftList (getRestPars (lparToList ass_lp))) ) chi_list in
+                        List.flatten (
+                        List.map (
+                            fun x ->
+                            match x with
+                            | (lp, ctx) ->
+                                if getParNum lp <= 2 then (new_eval tl)@(new_eval [x]) else
+                                let toList = lparToList lp in
+                                let combs = List.flatten (topComb toList) in
+                                let i = ref 0 in
+                                let combs_pairs = List.map (fun y -> i:=!i+1; (y, {ctx with level = ctx.level ^ "." ^ string_of_int !i})) combs in
+                                (new_eval tl)@(new_eval combs_pairs)
+                        ) (add_after1@add_after2)
                         )
-                    )  chi_eval
-                    )
-                ) else (
-                    printf "Entrei caso 3\n";
-                    printCtxLevel ctx.level;
-                    printMode fmt ass_lp;
-                    if getParNum ass_lp <= 2
-                    then (new_eval tl)@(new_eval (List.flatten (eval_chi (ass_lp, ctx))))
-                    else let chi_eval = List.flatten (eval_chi (getNestedLeft ass_lp, ctx)) in
-                    List.flatten (List.map (fun x ->
-                        let add_after = addAfterChiEval2 x (assocLeftList (getRestPars (lparToList ass_lp))) in
-                        match add_after with
-                        | (lp, ctx) ->
-                        if getParNum lp <= 2
-                        then (new_eval tl)@(new_eval [add_after])
-                        else (
-                            let toList = lparToList lp in
-                            let combs = List.flatten(topComb toList) in
-                            let i = ref 0 in
-                            let combs_pairs = List.map (fun y -> i:=!i+1; (y, {ctx with level = ctx.level ^ "." ^string_of_int !i})) combs in
-                            (new_eval tl)@(new_eval combs_pairs)
+                    | true, false ->
+                        let chi_list = List.flatten ( eval_chi_list (getNestedLeft ass_lp, ctx)) in
+                        let add_after2 = if getParNum ass_lp <= 2 then chi_list else List.map ( fun x -> addAfterChiEval2 x (assocLeftList (getRestPars (lparToList ass_lp))) ) chi_list in
+                        List.flatten (
+                        List.map (
+                            fun x ->
+                            match x with
+                            | (lp, ctx) ->
+                                if getParNum lp <= 2 then (new_eval tl)@(new_eval [x]) else
+                                let toList = lparToList lp in
+                                let combs = List.flatten (topComb toList) in
+                                let i = ref 0 in
+                                let combs_pairs = List.map (fun y -> i:=!i+1; (y, {ctx with level = ctx.level ^ "." ^ string_of_int !i})) combs in
+                                (new_eval tl)@(new_eval combs_pairs)
+                        ) (add_after2)
                         )
-                    ) chi_eval
-                    )
-                )
+                    | false, true ->
+                        let chi_nested = List.flatten (eval_chi_nested (getNestedLeft ass_lp, ctx)) in
+                        let add_after1 = if getParNum ass_lp <= 2 then chi_nested else List.map ( fun x -> addAfterChiEval2 x (assocLeftList (getRestPars (lparToList ass_lp))) ) chi_nested in
+                        List.flatten (
+                        List.map (
+                            fun x ->
+                            match x with
+                            | (lp, ctx) ->
+                                if getParNum lp <= 2 then (new_eval tl)@(new_eval [x]) else
+                                let toList = lparToList lp in
+                                let combs = List.flatten (topComb toList) in
+                                let i = ref 0 in
+                                let combs_pairs = List.map (fun y -> i:=!i+1; (y, {ctx with level = ctx.level ^ "." ^ string_of_int !i})) combs in
+                                (new_eval tl)@(new_eval combs_pairs)
+                        ) (add_after1)
+                        )                            
+                    | false, false ->
+                        let n_left = getNestedLeft ass_lp in
+                        match n_left with
+                        | LPar(LChi([], []), LNil) | LPar(LNil, LChi([], [])) -> 
+                            if getParNum ass_lp <= 2 
+                            then (new_eval tl)@[[(LNil, ctx)]] 
+                            else (new_eval tl)@(new_eval [addAfterChiEval2 (LNil, ctx) (assocLeftList (getRestPars (lparToList ass_lp)))])
+                        | LPar((LChi(_,_) as l1), (LList(_,_) as l2)) | LPar((LList(_,_) as l1), (LChi(_,_) as l2))
+                        | LPar((LChi(_,_) as l1), (LChi(_,_) as l2)) -> 
+                            if getParNum ass_lp <= 2 
+                            then (new_eval tl)@(new_eval [(join_chis l1 l2, ctx)])
+                            else (new_eval tl)@(new_eval [addAfterChiEval2 (join_chis l1 l2, ctx) (assocLeftList (getRestPars (lparToList ass_lp)))])
+                        | LPar(LNil, (LChi(_,_) as l1)) | LPar((LChi(_,_) as l1), LNil) ->
+                            if getParNum ass_lp <= 2
+                            then (new_eval tl)@(new_eval [(l1, ctx)])
+                            else (new_eval tl)@(new_eval [addAfterChiEval2 (l1, ctx) (assocLeftList (getRestPars (lparToList ass_lp)))])
+                        | _ -> printMode fmt ass_lp; raise (RuntimeException "No match in new_eval_1")
+            ) 
             | (LChi([], []), ctx) -> printCtxLevel ctx.level; printMode fmt (LNil); (new_eval tl)@[[(LNil, ctx)]]
-            | (LChi(el, ll) as a, ctx) when exist_corres el -> (new_eval tl)@(new_eval (List.flatten (eval_chi (LPar(a,LNil), ctx))))
-            | (_ as r, ctx) -> printCtxLevel ctx.level; printMode fmt r; (new_eval tl)@([[hd]])
+            | (LChi(el, ll) as a, ctx) when exist_corres el -> (new_eval tl)@(new_eval (List.flatten (eval_chi_nested (LPar(a,LNil), ctx))))
+            | (LNil, ctx) -> (new_eval tl)@[[(LNil, ctx)]]
             | (_ as err, ctx) -> printMode fmt err; raise (RuntimeException "No match in new_eval")
             end
-in 
-match arr with
-| [] -> []
-| hd::tl -> (eval tl)@(new_eval hd)
+        in 
+        match arr with
+        | [] -> []
+        | hd::tl -> (eval tl)@(new_eval hd)
 
 
     
@@ -526,4 +627,6 @@ let main exp =
 (* main ( PPar( PPar(PPref(AIn('a'), PPar(PPref(AOut('b'), PNil) , PPref(AIn('c'), PPref(AIn('d'), PNil)))) , PPref(AIn('b'), PNil) ) , PPref(AOut('a'), PPar(PPref(AOut('c'), PNil), PPref(AOut('d'), PNil)))) ) *)
 (* main ( PPar(PPar(PPref(AOut('b'), PPar(PNil, PNil)), PPref(AIn('b'), PNil) ), PPref(AIn('b'), PPref(AOut('b'), PPar(PPref(AOut('b'), PNil) , PPref(AIn('b'), PNil))))) ) *)
 
-main ( PPar(PPar(PPref(AIn('a'), PNil), PPref(AIn('a'), PNil)), PPref(AOut('a'), PPar(PPref(AOut('a'), PNil), PPref(AIn('b'), PNil))) ) )
+main ( PPar( PPar(PPref(AIn('a'), PPar(PPref(AOut('b'), PNil) , PPref(AIn('c'), PPref(AIn('d'), PNil)))) , PPref(AIn('b'), PNil) ) , PPref(AOut('a'), PPar(PPref(AOut('c'), PNil), PPref(AOut('d'), PNil)))) )
+
+(* main ( PPar(PPar(PPref(AIn('a'), PNil), PPref(AIn('a'), PNil)), PPref(AOut('a'), PPar(PPref(AOut('a'), PNil), PPref(AIn('b'), PNil))) ) ) *)
