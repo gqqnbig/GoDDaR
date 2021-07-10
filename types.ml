@@ -10,6 +10,7 @@ type action =
 
 type proc = 
     | PNil
+    | POr of proc * proc
     | PPref of action * proc
     | PPar of proc * proc
 
@@ -18,6 +19,7 @@ type eta =
 
 type lambda = 
     | LNil
+    | LOr of lambda * lambda
     | LList of eta * lambda
     | LChi of eta list * lambda list
     | LPar of lambda * lambda
@@ -34,6 +36,7 @@ type print_ctx =
 let rec toLambda proc =
     match proc with
     | PNil -> LNil
+    | POr(a, b) -> LOr(toLambda a, toLambda b)
     | PPref(a, p) -> LList(EEta(a), toLambda p)
     | PPar(p1, p2) -> LPar(toLambda p1, toLambda p2)
 
@@ -44,6 +47,7 @@ let toAction eta =
 let rec toProc lambda =
     match lambda with
     | LNil -> PNil
+    | LOr(a, b) -> POr(toProc a, toProc b)
     | LList(e, l) -> PPref(toAction e, toProc l)
     | LPar(l1, l2) -> PPar(toProc l1, toProc l2)
     | LChi(et, ll) -> chi_to_proc lambda
@@ -67,6 +71,8 @@ let assign_ctx2 lst =
 
 let next_ctx ctx = {ctx with level = ctx.level ^ ".1"}
 
+let conc_lvl ctx lvl = {ctx with level = ctx.level ^ "." ^ lvl}
+
 let compl_eta eta =
     match eta with
     | EEta(AIn(k)) -> EEta(AOut(k))
@@ -80,6 +86,11 @@ let isLPar exp =
 let isLChi exp =
     match exp with
     | LChi(_, _) -> true
+    | _ -> false
+
+let isLOr exp =
+    match exp with
+    | LOr(_,_) -> true
     | _ -> false
 
 let getEl chi =

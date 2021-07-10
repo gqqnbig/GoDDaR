@@ -3,6 +3,15 @@
 open Types
 
 (* ------------------- AUXILIARY FUNCTIONS -------------------- *)
+(* Tail recursive array append *)
+let append l1 l2 =
+  let rec loop acc l1 l2 =
+    match l1, l2 with
+    | [], [] -> List.rev acc
+    | [], h :: t -> loop (h :: acc) [] t
+    | h :: t, l -> loop (h :: acc) t l
+    in
+    loop [] l1 l2
 
 (* Enumerates the elements of a list by transforming them into pairs *)
 let rec enumerate list i =
@@ -129,7 +138,7 @@ let assocLeftList list =
 
 let rec getNestedLeft exp =
     match exp with
-    | LPar(LNil, _) | LPar(LList(_, _), _) | LPar(LChi(_,_), _) -> exp
+    | LPar(LNil, _) | LPar(LList(_, _), _) | LPar(LChi(_,_), _) | LPar(LOr(_,_), _) -> exp
     | LPar(l1, _) -> getNestedLeft l1
 
 let rec getParNum exp =
@@ -172,7 +181,49 @@ let rec remLNils exp =
         currExp := rem !currExp
     done; 
     !currExp
+
+
+let rec has_nested_chi exp =
+    match exp with
+    | LChi(_, _) -> true
+    | LPar(LChi(_,_), LNil) | LPar(LNil, LChi(_,_)) 
+    | LPar(LChi(_,_), LList(_,_)) | LPar(LList(_,_), LChi(_,_))
+    | LPar(LChi(_,_), LChi(_,_))-> true 
+    | LPar(l1, _) -> has_nested_chi l1
+    | _ -> false
+
+let rec can_chi_progress exp =
+    match exp with
+    | LPar(LChi(el,ll), LList(EEta(AIn(j)), l)) 
+    | LPar(LList(EEta(AIn(j)), l), LChi(el, ll)) -> if find_corres_list el (EEta(AOut(j))) 0 != [] || find_all_corres el el 0 0 != [] then true else false
+    | LPar(LChi(el,ll), LList(EEta(AOut(j)), l)) 
+    | LPar(LList(EEta(AOut(j)), l), LChi(el, ll)) -> if find_corres_list el (EEta(AIn(j))) 0 != [] || find_all_corres el el 0 0 != [] then true else false
+    | LChi(el, ll) | LPar(LChi(el, ll), _) | LPar(_, LChi(el, ll)) -> if find_all_corres el el 0 0 != [] then true else false
+    | LPar(l1, _) -> can_chi_progress l1
+    | _ -> false
+
+let rec can_chi_list_progress exp =
+    match exp with
+    | LPar(LChi(el, ll), LList(EEta(AIn(j)), l))
+    | LPar(LList(EEta(AIn(j)), l), LChi(el, ll)) -> if find_corres_list el (EEta(AOut(j))) 0 != [] then true else false
+    | LPar(LChi(el,ll), LList(EEta(AOut(j)), l)) 
+    | LPar(LList(EEta(AOut(j)), l), LChi(el, ll)) -> if find_corres_list el (EEta(AIn(j))) 0 != [] then true else false
+    | LPar(l1, _) -> can_chi_list_progress l1
+    | _ -> false
+
+let rec can_chi_nested_progress exp =
+    match exp with
+    | LChi(el, ll) | LPar(LChi(el, ll), LNil) | LPar(LNil, LChi(el, ll)) 
+    | LPar(LChi(el, ll), LList(_,_)) | LPar(LList(_,_), LChi(el, ll)) -> if find_all_corres el el 0 0 != [] then true else false
+    | LPar(l1, _) -> can_chi_nested_progress l1
+    | _ -> false
         
+let rec has_nested_or exp =
+    match exp with
+    | LOr(_,_)
+    | LPar(LOr(_,_), _) | LPar(_, LOr(_,_)) -> true
+    | LPar(l1, _) -> has_nested_or l1
+    | _ -> false
 
 (* ------------------- COMMAND LINE ARGUMENTS -------------------- *)
 

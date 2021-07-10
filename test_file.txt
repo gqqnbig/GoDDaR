@@ -95,3 +95,6 @@ main ( PPar(PPar(PPar(PPref(AOut('a'), PPref(AIn('b'), PNil)), PPref(AIn('c'), P
 
 (* 31. a!.a?.0 || a?.a?.a!.0 || a!.a?.0 || a!.a!.a?.0 || a!.a?.0*)
 main ( PPar(PPar(PPar(PPar(PPref(AOut('a'), PPref(AIn('a'), PNil)), PPref(AIn('a'), PPref(AIn('a'), PPref(AOut('a'), PNil)))), PPref(AOut('a'), PPref(AIn('a'), PNil))) , PPref(AOut('a'), PPref(AOut('a'), PPref(AIn('a'), PNil)))), PPref(AOut('a'), PPref(AIn('a'), PNil))) )
+
+(* 32. (a!.0 || a?.0) + (b!.0 || b?.0) *)
+main ( POr(PPar(PPref(AOut('a'), PNil), PPref(AIn('a'), PNil)), PPar(PPref(AOut('b'), PNil), PPref(AIn('b'), PNil))) )
