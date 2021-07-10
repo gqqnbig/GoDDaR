@@ -72,6 +72,11 @@ let compl_eta eta =
     | EEta(AIn(k)) -> EEta(AOut(k))
     | EEta(AOut(k)) -> EEta(AIn(k))
 
+let isLPar exp =
+    match exp with
+    | LPar(_,_) -> true
+    | _ -> false
+
 let isLChi exp =
     match exp with
     | LChi(_, _) -> true
