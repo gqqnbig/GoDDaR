@@ -344,16 +344,19 @@ let rec eval arr =
             match hd with
             | (LOr(l1, l2) as lo, ctx) ->
                 let ass_lo = assocLeft lo in
-                let ctx_l = {ctx with level = ctx.level ^ ".1" } in
-                let ctx_r = {ctx with level = ctx.level ^ ".2" } in
-                append (new_eval tl) (new_eval [(l1, ctx_l); (l2, ctx_r)])
+                let _ = printCtxLevel ctx.level in
+                let _ = printMode fmt ass_lo in
+                let ctx_l = conc_lvl ctx "1" in
+                let ctx_r = conc_lvl ctx "2" in
+                append (new_eval tl) (new_eval [(getL1 ass_lo, ctx_l); (getL2 ass_lo, ctx_r)])
             | (LPar(l1, l2) as lp, ctx) ->
                 let ass_lp = assocLeft lp in
                 if has_nested_or ass_lp
                 then
-                    let n_ctx = next_ctx ctx in
-                    let ctx_l = {n_ctx with level = n_ctx.level ^ ".1" } in
-                    let ctx_r = {n_ctx with level = n_ctx.level ^ ".2" } in
+                    let _ = printCtxLevel ctx.level in
+                    let _ = printMode fmt ass_lp in
+                    let ctx_l = conc_lvl ctx "1" in
+                    let ctx_r = conc_lvl ctx "2" in
                     match getNestedLeft ass_lp with
                     | LPar(LOr(a,b), c) -> append (new_eval tl) (new_eval [(LPar(a, c), ctx_l); (LPar(b,c), ctx_r)])
                     | LPar(a, LOr(b, c)) -> append (new_eval tl) (new_eval [(LPar(a, b), ctx_l); (LPar(a, c), ctx_r)])
@@ -376,7 +379,6 @@ let rec eval arr =
                     let chi_n_prog = can_chi_nested_progress ass_lp in
                     match chi_l_prog, chi_n_prog with
                     | true, true ->
-                        printf "entrei aqui\n";
                         let chi_nested = List.flatten (eval_chi_nested (getNestedLeft ass_lp, ctx)) in
                         let add_after1 = if getParNum ass_lp <= 2 then chi_nested else List.map ( fun x -> addAfterChiEval2 x (assocLeftList (getRestPars (lparToList ass_lp))) ) chi_nested in
                         let chi_list = List.flatten ( eval_chi_list (getNestedLeft ass_lp, ctx)) in
@@ -487,7 +489,7 @@ printf "%b\n" (can_chi_nested_progress ( LPar(LList(EEta(AIn('a')), LNil), LChi(
 
 printf "%b\n" (can_chi_nested_progress (LPar(LPar(LList(EEta(AIn('a')), LNil), LChi([EEta(AOut('a')); EEta(AOut('a'))],[LList(EEta(AIn('a')), LNil); LList(EEta(AOut('a')), LList(EEta(AIn('a')), LNil))])), LChi([EEta(AIn('a')); EEta(AOut('a'))], [LNil; LNil]))))
 *)
-main ( PPar(PPref(AOut('a'), POr(PPref(AIn('b'), PNil), PNil)), PPref(AIn('a'), PPref(AOut('b'), PNil))) )
+main ( PPar(PPref(AOut('a'), PPar( PPref(AOut('a'), PPar(PPref(AIn('b'), PNil), PPref(AIn('c'), PNil))) , PPref(AOut('d'), PNil))) , PPref(AIn('a'), PPar(PPar(PPar(PPref(AIn('a'), PNil), PPref(AOut('b'), PNil)), PPref(AOut('c'), PNil) ), PPref(AIn('d'), PNil))) ) )
 
 (*
 List.iter (fun x -> printMode fmt x) (case_i ( LChi([EEta(AIn('a')); EEta(AOut('b'))], [LOr(LList(EEta(AIn('c')), LList(EEta(AOut('h')), LList(EEta(AIn('g')), LNil))), LList(EEta(AOut('d')), LNil)); LNil])) 0)

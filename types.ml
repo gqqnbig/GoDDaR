@@ -100,7 +100,9 @@ let getEl chi =
 let getL1 lpar =
     match lpar with
     | LPar(l1, l2) -> l1
+    | LOr(l1, l2) -> l1
 
 let getL2 lpar =
     match lpar with
     | LPar(l1, l2) -> l2
+    | LOr(l1, l2) -> l2
