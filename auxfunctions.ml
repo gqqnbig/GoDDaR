@@ -143,7 +143,7 @@ let rec getNestedLeft exp =
 
 let rec getParNum exp =
     match exp with
-    | LPar(LNil, _) | LPar(LList(_, _), _) | LPar(LChi(_,_), _) -> 2
+    | LPar(LNil, _) | LPar(LList(_, _), _) | LPar(LChi(_,_), _) | LPar(LOr(_,_), _) -> 2
     | LPar(l1, _) -> 1 + getParNum l1
     | _ -> 0
 
@@ -221,9 +221,21 @@ let rec can_chi_nested_progress exp =
 let rec has_nested_or exp =
     match exp with
     | LOr(_,_)
-    | LPar(LOr(_,_), _) | LPar(_, LOr(_,_)) -> true
+    | LPar(LOr(_,_), LNil) | LPar(LNil, LOr(_,_))
+    | LPar(LOr(_,_), LList(_,_)) | LPar(LList(_,_), LOr(_,_))
+    | LPar(LOr(_,_), LChi(_,_)) | LPar(LChi(_,_), LOr(_,_)) -> true
     | LPar(l1, _) -> has_nested_or l1
     | _ -> false
+
+let rec has_lor_at ll pair =
+    match pair with
+    | (a, b) ->
+        let a_ll = List.nth ll a in
+        let b_ll = List.nth ll b in
+        match a_ll, b_ll with
+        | LOr(_,_), LOr(_,_) | LOr(_,_), _ | _, LOr(_,_) -> true
+        | _, _ -> false
+
 
 (* ------------------- COMMAND LINE ARGUMENTS -------------------- *)
 

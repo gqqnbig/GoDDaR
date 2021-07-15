@@ -38,6 +38,7 @@ let rec correct_chi_lambda ll curr_i i_at =
         | LList(EEta(_), LList(EEta(a), l)) -> LList(EEta(a), l)::tl
         | LList(EEta(_), LNil) -> LNil::tl
         | LList(EEta(_), LPar(m1, m2)) -> LPar(m1,m2)::tl
+        | LList(EEta(_), LOr(m1,m2)) -> LOr(m1,m2)::tl
         | LNil -> tl
         | _ -> print_lambdas fmt hd ;raise (RuntimeException "correct_chi_lambda failed: No match "))
         else hd::(correct_chi_lambda tl (curr_i+1) i_at)
@@ -50,6 +51,7 @@ let rec find_chi_lambda chi curr_i i_at =
         | LList(a, LList(b, l)) -> a
         | LList(a, LNil) -> a
         | LList(a, LPar(_, _)) -> a
+        | LList(a, LOr(_,_)) -> a
         | _ -> print_lambdas fmt hd ;raise (RuntimeException "find_chi_lambda failed: Unexpected match")) (* Pode ser preciso para o 3º caso*)
         else find_chi_lambda (LChi(et, tl)) (curr_i+1) i_at
 
@@ -130,7 +132,7 @@ let case_f chi i_pair =
                                         join_chis rr_chi lpChi
                 | _, LNil -> let r_chi = reduceChi chi b 0 in
                              (match r_chi with
-                             | LChi (el1, ll1) -> let chi_lambdaA = find_chi_lambda r_chi 0 a in (LChi(subst_at el1 chi_lambdaA 0 a, correct_chi_lambda ll1 0 a)))
+                             | LChi (el1, ll1) -> let chi_lambdaA = find_chi_lambda r_chi 0 a in (LChi(subst_at el1 chi_lambdaA 0 a, correct_chi_lambda ll1 0 a)))                    
                 ) else
             let chi_lambdaA = find_chi_lambda chi 0 a in
             let chi_lambdaB = find_chi_lambda chi 0 b in
@@ -206,11 +208,16 @@ let case_i chi i_at =
     match chi with
     | LChi(el, ll) ->
         let l_or = List.nth ll i_at in
+            begin
             match l_or with
             | LOr(LList(a, b), LList(c, d)) -> [LChi(subst_at el a 0 i_at, subst_at ll b 0 i_at); LChi(subst_at el c 0 i_at, subst_at ll d 0 i_at)]
             | LOr(LList(a, b), LNil) -> [LChi(subst_at el a 0 i_at, subst_at ll b 0 i_at); LChi(el, subst_at ll (LNil) 0 i_at)]
             | LOr(LNil, LList(a, b)) -> [LChi(el, subst_at ll (LNil) 0 i_at); LChi(subst_at el a 0 i_at, subst_at ll b 0 i_at)]
             | LOr(LNil, LNil) -> [LChi(el, subst_at ll (LNil) 0 i_at)]
+            | _ -> print_lambdas fmt l_or; raise (RuntimeException "No match in case_i inner\n")
+            end
+    | _ -> print_lambdas fmt chi; raise (RuntimeException "No match in case_i\n")
+            
 
 let case_f_or chi i_pair =
     match chi with
@@ -224,10 +231,9 @@ let case_f_or chi i_pair =
             match elemA_ll, elemB_ll with
             | LOr(_, _), LNil -> let r_chi = reduceChi chi b 0 in case_i r_chi a
             | LNil, LOr(_, _) -> let r_chi = reduceChi chi a 0 in case_i r_chi (b-1)
-            | LOr(_, _), LList(_, _) | LList(_, _), LOr(_, _) -> 
-                let i_chi = case_i chi a in List.map (fun x -> case_e (List.nth el b) x b) i_chi
+            | LOr(_, _), LList(_, _) -> let i_chi = case_i chi a in List.map (fun x -> case_e (List.nth el b) x b) i_chi
+            | LList(_, _), LOr(_, _) -> let i_chi = case_i chi b in List.map (fun x -> case_e (List.nth el a) x a) i_chi
             
-
 
 let rec has_lpar_in_chi chi =
     match chi with
@@ -255,6 +261,7 @@ let eval_par lhs rhs =
     | _, _ -> printMode fmt (LPar(lhs,rhs));printf "-> ";raise (RuntimeException "No match in eval_par\n")
 
 let rec sStepEval exp =
+    printf "Step Eval: "; print_lambdas fmt exp; printf "\n";
     match exp with
     | LNil -> LNil
     | LList(e, l) -> exp
@@ -262,7 +269,8 @@ let rec sStepEval exp =
     | LOr(_, _) -> exp
     | LPar((LPar(_,_) as l1), (LNil as l2))
     | LPar((LPar(_,_) as l1), (LList(_,_) as l2))
-    | LPar((LPar(_,_) as l1), (LChi(_,_) as l2)) -> LPar(sStepEval l1, sStepEval l2)
+    | LPar((LPar(_,_) as l1), (LChi(_,_) as l2)) 
+    | LPar((LPar(_,_) as l1), (LOr(_,_) as l2)) -> LPar(sStepEval l1, sStepEval l2)
     | LPar(l1, l2) -> let res = eval_par l1 l2 in remLNils res
 
 let rec eval_chi_list exp =
@@ -271,7 +279,6 @@ let rec eval_chi_list exp =
         begin
         match l1, l2 with
         | LChi(el, ll), LList(et, l) | LList(et,l), LChi(el,ll) when (List.exists ((=) (compl_eta et)) el) ->
-            (*printf "eval_chi case 1: "; *)
             let rec iter il e i =
                 (match il with
                 | [] -> []
@@ -286,7 +293,7 @@ let rec eval_chi_list exp =
                         else
                             if isLOr (List.nth ll hd)
                             then 
-                            let case_i = case_i l2 hd in
+                            let case_i = case_i l1 hd in
                                 [List.mapi ( fun j x -> (remLNils (LPar(x, l)), conc_lvl n_ctx (string_of_int (j+1)))) case_i] 
                             else ([[(remLNils (LPar(case_e e l1 hd, l)), n_ctx)]])@(iter tl e (i+1))
                     | LList(_, _), LChi(_, _) ->
@@ -320,11 +327,21 @@ let rec eval_chi_nested exp =
                     if isLChi l1 && isLChi l2 
                     then printCtxLevel2 n_ctx.level (getEl (join_chis l1 l2)) hd 
                     else printCtxLevel2 n_ctx.level el hd;
-                    printMode fmt (LPar(l1,l2));(*printf "Eval_chi case_f: \n"; *)
+                    printMode fmt (LPar(l1,l2));
                     match l1, l2 with
                     | LChi(_, _), LChi(_, _) -> (iter tl (i+1))@([[(case_f (join_chis l1 l2) hd, n_ctx)]]) 
-                    | LChi(_,_), _ -> (iter tl (i+1))@([[(remLNils (LPar((case_f l1 hd), l2)), n_ctx)]])
-                    | _, LChi(_, _) ->  (iter tl (i+1))@([[(remLNils (LPar(l1, (case_f l2 hd))), n_ctx)]])
+                    | LChi(_,_), _ -> 
+                        if has_lor_at ll hd 
+                        then
+                            let cf_res = case_f_or l1 hd in
+                            (iter tl (i+1))@[List.mapi ( fun k x -> (remLNils (LPar(x, l2)), conc_lvl ctx (string_of_int (k+1)))) cf_res]
+                        else (iter tl (i+1))@([[(remLNils (LPar((case_f l1 hd), l2)), n_ctx)]])
+                    | _, LChi(_, _) ->
+                        if has_lor_at ll hd
+                        then
+                            let cf_res = case_f_or l2 hd in
+                            (iter tl (i+1))@[List.mapi ( fun k x -> (remLNils (LPar(l1, x)), conc_lvl ctx (string_of_int (k+1)))) cf_res]
+                        else (iter tl (i+1))@([[(remLNils (LPar(l1, (case_f l2 hd))), n_ctx)]])
             in
             (match l1, l2 with
             | LChi(_,_), LChi(_,_) -> 
@@ -358,8 +375,21 @@ let rec eval arr =
                     let ctx_l = conc_lvl ctx "1" in
                     let ctx_r = conc_lvl ctx "2" in
                     match getNestedLeft ass_lp with
-                    | LPar(LOr(a,b), c) -> append (new_eval tl) (new_eval [(LPar(a, c), ctx_l); (LPar(b,c), ctx_r)])
-                    | LPar(a, LOr(b, c)) -> append (new_eval tl) (new_eval [(LPar(a, b), ctx_l); (LPar(a, c), ctx_r)])
+                    | LPar(LOr(a,b), c) -> 
+                        if getParNum ass_lp <=2
+                        then append (new_eval tl) (new_eval [(LPar(a, c), ctx_l); (LPar(b,c), ctx_r)])
+                        else 
+                        let add_after_l = addAfterChiEval2 (LPar(a,c), ctx_l) (assocLeftList (getRestPars (lparToList ass_lp))) in
+                        let add_after_r = addAfterChiEval2 (LPar(b,c), ctx_r) (assocLeftList (getRestPars (lparToList ass_lp))) in
+                        append (new_eval tl) (new_eval [add_after_l; add_after_r])
+                    | LPar(a, LOr(b, c)) -> 
+                        if getParNum ass_lp <=2
+                        then append (new_eval tl) (new_eval [(LPar(a, b), ctx_l); (LPar(a, c), ctx_r)])
+                        else
+                        let add_after_l = addAfterChiEval2 (LPar(a,b), ctx_l) (assocLeftList (getRestPars (lparToList ass_lp))) in
+                        let add_after_r = addAfterChiEval2 (LPar(a,c), ctx_r) (assocLeftList (getRestPars (lparToList ass_lp))) in
+                        append (new_eval tl) (new_eval [add_after_l; add_after_r])                        
+                    | _ -> printMode fmt (getNestedLeft ass_lp); raise (RuntimeException "No match in new_eval OR")
                 else if has_nested_chi ass_lp = false
                 then (
                     printCtxLevel ctx.level;
@@ -481,16 +511,4 @@ let main exp =
 
 (* ------------------- TESTING -------------------- *)
 
-(* main ( PPar(PPar(PPar(PPar(PPref(AOut('a'), PPref(AIn('a'), PNil)), PPref(AIn('a'), PPref(AIn('a'), PPref(AOut('a'), PNil)))), PPref(AOut('a'), PPref(AIn('a'), PNil))) , PPref(AOut('a'), PPref(AOut('a'), PPref(AIn('a'), PNil)))), PPref(AOut('a'), PPref(AIn('a'), PNil))) ) *)
-
-(*
-printf "%b\n" (can_chi_nested_progress ( LPar(LList(EEta(AIn('a')), LNil), LChi([EEta(AOut('a')); EEta(AOut('a'))],[LList(EEta(AIn('a')), LNil); LList(EEta(AOut('a')), LList(EEta(AIn('a')), LNil))])) ))
-
-
-printf "%b\n" (can_chi_nested_progress (LPar(LPar(LList(EEta(AIn('a')), LNil), LChi([EEta(AOut('a')); EEta(AOut('a'))],[LList(EEta(AIn('a')), LNil); LList(EEta(AOut('a')), LList(EEta(AIn('a')), LNil))])), LChi([EEta(AIn('a')); EEta(AOut('a'))], [LNil; LNil]))))
-*)
-main ( PPar(PPref(AOut('a'), PPar( PPref(AOut('a'), PPar(PPref(AIn('b'), PNil), PPref(AIn('c'), PNil))) , PPref(AOut('d'), PNil))) , PPref(AIn('a'), PPar(PPar(PPar(PPref(AIn('a'), PNil), PPref(AOut('b'), PNil)), PPref(AOut('c'), PNil) ), PPref(AIn('d'), PNil))) ) )
-
-(*
-List.iter (fun x -> printMode fmt x) (case_i ( LChi([EEta(AIn('a')); EEta(AOut('b'))], [LOr(LList(EEta(AIn('c')), LList(EEta(AOut('h')), LList(EEta(AIn('g')), LNil))), LList(EEta(AOut('d')), LNil)); LNil])) 0)
-*)
+main ( PPar(PPar(PPar(PPref(AOut('a'), PNil), PPref(AOut('b'), PNil)), POr(PPref(AIn('a'), PPref(AOut('c'), POr(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil)) ))), PPref(AIn('b'), PPref(AOut('c'), POr(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil)) ))))), PPref(AIn('c'), PPref(AIn('c'), PNil))) )

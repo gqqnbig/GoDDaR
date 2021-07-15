@@ -87,7 +87,7 @@ main ( PPar(PPref(AOut('a'), PPar( PPref(AOut('a'), PPar(PPref(AIn('a'), PNil), 
 (* 28. a!.(a!.(b?.0 || c?.0 )) || a?.(a?.0 || b!.0 || c!.0) -> SUCESSO *)
 main ( PPar(PPref(AOut('a'), PPref(AOut('a'), PPar(PPref(AIn('b'), PNil), PPref(AIn('c'), PNil)))) , PPref(AIn('a'), PPar(PPar(PPref(AIn('a'), PNil), PPref(AOut('b'), PNil)), PPref(AOut('c'), PNil) )) ) )
 
-(* 29. a!.(a!.(b?.0 || c?.0 ) || d!.0) || a?.(a?.0 || b!.0 || c!.0 || d?.0) *)
+(* 29. a!.(a!.(b?.0 || c?.0 ) || d!.0) || a?.(a?.0 || b!.0 || c!.0 || d?.0) -> STACK OVERFLOW *)
 main ( PPar(PPref(AOut('a'), PPar( PPref(AOut('a'), PPar(PPref(AIn('b'), PNil), PPref(AIn('c'), PNil))) , PPref(AOut('d'), PNil))) , PPref(AIn('a'), PPar(PPar(PPar(PPref(AIn('a'), PNil), PPref(AOut('b'), PNil)), PPref(AOut('c'), PNil) ), PPref(AIn('d'), PNil))) ) )
 
 (* 30. a!.b?.0 || c?.d?.a!.0 || c!.a?.0 || b!.d!.a?.0 *)
@@ -110,3 +110,20 @@ main ( POr(POr(PPar(PPref(AOut('a'), PNil), PPref(AIn('a'), PNil)), PPar(PPref(A
 
 (* 36. (a!.0 || a?.0) + (a!.0 || a?.b?.(c?.0 + d?.0) || b!.d!.0 ) *)
 main ( POr(PPar(PPref(AOut('a'), PNil), PPref(AIn('a'), PNil)), PPar(PPar(PPref(AOut('a'), PNil), PPref(AIn('a'), PPref(AIn('b'), POr(PPref(AIn('c'), PNil), PPref(AIn('d'), PNil))))), PPref(AOut('b'), PPref(AOut('d'), PNil))) ) )
+
+
+
+(* Listing 3 *)
+(* a!.0 || a?.b!.0 || a?.b!0 || b?.b?.0 -> DEADLOCK --- SUCCESSO *)
+main ( PPar(PPar(PPar(PPref(AOut('a'), PNil), PPref(AIn('a'), PPref(AOut('b'), PNil))), PPref(AIn('a'), PPref(AOut('b'), PNil))), PPref(AIn('b'), PPref(AIn('b'), PNil))) )
+
+(* Listing 7 -> Prime sieve *)
+(* a!.a!.0 || a?.b?.0 || a?.0 + b!.0  -> DEADLOCK -- Depende do nº de gerações *)
+main ( PPar(PPar(PPref(AOut('a'), PPref(AOut('a'), PNil)), PPref(AIn('a'), PPref(AIn('b'), PNil))), POr(PPref(AIn('a'), PNil), PPref(AOut('b'), PNil))) )
+
+(* Listing 8 -> Fan-in pattern *)
+(* a!.0 || b!.0 || a?.c!.0 + b?.c!.0 || c?.0 *)
+main ( PPar(PPar(PPar(PPref(AOut('a'), PNil), PPref(AOut('b'), PNil)), POr(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil)))), PPref(AIn('c'), PNil)) )
+
+(* a!.0 || b!.0 || a?.c!.(a?.c!.0 + b?.c!.0) + b?.c!.(a?.c!.0 + b?.c!.0) || c?.c?.0 -> DEADLOCK POSSÍVEL -- por causa da escolha *)
+main ( PPar(PPar(PPar(PPref(AOut('a'), PNil), PPref(AOut('b'), PNil)), POr(PPref(AIn('a'), PPref(AOut('c'), POr(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil)) ))), PPref(AIn('b'), PPref(AOut('c'), POr(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil)) ))))), PPref(AIn('c'), PPref(AIn('c'), PNil))) )
