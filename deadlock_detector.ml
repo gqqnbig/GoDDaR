@@ -204,20 +204,23 @@ let case_h elem chi at_i =
                     join_chis (LChi(f_el, f_ll)) (lparToChi (get_chi_at ll i_at))
 
 (* For the case where a choice is nested in a Chi's ll *)
-let case_i chi i_at =
+let rec case_i chi i_at =
     match chi with
     | LChi(el, ll) ->
         let l_or = List.nth ll i_at in
-            begin
-            match l_or with
-            | LOr(LList(a, b), LList(c, d)) -> [LChi(subst_at el a 0 i_at, subst_at ll b 0 i_at); LChi(subst_at el c 0 i_at, subst_at ll d 0 i_at)]
-            | LOr(LList(a, b), LNil) -> [LChi(subst_at el a 0 i_at, subst_at ll b 0 i_at); LChi(el, subst_at ll (LNil) 0 i_at)]
-            | LOr(LNil, LList(a, b)) -> [LChi(el, subst_at ll (LNil) 0 i_at); LChi(subst_at el a 0 i_at, subst_at ll b 0 i_at)]
-            | LOr(LNil, LNil) -> [LChi(el, subst_at ll (LNil) 0 i_at)]
-            | _ -> print_lambdas fmt l_or; raise (RuntimeException "No match in case_i inner\n")
-            end
+        let rec treat_or chi i_at n_or =
+            match chi with
+            | LChi(el, ll) ->
+                match n_or with
+                | LOr(LOr(_, _) as x, LList(a, b)) -> (treat_or chi i_at x)@[LChi(subst_at el a 0 i_at, subst_at ll b 0 i_at)]
+                | LOr(LOr(_, _) as x, LNil) -> (treat_or chi i_at x)@[LChi(el, subst_at ll (LNil) 0 i_at)]
+                | LOr(LList(a, b), LList(c, d)) -> [LChi(subst_at el a 0 i_at, subst_at ll b 0 i_at); LChi(subst_at el c 0 i_at, subst_at ll d 0 i_at)]
+                | LOr(LList(a, b), LNil) -> [LChi(subst_at el a 0 i_at, subst_at ll b 0 i_at); LChi(el, subst_at ll (LNil) 0 i_at)]
+                | LOr(LNil, LList(a, b)) -> [LChi(el, subst_at ll (LNil) 0 i_at); LChi(subst_at el a 0 i_at, subst_at ll b 0 i_at)]
+                | LOr(LNil, LNil) -> [LChi(el, subst_at ll (LNil) 0 i_at)]
+                | _ -> print_lambdas fmt n_or; raise (RuntimeException "No match in treat_or inside case_i\n")
+        in treat_or chi i_at l_or
     | _ -> print_lambdas fmt chi; raise (RuntimeException "No match in case_i\n")
-            
 
 let case_f_or chi i_pair =
     match chi with
@@ -511,4 +514,4 @@ let main exp =
 
 (* ------------------- TESTING -------------------- *)
 
-main ( PPar(PPar(PPar(PPref(AOut('a'), PNil), PPref(AOut('b'), PNil)), POr(PPref(AIn('a'), PPref(AOut('c'), POr(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil)) ))), PPref(AIn('b'), PPref(AOut('c'), POr(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil)) ))))), PPref(AIn('c'), PPref(AIn('c'), PNil))) )
+main ( PPar(PPar(PPar(PPref(AOut('a'), PNil), PPref(AOut('b'), PNil)), POr(POr(PPref(AIn('a'), PPref(AOut('c'), POr(POr(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil))), PNil))), PPref(AIn('b'), PPref(AOut('c'), POr(POr(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil))), PNil))) ), PNil) ), PPref(AIn('c'), PPref(AIn('c'), PNil))) )

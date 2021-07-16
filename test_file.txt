@@ -122,8 +122,15 @@ main ( PPar(PPar(PPar(PPref(AOut('a'), PNil), PPref(AIn('a'), PPref(AOut('b'), P
 main ( PPar(PPar(PPref(AOut('a'), PPref(AOut('a'), PNil)), PPref(AIn('a'), PPref(AIn('b'), PNil))), POr(PPref(AIn('a'), PNil), PPref(AOut('b'), PNil))) )
 
 (* Listing 8 -> Fan-in pattern *)
-(* a!.0 || b!.0 || a?.c!.0 + b?.c!.0 || c?.0 *)
+(* a!.0 || b!.0 || a?.c!.0 + b?.c!.0 || c?.0 -> DEADLOCK -- porque há 2 Works e apenas uma receção *)
 main ( PPar(PPar(PPar(PPref(AOut('a'), PNil), PPref(AOut('b'), PNil)), POr(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil)))), PPref(AIn('c'), PNil)) )
 
 (* a!.0 || b!.0 || a?.c!.(a?.c!.0 + b?.c!.0) + b?.c!.(a?.c!.0 + b?.c!.0) || c?.c?.0 -> DEADLOCK POSSÍVEL -- por causa da escolha *)
 main ( PPar(PPar(PPar(PPref(AOut('a'), PNil), PPref(AOut('b'), PNil)), POr(PPref(AIn('a'), PPref(AOut('c'), POr(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil)) ))), PPref(AIn('b'), PPref(AOut('c'), POr(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil)) ))))), PPref(AIn('c'), PPref(AIn('c'), PNil))) )
+
+(* Listing 9 -> Alternative fan-in pattern *)
+(* a!.0 || b!.0 || (a?.c!.0 + b!.c!.0 + 0) || (c?.0 + 0) -> DEADLOCK -- porque há 2 works e apenas uma receção *)
+main ( PPar(PPar(PPar(PPref(AOut('a'), PNil), PPref(AOut('b'), PNil)), POr(POr(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil))), PNil)), POr(PPref(AIn('c'), PNil), PNil)) )
+
+(* a!.0 || b!.0 || a?.c!.(a?.c!.0 + b?.c!.0 + 0) + b?.c!.(a?.c!.0 + b?.c!.0 + 0) + 0 || c?.c?.0 -> DEADLOCK POSSÍVEL -- por causa da escolha *)
+main ( PPar(PPar(PPar(PPref(AOut('a'), PNil), PPref(AOut('b'), PNil)), POr(POr(PPref(AIn('a'), PPref(AOut('c'), POr(POr(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil))), PNil))), PPref(AIn('b'), PPref(AOut('c'), POr(POr(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil))), PNil))) ), PNil) ), PPref(AIn('c'), PPref(AIn('c'), PNil))) )
