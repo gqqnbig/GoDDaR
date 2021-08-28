@@ -134,3 +134,30 @@ main ( PPar(PPar(PPar(PPref(AOut('a'), PNil), PPref(AOut('b'), PNil)), POr(POr(P
 
 (* a!.0 || b!.0 || a?.c!.(a?.c!.0 + b?.c!.0 + 0) + b?.c!.(a?.c!.0 + b?.c!.0 + 0) + 0 || c?.c?.0 -> DEADLOCK POSSÍVEL -- por causa da escolha *)
 main ( PPar(PPar(PPar(PPref(AOut('a'), PNil), PPref(AOut('b'), PNil)), POr(POr(PPref(AIn('a'), PPref(AOut('c'), POr(POr(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil))), PNil))), PPref(AIn('b'), PPref(AOut('c'), POr(POr(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil))), PNil))) ), PNil) ), PPref(AIn('c'), PPref(AIn('c'), PNil))) )
+
+(* ----------- cond-recur ----------- -> o programa MiGo parece estar mal feito *) (* t0 = a, t1=b *)
+(* b!.b!.0 + b!.0 || a?.0 + b?.b?.0 *) (* -> maneira errada *)
+main ( PPar(POr(PPref(AOut('b'), PPref(AOut('b'), PNil)), PPref(AOut('b'), PNil)), POr(PPref(AIn('a'), PNil), PPref(AIn('b'), PPref(AIn('b'), PNil)))) )
+
+(* (b!.(b!.0 + a!.0) + a!.(b!.0 + a!.0)) || (a?.0 + b?.b?.0) -> maneira que eu acho correta *)
+main ( PPar( POr(PPref(AOut('b'), POr(PPref(AOut('b'), PNil), PPref(AOut('a'), PNil))), PPref(AOut('a'), POr(PPref(AOut('b'), PNil), PPref(AOut('a'), PNil)))), POr(PPref(AIn('a'), PNil), PPref(AIn('b'), PPref(AIn('b'), PNil)))) )
+
+(* ----------- Forselect ----------- *)
+(* b?.a!.0 + c!.0 || c?.0 + b!.a!.0 || a?.a?.0 -> DEADLOCK POSSÍVEL -- por causa da escolha *)
+main ( PPar(PPar(POr(PPref(AIn('b'), PPref(AOut('a'), PNil)), PPref(AOut('c'), PNil)), POr(PPref(AIn('c'), PNil), PPref(AOut('b'), PPref(AOut('a'), PNil)))), PPref(AIn('a'), PPref(AIn('a'), PNil))) )
+
+(* b?.a!.0 + c!.(b?.a!.0 + c!.0) || c?.(c? + b!.a!.0) + b!.a!.0 || a?.a?.0 -> DEADLOCK POSSÍVEL -- por causa da escolha *)
+main ( PPar(PPar(POr(PPref(AIn('b'), PPref(AOut('a'), PNil)), PPref(AOut('c'), POr(PPref(AIn('b'), PPref(AOut('a'), PNil)), PPref(AOut('c'), PNil)))) , POr(PPref(AIn('c'), POr(PPref(AIn('c'), PNil), PPref(AOut('b'), PPref(AOut('a'), PNil)))), PPref(AOut('b'), PPref(AOut('a'), PNil))) ), PPref(AIn('a'), PPref(AIn('a'), PNil))) )
+
+(* ----------- Giachino dining philosopher ----------- *)
+(* Stack overflow em 1.7.1.1.1.1.1.1.1.60.2.2.12.3.1.2.1 *)
+(* a!.a?.0 || b!.b?.0 || c!.c?.0 || a?.(b?.a!.b!.0 + a!.0) + b?.(a?.b!.a!.0 + b!.0) || b?.(c?.b!.c!.0 + b!.0) + c?.(b?.c!.b!.0 + c!.0) || 
+c?.(a?.c!.a!.0 + c!.0) + a?.(c?.a!.c!.0 + a!.0) *)
+main ( PPar(PPar(PPar(PPar(PPar(PPref(AOut('a'), PPref(AIn('a'), PNil)), PPref(AOut('b'), PPref(AIn('b'), PNil))), PPref(AOut('c'), PPref(AIn('c'), PNil))), 
+POr( PPref(AIn('a'), POr(PPref(AIn('b'), PPref(AOut('a'), PPref(AOut('b'), PNil))), PPref(AOut('a'), PNil))), 
+PPref(AIn('b'), POr(PPref(AIn('a'), PPref(AOut('b'), PPref(AOut('a'), PNil))), PPref(AOut('b'), PNil))))),
+POr( PPref(AIn('b'), POr(PPref(AIn('c'), PPref(AOut('b'), PPref(AOut('c'), PNil))), PPref(AOut('b'), PNil))),
+PPref(AIn('c'), POr(PPref(AIn('b'), PPref(AOut('c'), PPref(AOut('b'), PNil))), PPref(AOut('c'), PNil))))), 
+POr(PPref(AIn('c'), POr(PPref(AIn('a'), PPref(AOut('c'), PPref(AOut('a'), PNil))), PPref(AOut('c'), PNil))),
+PPref(AIn('a'), POr(PPref(AIn('c'), PPref(AOut('a'), PPref(AOut('c'), PNil))), PPref(AOut('a'), PNil))))) )
+

@@ -236,6 +236,10 @@ let case_f_or chi i_pair =
             | LNil, LOr(_, _) -> let r_chi = reduceChi chi a 0 in case_i r_chi (b-1)
             | LOr(_, _), LList(_, _) -> let i_chi = case_i chi a in List.map (fun x -> case_e (List.nth el b) x b) i_chi
             | LList(_, _), LOr(_, _) -> let i_chi = case_i chi b in List.map (fun x -> case_e (List.nth el a) x a) i_chi
+            | LOr(_, _), LOr(_, _) -> 
+                let n_chi = case_i chi b in
+                List.flatten( List.map (fun x -> case_i x a) n_chi )
+            | _ -> printMode fmt elemA_ll; printMode fmt elemB_ll; raise (RuntimeException "No match in case_f_or\n")
             
 
 let rec has_lpar_in_chi chi =
@@ -332,7 +336,15 @@ let rec eval_chi_nested exp =
                     else printCtxLevel2 n_ctx.level el hd;
                     printMode fmt (LPar(l1,l2));
                     match l1, l2 with
-                    | LChi(_, _), LChi(_, _) -> (iter tl (i+1))@([[(case_f (join_chis l1 l2) hd, n_ctx)]]) 
+                    | LChi(_, _), LChi(_, _) ->
+                        let n_chi = join_chis l1 l2 in
+                        (match n_chi with
+                        | LChi(el1, ll1) ->
+                            if has_lor_at ll1 hd
+                            then
+                                let cf_res = case_f_or n_chi hd in
+                                (iter tl (i+1))@[List.mapi ( fun k x -> (x, conc_lvl ctx (string_of_int (k+1))) ) cf_res]
+                            else (iter tl (i+1))@([[(case_f n_chi hd, n_ctx)]])) 
                     | LChi(_,_), _ -> 
                         if has_lor_at ll hd 
                         then
@@ -493,25 +505,68 @@ let rec eval arr =
         | [] -> []
         | hd::tl -> append (eval tl) (new_eval hd)
 
+let rec top_lvl_extractor exp =
+  match exp with
+  | LPar(LNil, LNil) -> []
+  | LPar(LList(a, _), LList(b, _)) -> [a;b]
+  | LPar(LList(a, _), LNil) | LPar(LNil, LList(a, _)) -> [a]
+  | LPar(LChi(a, _), LList(b, _)) | LPar(LList(b,_), LChi(a, _)) -> a@[b]
+  | LPar(LChi(a, _), LChi(b, _)) -> a@b
+  | LPar(LChi(a, _), LNil) | LPar(LNil, LChi(a, _))-> a
+  | LPar(LPar(_,_) as a, LList(b, _)) -> b::(top_lvl_extractor a)
+  | LPar(LPar(_, _) as a, LChi(b, _)) -> b@(top_lvl_extractor a)
+  | LPar(LPar(_, _) as a, LNil) -> top_lvl_extractor a
+  | _ as err -> printMode fmt err; raise (RuntimeException "No match in top_lvl_extractor \n")
+
+
+let rec deadlock_solver_1 exp top_lvl =
+  match exp with
+  | LPar(a , b) -> LPar(deadlock_solver_1 a top_lvl, deadlock_solver_1 b top_lvl)
+  | LNil -> LNil
+  | LList(EEta(_) as a, b) -> if List.mem a top_lvl then LPar(LList(a, LNil), b) else LList(a, deadlock_solver_1 b top_lvl)
+  | LChi(a, b) -> 
+    let rec for_all e_arr l_arr =
+      match e_arr, l_arr with
+      | [a], [b] -> if List.mem a top_lvl then LPar(LList(a, LNil), b) else LList(a, deadlock_solver_1 b top_lvl)
+      | a::e_tl, b::l_tl -> if List.mem a top_lvl then LPar(LPar(LList(a, LNil), b), for_all e_tl l_tl) else LPar(LList(a, deadlock_solver_1 b top_lvl), for_all e_tl l_tl)
+    in for_all a b
+
     
     
 let main exp =
-    let lamExp = toLambda exp in
-    let toList = lparToList lamExp  in
-    let res = if List.length toList <= 2 
-              then (eval [[(lamExp, {print=true; level="1"})]])
-              else let comb_lst = topComb toList in 
-              printFinalArrComb fmt (List.flatten comb_lst); eval (assign_ctx2 comb_lst)
-    in
-    let findings = proc_findings_comb (List.flatten res) in
-    if List.length findings = List.length res
-    then printf "\nThe process has a deadlock: every process combination is blocked.\n"
-    else if List.length findings = 0 
-        then printf "\nThe process is deadlock-free.\n"
-        else print_findings_comb (List.rev findings);
-    if !verbose then let _ = printf "\n" in print_list_comb fmt (List.rev (List.flatten res)) else ()
+  let lamExp = toLambda exp in
+  let toList = lparToList lamExp  in
+  let res = 
+    if List.length toList <= 2 
+    then (eval [[(lamExp, {print=true; level="1"})]])
+    else let comb_lst = topComb toList in 
+    printFinalArrComb fmt (List.flatten comb_lst); eval (assign_ctx2 comb_lst)
+  in
+  let findings = proc_findings_comb (List.flatten res) in
+  if List.length findings = List.length res
+  then printf "\nThe process has a deadlock: every process combination is blocked.\n"
+  else if List.length findings = 0 
+    then printf "\nThe process is deadlock-free.\n"
+    else print_findings_comb (List.rev findings);
+  if !verbose then let _ = printf "\n" in print_list_comb fmt (List.rev (List.flatten res)) else ()
 ;;
 
 (* ------------------- TESTING -------------------- *)
 
-main ( PPar(PPar(PPar(PPref(AOut('a'), PNil), PPref(AOut('b'), PNil)), POr(POr(PPref(AIn('a'), PPref(AOut('c'), POr(POr(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil))), PNil))), PPref(AIn('b'), PPref(AOut('c'), POr(POr(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil))), PNil))) ), PNil) ), PPref(AIn('c'), PPref(AIn('c'), PNil))) )
+(*
+main ( PPar(PPar(PPar(PPref(AOut('a'), PNil), PPref(AOut('b'), PNil)), POr(PPref(AIn('a'), PPref(AOut('c'), POr(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil)) ))), PPref(AIn('b'), PPref(AOut('c'), POr(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil)) ))))), PPref(AIn('c'), PPref(AIn('c'), PNil))) )
+*)
+
+(* a.b.0 || c.a.0 || b'.a'.0 || a.0 || 0*)
+let arr = top_lvl_extractor (LPar(LPar(LChi([EEta(AIn('a')); EEta(AIn('c')); EEta(AOut('b'))], [LList(EEta(AIn('b')), LNil); LList(EEta(AIn('a')), LNil); LList(EEta(AOut('a')), LNil)]), LList(EEta(AIn('a')), LNil)), LNil)) in
+let resol = deadlock_solver_1 (LPar(LPar(LChi([EEta(AIn('a')); EEta(AIn('c')); EEta(AOut('b'))], [LList(EEta(AIn('b')), LNil); LList(EEta(AIn('a')), LNil); LList(EEta(AOut('a')), LNil)]), LList(EEta(AIn('a')), LNil)), LNil)) (arr) in
+List.iter (fun x -> print_eta fmt x; printf "\n") arr; printMode fmt resol
+
+
+(* 
+LPar(LPar(LChi([EEta(AIn('a')); EEta(AIn('c')); EEta(AOut('b'))], [LList(EEta(AIn('b')), LNil); LList(EEta(AIn('a')), LNil); LList(EEta(AOut('a')), LNil)]), LList(EEta(AIn('a')), LNil)), LNil)
+LPar(LPar(LList(EEta(AIn('a')), LList(EEta(AIn('b')), LNil)), LList(EEta(AIn('c')), LList(EEta(AIn('a')), LNil))), LList(EEta(AOut('b')), LList(EEta(AOut('a')), LNil))) 
+
+
+*)
+
