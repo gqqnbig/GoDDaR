@@ -236,6 +236,57 @@ let rec has_lor_at ll pair =
         | LOr(_,_), LOr(_,_) | LOr(_,_), _ | _, LOr(_,_) -> true
         | _, _ -> false
 
+let rec has_lor exp =
+  match exp with
+  | LList(a, b) -> has_lor b
+  | LOr(_,_) -> true
+  | _ -> false
+
+
+let rec lor_disentangler exp =
+  match exp with
+  | LOr(a, b) -> (lor_disentangler a)@(lor_disentangler b)
+  | _ -> [exp]
+
+let rec inner_lor_dis exp =
+  let rec calc_prev_exp exp = 
+    match exp with
+    | LList(a, LOr(_,_)) -> LList(a, LNil)
+    | LList(a, b) -> LList(a, calc_prev_exp b)
+  in
+  let prev_exp = calc_prev_exp exp in
+  let rec calc_lor_exp exp =
+    match exp with
+    | LList(a, (LOr(_,_) as x)) -> x
+    | LList(a, b) -> calc_lor_exp b 
+  in 
+  let lor_exp = calc_lor_exp exp in
+  let rec lors exp =
+    match exp with
+    | LList(a, LNil) as e -> [e]
+    | LList(a, b) as e -> [e]
+    | LOr(x, y) -> y::(lors x)
+  in 
+  let lors_arr = lors lor_exp in
+  let rec join exp subst =
+    match exp with
+    | LList(a, LNil) -> LList(a, subst)
+    | LList(a, b) -> LList(a, join b subst)
+  in
+  let rec arr_loop arr =
+    match arr with
+    | [] -> []
+    | hd::tl -> (join prev_exp hd)::(arr_loop tl)
+  in
+  let one_pass_res = arr_loop lors_arr in
+  let rec any_has_lor arr =
+    match arr with
+    | [] -> []
+    | hd::tl -> if has_lor hd then (List.rev (inner_lor_dis hd))@(any_has_lor tl) else hd::(any_has_lor tl)
+  in any_has_lor one_pass_res
+     
+  
+
 
 (* ------------------- COMMAND LINE ARGUMENTS -------------------- *)
 
