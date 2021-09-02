@@ -3,6 +3,7 @@
 open Types
 
 (* ------------------- AUXILIARY FUNCTIONS -------------------- *)
+
 (* Tail recursive array append *)
 let append l1 l2 =
   let rec loop acc l1 l2 =
@@ -236,12 +237,14 @@ let rec has_lor_at ll pair =
         | LOr(_,_), LOr(_,_) | LOr(_,_), _ | _, LOr(_,_) -> true
         | _, _ -> false
 
+(* ------------------- BEGIN CORRESPONDING ACTIONS VERIFICATION ------------------- *)
+
 let rec has_lor exp =
   match exp with
   | LList(a, b) -> has_lor b
+  | LPar(a, b) -> (has_lor a)||(has_lor b)
   | LOr(_,_) -> true
   | _ -> false
-
 
 let rec lor_disentangler exp =
   match exp with
@@ -285,7 +288,120 @@ let rec inner_lor_dis exp =
     | hd::tl -> if has_lor hd then (List.rev (inner_lor_dis hd))@(any_has_lor tl) else hd::(any_has_lor tl)
   in any_has_lor one_pass_res
      
+let rec lor_assign arr =
+  match arr with
+  | [] -> []
+  | hd::tl -> if has_lor hd then (inner_lor_dis hd)::(lor_assign tl) else [hd]::(lor_assign tl)
+
+let rec lpar_lor_case exp =
+  let rec assoc arr1 arr2 arr2_c =
+    match arr1, arr2 with
+    | [], [] -> []
+    | h::t, [] -> assoc t arr2_c arr2_c
+    | h::t, hd::tl -> LPar(h, hd)::(assoc arr1 tl arr2_c)
+  in
+  let calc_lor_exp exp =
+    match exp with
+    | LPar(LOr(a, b), LOr(c, d)) -> LPar(a, c)::LPar(a, d)::LPar(b, c)::LPar(b, d)::[]
+    | LPar(LOr(a, b), x) -> LPar(a, x)::LPar(b, x)::[]
+    | LPar(x, LOr(a, b)) -> LPar(x, a)::LPar(x, b)::[]
+    | LPar(LPar(LOr(a, b), LOr(c, d)), x) -> LPar(LPar(a, c), x)::LPar(LPar(a, d), x)::LPar(LPar(b, c), x)::LPar(LPar(b, d), x)::[]
+    | LPar(LPar(LOr(a, b), c), x) -> LPar(LPar(a, c), x)::LPar(LPar(b,c), x)::[]
+    | LPar(LPar(a, LOr(b, c)), x) -> LPar(LPar(a, b), x)::LPar(LPar(a, c), x)::[]
+    | _ -> exp::[]
+  in
+  let one_pass_res = calc_lor_exp exp in
+  let rec any_has_lor arr =
+    match arr with
+    | [] -> []
+    | hd::tl -> if has_lor hd then (List.rev (lpar_lor_case hd))@(any_has_lor tl) else hd::(any_has_lor tl)
+  in
+  any_has_lor one_pass_res
+
+let rec reduce_arr arr i =
+  match arr with
+  | (a, b)::[] -> (a, i+b)
+  | (a, b)::tl -> reduce_arr tl (i+b)
+
+let rec count_actions exp =
+  let rec count exp arr =
+    match exp with
+    | LNil -> arr
+    | LPar(a, b) -> (count a arr)@(count b arr)
+    | LList(a, b) ->
+        try 
+          let i = List.assoc a arr in
+          let r_arr = List.remove_assoc a arr in
+          let n_arr = (a, i+1)::r_arr in
+          count b n_arr
+        with
+        | Not_found -> count b ((a, 1)::arr)
+  in
+  let count_res = count exp [] in
+  let rec reduce arr =
+    match arr with
+    | [] -> []
+    | ((a, b) as hd)::tl -> 
+      let f_arr = 
+        List.filter (
+          fun x ->
+          match x with
+          | (c, i) -> if c = a then true else false
+        ) arr in
+      let red_res = reduce_arr f_arr 0 in
+      let rem_arr = 
+        List.filter (
+          fun x ->
+          match x with
+          | (c, i) -> if c != a then true else false
+        ) arr in
+        red_res::(reduce rem_arr)
+  in reduce count_res
+
+let compl eta =
+  match eta with
+  | EEta(AIn(k)) -> EEta(AOut(k))
+  | EEta(AOut(k)) -> EEta(AIn(k))
+
+let rec compare_action_counts arr = 
+  match arr with
+  | [] -> []
+  | (a, b)::tl ->
+    try
+      let i = List.assoc (compl a) arr in
+      let filter_compl a =
+        List.filter (
+          fun x ->
+          match x with
+          | (c, i) -> if (compl a) = c then false else true
+        ) tl in
+      if i = b
+      then compare_action_counts (filter_compl a)
+      else (
+        a::(compare_action_counts (filter_compl a))
+      )
+    with
+    | Not_found -> a::(compare_action_counts tl)
+
+    
+     
+
+
+(* Acho que tenho que fazer primeiro uma função que trata os LPars e depois outra que trata dos LOrs ? *)
+
+(*
+  let rec calc_lor_exp exp =
+    match exp with
+    | LPar(LOr(a, b), LOr(c, d)) -> LPar(a, c)::LPar(a, d)::LPar(b, c)::LPar(b, d)::[]
+    | LPar(LOr(a, b), x) -> LPar(a, x)::LPar(b, x)::[]
+    | LPar(x, LOr(a, b)) -> LPar(x, a)::LPar(x, b)::[]
+  in
+  calc_lor_exp exp
+*)
+
+
   
+(* ------------------- END CORRESPONDING ACTIONS VERIFICATION ------------------- *)
 
 
 (* ------------------- COMMAND LINE ARGUMENTS -------------------- *)

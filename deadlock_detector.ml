@@ -573,10 +573,10 @@ let main exp =
 main ( PPar(PPar(PPar(PPref(AOut('a'), PNil), PPref(AOut('b'), PNil)), POr(PPref(AIn('a'), PPref(AOut('c'), POr(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil)) ))), PPref(AIn('b'), PPref(AOut('c'), POr(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil)) ))))), PPref(AIn('c'), PPref(AIn('c'), PNil))) )
 *)
 
-(*
-let proc = LPar(LPar(LList(EEta(AOut('a')), LList(EEta(AIn('c')), LNil)), LList(EEta(AOut('c')), LList(EEta(AIn('a')), LNil))), LList(EEta(AOut('b')), LList(EEta(AIn('b')), LNil))) in
+(*)
+let proc = LPar(LList(EEta(AIn('a')), LList(EEta(AOut('a')), LList(EEta(AIn('b')), LNil))), LList(EEta(AOut('b')), LList(EEta(AIn('a')), LList(EEta(AOut('a')), LNil))) ) in
 let arr = top_lvl_extractor proc in
-let resol = deadlock_solver_2 proc (arr) in
+let resol = deadlock_solver_1 proc (arr) in
 List.iter (fun x -> print_eta fmt x; printf "\n") arr; printMode fmt resol
 *)
 
@@ -585,14 +585,48 @@ List.iter (fun x -> print_eta fmt x; printf "\n") arr; printMode fmt resol
 2) LPar(LPar(LList(EEta(AIn('a')), LList(EEta(AIn('b')), LNil)), LList(EEta(AIn('c')), LList(EEta(AIn('a')), LNil))), LList(EEta(AOut('b')), LList(EEta(AOut('a')), LNil))) 
 3) LPar(LPar(LList(EEta(AOut('a')), LList(EEta(AIn('c')), LNil)), LList(EEta(AOut('c')), LList(EEta(AIn('a')), LNil))), LList(EEta(AOut('b')), LList(EEta(AIn('b')), LNil)))
 
+Exemplos.pdf
+3) LPar(LList(EEta(AIn('a')), LList(EEta(AOut('a')), LList(EEta(AIn('b')), LNil))), LList(EEta(AOut('b')), LList(EEta(AIn('a')), LList(EEta(AOut('a')), LNil))) )
+4) LPar(LList(EEta(AIn('a')), LList(EEta(AOut('a')), LList(EEta(AIn('a')), LList(EEta(AIn('a')), LNil)))), LList(EEta(AIn('a')), LList(EEta(AOut('a')), LList(EEta(AOut('a')), LList(EEta(AOut('a')), LNil)))))
 *)
 
 (* LOr(LOr(LList(EEta(AIn('a')), LNil), LList(EEta(AOut('a')), LNil)), LPar(LList(EEta(AOut('a')), LList(EEta(AIn('b')), LNil)) , LList(EEta(AIn('a')), LList(EEta(AOut('b')), LNil)) )) *)
 (* LOr(LList(EEta(AOut('a')), LList(EEta(AIn('b')), LOr(LList(EEta(AOut('c')), LNil), LList(EEta(AIn('c')), LNil)))), LPar(LList(EEta(AIn('a')), LList(EEta(AIn('b')), LNil)), LList(EEta(AOut('a')), LList(EEta(AOut('b')), LNil)))) *)
+(* LList(EEta(AOut('a')), LList(EEta(AIn('b')), LOr(LOr(LList(EEta(AOut('c')), LList(EEta(AOut('b')), LNil)), LList(EEta(AIn('c')), LOr(LList(EEta(AIn('z')), LNil), LList(EEta(AIn('w')), LNil)))), LList(EEta(AIn('a')), LNil) ))) *)
+(* Sem LOr - LPar(LPar(LList(EEta(AIn('a')), LList(EEta(AIn('b')), LNil)), LList(EEta(AOut('b')), LList(EEta(AIn('c')), LNil))), LList(EEta(AOut('a')), LNil)) *)
+(* LPar(LOr(LList(EEta(AOut('a')), LNil), LList(EEta(AIn('b')), LNil)), LOr(LList(EEta(AIn('a')), LNil), LList(EEta(AOut('b')), LNil))) *)
 
-let proc = LList(EEta(AOut('a')), LList(EEta(AIn('b')), LOr(LOr(LList(EEta(AOut('c')), LList(EEta(AOut('b')), LNil)), LList(EEta(AIn('c')), LOr(LList(EEta(AIn('z')), LNil), LList(EEta(AIn('w')), LNil)))), LList(EEta(AIn('a')), LNil) ))) in 
-let corres = inner_lor_dis proc in 
-List.iter (fun x -> printMode fmt x; printf "; ") corres
 
 
-(* List.iter (fun x -> printf "["; List.iter (fun y -> print_eta fmt y; printf "; ") x; printf "] " ) corres *)
+(* CORRESPONDING ACTION VERIFIER *)
+(*
+let proc = LPar(LOr(LList(EEta(AOut('a')), LNil), LPar(LOr(LList(EEta(AIn('b')), LNil), LList(EEta(AIn('c')), LNil)), LOr(LList(EEta(AOut('b')), LNil), LList(EEta(AOut('c')), LNil)) )), LOr(LList(EEta(AIn('a')), LNil), LList(EEta(AOut('b')), LNil))) in
+let print_proc = printMode fmt proc; printf "\n" in
+let sep = lpar_lor_case proc in
+(* let corres = lor_assign sep in *)
+List.iter (fun x -> printf "["; printMode fmt x; printf ";") (sep)
+*)
+
+let proc = LPar(LPar(LPar(LPar(LList(EEta(AIn('a')), LList(EEta(AIn('b')), LNil)), LList(EEta(AIn('c')), LList(EEta(AIn('a')), LNil))), LList(EEta(AOut('b')), LList(EEta(AOut('a')), LNil))), LList(EEta(AIn('a')), LNil)), LNil) in
+let res = compare_action_counts (count_actions proc) in
+List.iter (fun x -> print_eta fmt x; printf "\n") res
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+(* !a || (!b.?b.?a + ?a)  *)
