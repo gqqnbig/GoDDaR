@@ -246,6 +246,26 @@ let rec has_lor exp =
   | LOr(_,_) -> true
   | _ -> false
 
+let starts_w_lpar exp =
+  match exp with
+  | LPar(_,_) -> true
+  | _ -> false
+
+let starts_w_lor exp =
+  match exp with
+  | LOr(_, _) -> true
+  | _ -> false
+
+let starts_w_llist exp =
+  match exp with
+  | LList(_,_) -> true
+  | _ -> false
+
+let has_inner_lor exp =
+  match exp with
+  | LList(a, LOr(_,_)) -> true
+  | LList(a, b) -> false
+
 let rec lor_disentangler exp =
   match exp with
   | LOr(a, b) -> (lor_disentangler a)@(lor_disentangler b)
@@ -287,19 +307,7 @@ let rec inner_lor_dis exp =
     | [] -> []
     | hd::tl -> if has_lor hd then (List.rev (inner_lor_dis hd))@(any_has_lor tl) else hd::(any_has_lor tl)
   in any_has_lor one_pass_res
-     
-let rec lor_assign arr =
-  match arr with
-  | [] -> []
-  | hd::tl -> if has_lor hd then (inner_lor_dis hd)::(lor_assign tl) else [hd]::(lor_assign tl)
-
-let rec lpar_lor_case exp =
-  let rec assoc arr1 arr2 arr2_c =
-    match arr1, arr2 with
-    | [], [] -> []
-    | h::t, [] -> assoc t arr2_c arr2_c
-    | h::t, hd::tl -> LPar(h, hd)::(assoc arr1 tl arr2_c)
-  in
+and lpar_lor_case exp =
   let calc_lor_exp exp =
     match exp with
     | LPar(LOr(a, b), LOr(c, d)) -> LPar(a, c)::LPar(a, d)::LPar(b, c)::LPar(b, d)::[]
@@ -308,15 +316,32 @@ let rec lpar_lor_case exp =
     | LPar(LPar(LOr(a, b), LOr(c, d)), x) -> LPar(LPar(a, c), x)::LPar(LPar(a, d), x)::LPar(LPar(b, c), x)::LPar(LPar(b, d), x)::[]
     | LPar(LPar(LOr(a, b), c), x) -> LPar(LPar(a, c), x)::LPar(LPar(b,c), x)::[]
     | LPar(LPar(a, LOr(b, c)), x) -> LPar(LPar(a, b), x)::LPar(LPar(a, c), x)::[]
+    | LPar((LList(_,_) as y), (LList(_,_) as z)) when has_inner_lor y -> let inner_res = inner_lor_dis y in List.map (fun x -> LPar(x, z)) inner_res
+    | LPar((LList(_,_) as y), (LList(_,_) as z)) when has_inner_lor z -> let inner_res = inner_lor_dis z in List.map (fun x -> LPar(y, x)) inner_res
+    | LPar((LList(_,_) as y), (LList(_,_) as z)) when has_inner_lor y && has_inner_lor z ->
+      let inner_res_y = inner_lor_dis y in
+      let inner_res_z = inner_lor_dis z in
+      let rec assoc_loop y_arr z_arr z_c =
+        match y_arr, z_arr with
+        | [], _ -> []
+        | hd::tl, [] -> assoc_loop tl z_c z_c
+        | hd::tl, h::t -> LPar(hd, h)::(assoc_loop y_arr t z_c)
+      in 
+      assoc_loop inner_res_y inner_res_z inner_res_z
     | _ -> exp::[]
   in
   let one_pass_res = calc_lor_exp exp in
   let rec any_has_lor arr =
     match arr with
     | [] -> []
-    | hd::tl -> if has_lor hd then (List.rev (lpar_lor_case hd))@(any_has_lor tl) else hd::(any_has_lor tl)
+    | hd::tl -> if has_lor hd then (lpar_lor_case hd)@(any_has_lor tl) else hd::(any_has_lor tl)
   in
   any_has_lor one_pass_res
+     
+let rec lor_assign arr =
+  match arr with
+  | [] -> []
+  | hd::tl -> if has_lor hd then (inner_lor_dis hd)::(lor_assign tl) else [hd]::(lor_assign tl)
 
 let rec reduce_arr arr i =
   match arr with
@@ -375,28 +400,57 @@ let rec compare_action_counts arr =
           match x with
           | (c, i) -> if (compl a) = c then false else true
         ) tl in
-      if i = b
+      if b = i
       then compare_action_counts (filter_compl a)
       else (
-        a::(compare_action_counts (filter_compl a))
+        if b > i then
+          a::(compare_action_counts (filter_compl a))
+        else (compl a)::(compare_action_counts (filter_compl a))
       )
     with
     | Not_found -> a::(compare_action_counts tl)
 
-    
-     
-
-
-(* Acho que tenho que fazer primeiro uma função que trata os LPars e depois outra que trata dos LOrs ? *)
-
-(*
-  let rec calc_lor_exp exp =
-    match exp with
-    | LPar(LOr(a, b), LOr(c, d)) -> LPar(a, c)::LPar(a, d)::LPar(b, c)::LPar(b, d)::[]
-    | LPar(LOr(a, b), x) -> LPar(a, x)::LPar(b, x)::[]
-    | LPar(x, LOr(a, b)) -> LPar(x, a)::LPar(x, b)::[]
+let main_act_verifier exp =
+  let rec count_loop arr =
+    match arr with
+    | [] -> []
+    | hd::tl -> (
+      let count_res = count_actions hd in
+      let comp_res = compare_action_counts count_res in
+      (hd, compare_action_counts count_res)::(count_loop tl))
   in
-  calc_lor_exp exp
+  if starts_w_lor exp
+  then
+    let disent = lor_disentangler exp in
+    let lpar_lor_res = 
+      List.map (fun x ->
+        if starts_w_llist x
+        then inner_lor_dis x
+        else lpar_lor_case x
+      ) disent in
+    count_loop (List.flatten lpar_lor_res)
+  else
+    let lpar_lor_res = lpar_lor_case exp in
+    count_loop lpar_lor_res
+
+let rec has_miss_acts arr =
+  match arr with
+  | [] -> false
+  | (a,b)::tl -> if (List.length b) > 0 then true else has_miss_acts tl
+
+  
+(* 
+  let lpar_lor_res = lpar_lor_case exp in
+  let rec count_loop arr =
+    match arr with
+    | [] -> []
+    | hd::tl -> (
+      let count_res = count_actions hd in
+      let comp_res = compare_action_counts count_res in
+      (hd, compare_action_counts count_res)::(count_loop tl))
+  in
+  count_loop lpar_lor_res
+
 *)
 
 

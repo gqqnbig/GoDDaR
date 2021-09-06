@@ -516,6 +516,7 @@ let rec top_lvl_extractor exp =
   | LPar(LPar(_,_) as a, LList(b, _)) -> b::(top_lvl_extractor a)
   | LPar(LPar(_, _) as a, LChi(b, _)) -> b@(top_lvl_extractor a)
   | LPar(LPar(_, _) as a, LNil) -> top_lvl_extractor a
+  | LList(a, _) -> [a]
   | _ as err -> printMode fmt err; raise (RuntimeException "No match in top_lvl_extractor \n")
 
 
@@ -551,32 +552,40 @@ let rec deadlock_solver_2 exp top_lvl =
     
 let main exp =
   let lamExp = toLambda exp in
-  let toList = lparToList lamExp  in
-  let res = 
-    if List.length toList <= 2 
-    then (eval [[(lamExp, {print=true; level="1"})]])
-    else let comb_lst = topComb toList in 
-    printFinalArrComb fmt (List.flatten comb_lst); eval (assign_ctx2 comb_lst)
-  in
-  let findings = proc_findings_comb (List.flatten res) in
-  if List.length findings = List.length res
-  then printf "\nThe process has a deadlock: every process combination is blocked.\n"
-  else if List.length findings = 0 
-    then printf "\nThe process is deadlock-free.\n"
-    else print_findings_comb (List.rev findings);
-  if !verbose then let _ = printf "\n" in print_list_comb fmt (List.rev (List.flatten res)) else ()
+  let act_ver = main_act_verifier lamExp in
+  if has_miss_acts act_ver
+  then (printMode fmt lamExp; printf "\n"; print_act_ver act_ver)
+  else
+    let toList = lparToList lamExp  in
+    let res = 
+        if List.length toList <= 2 
+        then (eval [[(lamExp, {print=true; level="1"})]])
+        else let comb_lst = topComb toList in 
+        printFinalArrComb fmt (List.flatten comb_lst); eval (assign_ctx2 comb_lst)
+    in
+    let findings = proc_findings_comb (List.flatten res) in
+    if List.length findings = List.length res
+    then printf "\nThe process has a deadlock: every process combination is blocked.\n"
+    else if List.length findings = 0 
+        then printf "\nThe process is deadlock-free.\n"
+        else print_findings_comb (List.rev findings);
+    if !verbose then let _ = printf "\n" in print_list_comb fmt (List.rev (List.flatten res)) else ()
 ;;
 
 (* ------------------- TESTING -------------------- *)
+
+main (PPar(PPref(AIn('a'), PNil), PPref(AOut('b'), PNil)))
 
 (*
 main ( PPar(PPar(PPar(PPref(AOut('a'), PNil), PPref(AOut('b'), PNil)), POr(PPref(AIn('a'), PPref(AOut('c'), POr(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil)) ))), PPref(AIn('b'), PPref(AOut('c'), POr(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil)) ))))), PPref(AIn('c'), PPref(AIn('c'), PNil))) )
 *)
 
-(*)
-let proc = LPar(LList(EEta(AIn('a')), LList(EEta(AOut('a')), LList(EEta(AIn('b')), LNil))), LList(EEta(AOut('b')), LList(EEta(AIn('a')), LList(EEta(AOut('a')), LNil))) ) in
+(* O 1º algoritmo não funciona neste caso *)
+(* O 2º algoritmo resolve o deadlock no nível inicial, mas se houver deadlocks em níveis abaixo, esses não são resolvidos *)
+(*
+let proc = LList(EEta(AIn('a')), LList(EEta(AIn('b')), LList(EEta(AOut('b')), LList(EEta(AOut('a')), LNil)))) in
 let arr = top_lvl_extractor proc in
-let resol = deadlock_solver_1 proc (arr) in
+let resol = deadlock_solver_2 proc (arr) in
 List.iter (fun x -> print_eta fmt x; printf "\n") arr; printMode fmt resol
 *)
 
@@ -596,20 +605,23 @@ Exemplos.pdf
 (* Sem LOr - LPar(LPar(LList(EEta(AIn('a')), LList(EEta(AIn('b')), LNil)), LList(EEta(AOut('b')), LList(EEta(AIn('c')), LNil))), LList(EEta(AOut('a')), LNil)) *)
 (* LPar(LOr(LList(EEta(AOut('a')), LNil), LList(EEta(AIn('b')), LNil)), LOr(LList(EEta(AIn('a')), LNil), LList(EEta(AOut('b')), LNil))) *)
 
-
-
+(* LOr(LList(EEta(AOut('a')), LList(EEta(AIn('b')), LOr(LList(EEta(AOut('c')), LNil), LList(EEta(AIn('c')), LNil)))), LPar(LOr(LList(EEta(AIn('a')), LNil), LList(EEta(AIn('b')), LNil)), LOr(LList(EEta(AOut('a')), LNil), LList(EEta(AOut('b')), LNil)))) *)
+(* LPar(LList(EEta(AOut('a')), LOr(LList(EEta(AOut('c')), LNil), LList(EEta(AIn('c')), LNil))), LList(EEta(AIn('a')), LOr(LList(EEta(AIn('d')), LNil), LList(EEta(AOut('d')), LOr(LList(EEta(AIn('z')), LNil), LList(EEta(AOut('z')), LNil))) ))  ) *)
+(* LOr(LList(EEta(AOut('a')), LList(EEta(AIn('b')), LOr(LOr(LList(EEta(AOut('c')), LNil), LList(EEta(AOut('d')), LNil)), LList(EEta(AIn('c')), LNil)))), LPar(LList(EEta(AIn('a')), LList(EEta(AIn('b')), LNil)), LList(EEta(AOut('a')), LList(EEta(AOut('b')), LNil)))) *)
 (* CORRESPONDING ACTION VERIFIER *)
+
 (*
-let proc = LPar(LOr(LList(EEta(AOut('a')), LNil), LPar(LOr(LList(EEta(AIn('b')), LNil), LList(EEta(AIn('c')), LNil)), LOr(LList(EEta(AOut('b')), LNil), LList(EEta(AOut('c')), LNil)) )), LOr(LList(EEta(AIn('a')), LNil), LList(EEta(AOut('b')), LNil))) in
+let proc = LPar(LList(EEta(AIn('a')), LNil), LList(EEta(AOut('a')), LNil)) in
 let print_proc = printMode fmt proc; printf "\n" in
-let sep = lpar_lor_case proc in
-(* let corres = lor_assign sep in *)
-List.iter (fun x -> printf "["; printMode fmt x; printf ";") (sep)
+let res = main_lpar_lor proc in
+print_act_ver res
 *)
 
-let proc = LPar(LPar(LPar(LPar(LList(EEta(AIn('a')), LList(EEta(AIn('b')), LNil)), LList(EEta(AIn('c')), LList(EEta(AIn('a')), LNil))), LList(EEta(AOut('b')), LList(EEta(AOut('a')), LNil))), LList(EEta(AIn('a')), LNil)), LNil) in
-let res = compare_action_counts (count_actions proc) in
-List.iter (fun x -> print_eta fmt x; printf "\n") res
+(*
+let dis = lor_disentangler proc in
+let assign = lor_assign dis in
+List.iter (fun x -> List.iter (fun y -> printMode fmt y) x; printf "\n") assign
+*)
 
 
 

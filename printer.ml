@@ -16,7 +16,7 @@ let print_action fmt a =
 let print_action_simple fmt a =
     match a with
     | AIn(a) -> fprintf fmt "%c?" a 
-    | AOut(a) -> fprintf fmt "%c!" a 
+    | AOut(a) -> fprintf fmt "%c!" a
 
 (* ----------- Lambda ----------- *)
 
@@ -42,6 +42,23 @@ and print_lambdalist fmt lst =
     | [] -> ()
     | hd::[] -> fprintf fmt "%a" print_lambdas hd
     | hd::tl -> fprintf fmt "%a, " print_lambdas hd; print_lambdalist fmt tl
+
+let rec print_etalist_alt fmt lst =
+  match lst with
+  | [] -> ()
+  | hd::[] -> print_eta fmt hd
+  | hd::tl -> print_eta fmt hd; printf ", "; print_etalist_alt fmt tl
+
+let rec print_etalist_alt_simple fmt lst =
+  match lst with
+  | [] -> ()
+  | hd::[] ->
+    (match hd with
+    | EEta(k) -> print_action_simple fmt k)
+  | hd::tl -> 
+    (match hd with
+    | EEta(k) -> print_action_simple fmt k; printf ", "; print_etalist_alt_simple fmt tl)
+
 
 (* ----------- Proc ----------- *)
 
@@ -105,3 +122,21 @@ let printCtxLevel1 lvl eta et i =
 let printCtxLevel2 lvl el p =
     match p with
     | (a,b) -> if !verbose || !simplified then (printf "\n---- %s ---- -> between " lvl; print_eta fmt (List.nth el a); printf " at i = %d and " a; print_eta fmt (List.nth el b);printf " at j = %d" b;printf "\n") else ()
+
+(* ------------------- BEGIN CORRESPONDING ACTIONS VERIFICATION ------------------- *)
+
+let rec print_act_ver arr =
+  let rec print arr =
+    match arr with
+    | [] -> ()
+    | hd::tl -> 
+        match hd with
+        | (a, []) -> print tl
+        | (a, b) -> 
+          if !verbose
+          then (printf "- "; print_etalist_alt fmt b; printf " in "; printMode fmt a; printf "\n"; print tl)
+          else (
+            if !simplified 
+            then (printf "- "; print_etalist_alt_simple fmt b; printf " in "; printMode fmt a; print tl))
+  in
+  if !verbose || !simplified then printf "Action(s) missing correspondence(s) in process(es):\n"; print arr
