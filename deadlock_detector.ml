@@ -548,8 +548,7 @@ let rec deadlock_solver_2 exp top_lvl =
       | x::e_tl, y::l_ltl -> LPar(deadlock_solver_2 (LList(x,y)) top_lvl, for_all e_tl l_ltl)
     in for_all a b
 
-    
-    
+ 
 let main exp =
   let lamExp = toLambda exp in
   let act_ver = main_act_verifier lamExp in
@@ -573,15 +572,23 @@ let main exp =
 ;;
 
 (* ------------------- TESTING -------------------- *)
+(* !a || (!b.?b.?a + ?a)  *)
+(* main (PPar(PPref(AOut('a'), PNil), POr(PPref(AOut('b'), PPref(AIn('b'), PPref(AIn('a'), PNil))), PPref(AIn('a'), PNil)))) *)
 
-main (PPar(PPref(AIn('a'), PNil), PPref(AOut('b'), PNil)))
+(* PPar(PPref(AOut('b'), POr(PPar(PPref(AIn('a'), PPref(AIn('c'), PNil)), PPref(AOut('c'), PPref(AOut('a'), PNil))), PPar(PPref(AOut('a'), PNil), PPref(AIn('a'), PNil)))), PPref(AOut('c'), PPref(AIn('b'), PPref(AIn('c'), PNil))) ) *)
+(* LPar(LList(EEta(AOut('b')), LOr(LPar(LList(EEta(AIn('a')), LList(EEta(AIn('c')), LNil)), LList(EEta(AOut('c')), LList(EEta(AOut('a')), LNil))), LPar(LList(EEta(AOut('a')), LNil), LList(EEta(AIn('a')), LNil))   )), LList(EEta(AOut('c')), LList(EEta(AIn('b')), LList(EEta(AIn('c')), LNil)))) *)
 
-(*
-main ( PPar(PPar(PPar(PPref(AOut('a'), PNil), PPref(AOut('b'), PNil)), POr(PPref(AIn('a'), PPref(AOut('c'), POr(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil)) ))), PPref(AIn('b'), PPref(AOut('c'), POr(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil)) ))))), PPref(AIn('c'), PPref(AIn('c'), PNil))) )
-*)
+
+
+
+
+
+(* a!.b?.(c!.0 + c?.0) + (a?.0 + b?.0 || a!.0 + b!.0) *)
+
 
 (* O 1º algoritmo não funciona neste caso *)
 (* O 2º algoritmo resolve o deadlock no nível inicial, mas se houver deadlocks em níveis abaixo, esses não são resolvidos *)
+
 (*
 let proc = LList(EEta(AIn('a')), LList(EEta(AIn('b')), LList(EEta(AOut('b')), LList(EEta(AOut('a')), LNil)))) in
 let arr = top_lvl_extractor proc in

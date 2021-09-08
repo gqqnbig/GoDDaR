@@ -266,6 +266,13 @@ let has_inner_lor exp =
   | LList(a, LOr(_,_)) -> true
   | LList(a, b) -> false
 
+let rec has_inner_lor_2 exp =
+  match exp with
+  | LPar(a, b) -> (has_inner_lor_2 a)||(has_inner_lor_2 b)
+  | LList(a, b) -> has_inner_lor_2 b
+  | LOr(_,_) -> true
+  | LNil -> false
+
 let rec lor_disentangler exp =
   match exp with
   | LOr(a, b) -> (lor_disentangler a)@(lor_disentangler b)
@@ -288,6 +295,7 @@ let rec inner_lor_dis exp =
     match exp with
     | LList(a, LNil) as e -> [e]
     | LList(a, b) as e -> [e]
+    | LPar(a, b) as e -> [e]
     | LOr(x, y) -> y::(lors x)
   in 
   let lors_arr = lors lor_exp in
@@ -352,7 +360,7 @@ let rec count_actions exp =
   let rec count exp arr =
     match exp with
     | LNil -> arr
-    | LPar(a, b) -> (count a arr)@(count b arr)
+    | LPar(a, b) -> (count a arr)@(count b []) (* Caso contrário ficamos com ocorrências duplicadas depois da concatenaçaõ *)
     | LList(a, b) ->
         try 
           let i = List.assoc a arr in
@@ -401,7 +409,7 @@ let rec compare_action_counts arr =
           | (c, i) -> if (compl a) = c then false else true
         ) tl in
       if b = i
-      then compare_action_counts (filter_compl a)
+      then compare_action_counts (List.remove_assoc (compl a) (List.remove_assoc a arr)) (* Usar o filter_compl aqui retira apenas os complementos todos, e não as restantes ações *)
       else (
         if b > i then
           a::(compare_action_counts (filter_compl a))
@@ -417,16 +425,19 @@ let main_act_verifier exp =
     | hd::tl -> (
       let count_res = count_actions hd in
       let comp_res = compare_action_counts count_res in
-      (hd, compare_action_counts count_res)::(count_loop tl))
+      (hd, comp_res)::(count_loop tl))
   in
   if starts_w_lor exp
   then
     let disent = lor_disentangler exp in
     let lpar_lor_res = 
       List.map (fun x ->
-        if starts_w_llist x
-        then inner_lor_dis x
-        else lpar_lor_case x
+        if has_inner_lor_2 x = false
+        then [x]
+        else 
+          if starts_w_llist x
+          then inner_lor_dis x
+          else lpar_lor_case x
       ) disent in
     count_loop (List.flatten lpar_lor_res)
   else
@@ -437,23 +448,6 @@ let rec has_miss_acts arr =
   match arr with
   | [] -> false
   | (a,b)::tl -> if (List.length b) > 0 then true else has_miss_acts tl
-
-  
-(* 
-  let lpar_lor_res = lpar_lor_case exp in
-  let rec count_loop arr =
-    match arr with
-    | [] -> []
-    | hd::tl -> (
-      let count_res = count_actions hd in
-      let comp_res = compare_action_counts count_res in
-      (hd, compare_action_counts count_res)::(count_loop tl))
-  in
-  count_loop lpar_lor_res
-
-*)
-
-
   
 (* ------------------- END CORRESPONDING ACTIONS VERIFICATION ------------------- *)
 
