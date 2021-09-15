@@ -458,6 +458,14 @@ let rec rem_print_ctx arr =
     match hd with
     | (a, b) -> a::(rem_print_ctx tl)
 
+let rec all_same arr =
+  match arr with
+  | [hd] -> true
+  | [hd; tl] -> if hd = tl then true else false
+  | hd::md::tl -> if hd = md then all_same (md::tl) else false
+
+let fst arr = List.map (fun x -> fst x) arr
+
 
 (* ------------------- COMMAND LINE ARGUMENTS -------------------- *)
 

@@ -78,12 +78,14 @@ let rec print_proc_simple fmt p =
 
 (* ----------- Misc ----------- *)
 
-let printMode fmt exp =
+let printMode fmt exp p =
+  if p then
     if !verbose then
         let _ = print_lambdas fmt exp in let _ = printf " ---> " in let _ = print_proc_simple fmt (toProc exp) in printf "\n"
     else if !simplified then
         let _ = print_proc_simple fmt (toProc exp) in printf "\n"
     else ()
+  else ()
 
 let rec print_findings_comb lst = 
     let rec find_list lst =
@@ -110,18 +112,24 @@ let rec print_list_comb fmt lst =
 let printFinalArrComb fmt lst =
     if !verbose then
         (printf "Initial Combinations:\n";
-        let i = ref 0 in List.iter (fun x -> i:= !i+1; printf "---- %d ----\n" !i; printMode fmt x; printf "\n") lst)
+        let i = ref 0 in List.iter (fun x -> i:= !i+1; printf "---- %d ----\n" !i; printMode fmt x true; printf "\n") lst)
     else ()
 
-let printCtxLevel lvl =
-    if !verbose || !simplified then printf "\n---- %s ----\n" lvl else ()
+let printCtxLevel p_ctx =
+  if p_ctx.print then
+    if !verbose || !simplified then printf "\n---- %s ----\n" p_ctx.level else ()
+  else ()
 
-let printCtxLevel1 lvl eta et i =
-    if !verbose || !simplified then (printf "\n---- %s ---- -> between " lvl; print_eta fmt eta; printf " at i = %d and " i; print_eta fmt et; printf "\n") else ()
+let printCtxLevel1 p_ctx eta et i =
+  if p_ctx.print then
+    if !verbose || !simplified then (printf "\n---- %s ---- -> between " p_ctx.level; print_eta fmt eta; printf " at i = %d and " i; print_eta fmt et; printf "\n") else ()
+  else ()
 
-let printCtxLevel2 lvl el p =
+let printCtxLevel2 p_ctx el p =
+  if p_ctx.print then
     match p with
-    | (a,b) -> if !verbose || !simplified then (printf "\n---- %s ---- -> between " lvl; print_eta fmt (List.nth el a); printf " at i = %d and " a; print_eta fmt (List.nth el b);printf " at j = %d" b;printf "\n") else ()
+    | (a,b) -> if !verbose || !simplified then (printf "\n---- %s ---- -> between " p_ctx.level; print_eta fmt (List.nth el a); printf " at i = %d and " a; print_eta fmt (List.nth el b);printf " at j = %d" b;printf "\n") else ()
+  else ()
 
 (* ------------------- BEGIN CORRESPONDING ACTIONS VERIFICATION ------------------- *)
 
@@ -134,9 +142,9 @@ let rec print_act_ver arr =
         | (a, []) -> print tl
         | (a, b) -> 
           if !verbose
-          then (printf "- "; print_etalist_alt fmt b; printf " in "; printMode fmt a; printf "\n"; print tl)
+          then (printf "- "; print_etalist_alt fmt b; printf " in "; printMode fmt a true; printf "\n"; print tl)
           else (
             if !simplified 
-            then (printf "- "; print_etalist_alt_simple fmt b; printf " in "; printMode fmt a; print tl))
+            then (printf "- "; print_etalist_alt_simple fmt b; printf " in "; printMode fmt a true; print tl))
   in
   if !verbose || !simplified then printf "Action(s) missing correspondence(s) in process(es):\n"; print arr

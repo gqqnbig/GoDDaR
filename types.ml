@@ -59,14 +59,14 @@ and chi_to_proc chi =
         let c_ehd = toAction ehd in
         let c_lhd = toProc lhd in PPar(PPref(c_ehd, c_lhd), chi_to_proc (LChi(etl, ltl)))
 
-let assign_ctx lst =
+let assign_ctx lst print =
     let i = ref 0 in
-        List.map (fun x -> i:=!i+1; (x, {print = true; level = string_of_int !i})) lst
+        List.map (fun x -> i:=!i+1; (x, {print = print; level = string_of_int !i})) lst
 
-let assign_ctx2 lst =
+let assign_ctx2 lst print =
     let i = ref 0 in
         List.map ( fun x -> 
-            List.map ( fun y -> i:=!i+1; (y, {print = true; level = string_of_int !i})) x
+            List.map ( fun y -> i:=!i+1; (y, {print = print; level = string_of_int !i})) x
         ) lst
 
 let next_ctx ctx = {ctx with level = ctx.level ^ ".1"}
@@ -106,3 +106,14 @@ let getL2 lpar =
     match lpar with
     | LPar(l1, l2) -> l2
     | LOr(l1, l2) -> l2
+
+let lchi_to_lpar exp =
+  match exp with
+  | LChi(a, b) ->
+    let rec loop arr1 arr2 =
+      match arr1, arr2 with
+      | hd::[], hd1::[] -> LList(hd, hd1)
+      | hd::tl, hd1::tl1 -> LPar(LList(hd, hd1), loop tl tl1)
+    in
+    loop a b
+  | _ -> exp
