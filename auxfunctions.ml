@@ -391,29 +391,24 @@ let rec count_actions exp =
         red_res::(reduce rem_arr)
   in reduce count_res
 
-let compl eta =
-  match eta with
-  | EEta(AIn(k)) -> EEta(AOut(k))
-  | EEta(AOut(k)) -> EEta(AIn(k))
-
 let rec compare_action_counts arr = 
   match arr with
   | [] -> []
   | (a, b)::tl ->
     try
-      let i = List.assoc (compl a) arr in
+      let i = List.assoc (compl_eta a) arr in
       let filter_compl a =
         List.filter (
           fun x ->
           match x with
-          | (c, i) -> if (compl a) = c then false else true
+          | (c, i) -> if (compl_eta a) = c then false else true
         ) tl in
       if b = i
-      then compare_action_counts (List.remove_assoc (compl a) (List.remove_assoc a arr)) (* Usar o filter_compl aqui retira apenas os complementos todos, e não as restantes ações *)
+      then compare_action_counts (List.remove_assoc (compl_eta a) (List.remove_assoc a arr)) (* Usar o filter_compl aqui retira apenas os complementos todos, e não as restantes ações *)
       else (
         if b > i then
           a::(compare_action_counts (filter_compl a))
-        else (compl a)::(compare_action_counts (filter_compl a))
+        else (compl_eta a)::(compare_action_counts (filter_compl a))
       )
     with
     | Not_found -> a::(compare_action_counts tl)
@@ -465,6 +460,15 @@ let rec all_same arr =
   | hd::md::tl -> if hd = md then all_same (md::tl) else false
 
 let fst arr = List.map (fun x -> fst x) arr
+
+let rec use_lsubst exp sub =
+  match exp with
+  | LSubst -> sub
+  | LPar(a, b) -> LPar(use_lsubst a sub, use_lsubst b sub)
+  | LOr(a, b) -> LOr(use_lsubst a sub, use_lsubst b sub)
+  | LList(a, b) -> LList(a, use_lsubst b sub)
+  | LNil -> LNil
+
 
 
 (* ------------------- COMMAND LINE ARGUMENTS -------------------- *)

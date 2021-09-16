@@ -23,6 +23,7 @@ type lambda =
     | LList of eta * lambda
     | LChi of eta list * lambda list
     | LPar of lambda * lambda
+    | LSubst
 
 (* Print_context *)
 type print_ctx =

@@ -102,10 +102,20 @@ let rec print_list_comb fmt lst =
     let rec find_list lst =
         match lst with
         | [] -> ()
-        | hd::[] -> (match hd with | l, c -> printf "("; print_lambdas fmt l; printf ", %s)" c.level; printf "]";printf " ---> ";print_proc_simple fmt (toProc l))
-        | hd::tl -> (match hd with | l, c -> printf "("; print_lambdas fmt l; printf ", %s)" c.level; printf "; ---> ";print_proc_simple fmt (toProc l);printf "\n"; find_list tl)
+        | hd::[] -> 
+          (match hd with 
+          | l, c -> 
+            if !verbose 
+            then (printf "("; print_lambdas fmt l; printf ", %s)" c.level; printf "]";printf " ---> ";print_proc_simple fmt (toProc l))
+            else (printf "("; print_proc_simple fmt (toProc l); printf ", %s)" c.level; printf "]"))
+        | hd::tl -> 
+          (match hd with 
+          | l, c -> 
+            if !verbose
+            then (printf "("; print_lambdas fmt l; printf ", %s)" c.level; printf "; ---> ";print_proc_simple fmt (toProc l);printf "\n"; find_list tl)
+            else (printf "("; print_proc_simple fmt (toProc l); printf ", %s)" c.level; printf "\n"; find_list tl))
     in
-    printf "[";
+    printf "\n[";
     find_list lst;
     printf "\n"
 
@@ -142,9 +152,9 @@ let rec print_act_ver arr =
         | (a, []) -> print tl
         | (a, b) -> 
           if !verbose
-          then (printf "- "; print_etalist_alt fmt b; printf " in "; printMode fmt a true; printf "\n"; print tl)
+          then (printf "- "; print_etalist_alt fmt (List.rev b); printf " in "; printMode fmt a true; printf "\n"; print tl)
           else (
             if !simplified 
-            then (printf "- "; print_etalist_alt_simple fmt b; printf " in "; printMode fmt a true; print tl))
+            then (printf "- "; print_etalist_alt_simple fmt (List.rev b); printf " in "; printMode fmt a true; print tl))
   in
   if !verbose || !simplified then printf "Action(s) missing correspondence(s) in process(es):\n"; print arr
