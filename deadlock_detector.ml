@@ -555,23 +555,8 @@ let rec deadlock_solver_2 exp top_lvl =
       | x::e_tl, y::l_ltl -> LPar(deadlock_solver_2 (LList(x,y)) top_lvl, for_all e_tl l_ltl)
     in for_all a b
 
-let main_deadlock_solver_print arr =
-  let p = rem_print_ctx (List.flatten arr) in
-  let top_lvl = get_top_lvl p in
-  let combined = List.combine p top_lvl in
-  let solved =
-    List.rev (
-      List.map ( fun x -> 
-        match x with
-        | (a, b) -> if (!ds = 0  || !ds = 1) then deadlock_solver_1 a b else deadlock_solver_2 a b
-      ) combined 
-    ) in
-  let _ = printf "\nDeadlock(s) solved with algorithm %d:\n" !ds in
-  List.iter ( fun x -> printf "- "; printMode fmt x true) solved
-
-
-let main_deadlock_solver arr =
-  let p = [List.hd arr] in
+let main_deadlock_solver arr hd_only =
+  let p = if hd_only then [List.hd arr] else arr in
   let top_lvl = get_top_lvl p in
   let combined = List.combine p top_lvl in
     List.rev (
@@ -630,7 +615,29 @@ let main exp =
         else let comb_lst = topComb toList in 
         printFinalArrComb fmt (List.flatten comb_lst); eval (assign_ctx2 comb_lst true)
     in
-    (*let _ = printf "1º RES: ";  in *)
+    let rec det_res_loop arr =
+    match arr with
+    | [] -> []
+    | hd::tl -> 
+      let toList1 = lparToList hd in
+      let res1 = (eval [[((lchi_to_lpar hd), {print=false; level="a"})]]) in 
+      let findings = proc_findings_comb (List.flatten res1) in
+      if List.length findings != 0
+      then
+        let result = List.hd (List.filter (fun x -> if x = LNil then false else true) (fst (List.flatten res1))) in
+        let deadl_exp = (*printf "\nhd:"; printMode fmt hd true;*)find_deadl_exp hd result in
+        let use_subst = (* printf "result:" ;printMode fmt (List.hd (main_deadlock_solver [result])) true; *)use_lsubst deadl_exp (List.hd (main_deadlock_solver [result] true)) in
+          (det_res_loop (use_subst::tl))
+      else hd::(det_res_loop tl)
+    in
+    let rec final_change exp dexps solved =
+      match dexps, solved with
+      | [], [] -> exp
+      | hd::tl, hd1::tl1 -> 
+        let deadl_exp = find_deadl_exp exp hd in
+        let use_subst = use_lsubst deadl_exp hd1 in
+          final_change use_subst tl tl1
+    in 
     let init_findings = (proc_findings_comb (List.flatten res)) in
     if List.length init_findings = 0
     then printf "\nThe process is deadlock-free.\n"
@@ -638,45 +645,31 @@ let main exp =
       if List.length init_findings = List.length (List.flatten res)
       then 
         let _ = printf "\nThe process has a deadlock: every process combination is blocked.\n" in 
-        print_list_comb fmt (List.rev (List.flatten res))
-      else 
         let _ = print_list_comb fmt (List.rev (List.flatten res)) in
-        let rec det_res_loop arr =
-        match arr with
-        | [] -> []
-        | hd::tl -> 
-          let toList1 = lparToList hd in
-          let res1 = (eval [[((lchi_to_lpar hd), {print=false; level="a"})]]) in 
-          let findings = proc_findings_comb (List.flatten res1) in
-          if List.length findings != 0
-          then
-            let result = List.hd (List.filter (fun x -> if x = LNil then false else true) (fst (List.flatten res1))) in
-            let deadl_exp = (*printf "\nhd:"; printMode fmt hd true;*)find_deadl_exp hd result in
-            let use_subst = (* printf "result:" ;printMode fmt (List.hd (main_deadlock_solver [result])) true; *)use_lsubst deadl_exp (List.hd (main_deadlock_solver [result])) in
-              (det_res_loop (use_subst::tl))
-          else hd::(det_res_loop tl)
-        in
         let all_solv = det_res_loop (List.filter (fun x -> if x = LNil then false else true) (fst (List.flatten res))) in
-        (* let _ = printf "all_solv: "; List.iter ( fun x -> printMode fmt x true) all_solv in 
-        let _ = printf "\nFINAL CHANGE\n" in *)
-        let rec final_change exp dexps solved =
-          match dexps, solved with
-          | [], [] -> exp
-          | hd::tl, hd1::tl1 -> 
-            let deadl_exp = find_deadl_exp exp hd in
-            let use_subst = use_lsubst deadl_exp hd1 in
-              final_change use_subst tl tl1
-        in 
         let final_res = final_change lamExp (List.filter (fun x -> if x = LNil then false else true) (List.map (fun x -> lchi_to_lpar x ) (fst (List.flatten res)))) all_solv in
         let _ = printf "\nDeadlock(s) solved with algorithm %d:\n" !ds in
         printMode fmt final_res true
+      else 
+        let _ = print_list_comb fmt (List.rev (List.flatten res)) in
+        let all_solv = det_res_loop (List.filter (fun x -> if x = LNil then false else true) (fst (List.flatten res))) in
+        let final_res = final_change lamExp (List.filter (fun x -> if x = LNil then false else true) (List.map (fun x -> lchi_to_lpar x ) (fst (List.flatten res)))) all_solv in
+        let _ = printf "\nDeadlock(s) solved with algorithm %d:\n" !ds in
+        if final_res = lamExp
+        then 
+          let filter_res = List.filter ( fun x -> match x with (a,b) -> if a = LNil then false else true) (List.flatten res) in
+          let alter_res = main_deadlock_solver (fst filter_res) false in
+          let rem_nils = List.map (fun x -> remLNils x) alter_res in
+          let f_res = List.combine rem_nils (snd filter_res) in
+          print_list_comb fmt f_res
+        else printMode fmt final_res true
 ;;
 
 
 
 (* ------------------- TESTING -------------------- *)
 
-main ( PPar( PPar( PPref(AOut('a'), PPref(AIn('b'), PNil)) , PPref(AIn('a'), PNil)) , PPref(AIn('a'), PPref(AOut('a'), PPref(AOut('b'), PNil))) ) )
+(* main ( PPar( PPar( PPref(AOut('a'), PPref(AIn('b'), PNil)) , PPref(AIn('a'), PNil)) , PPref(AIn('a'), PPref(AOut('a'), PPref(AOut('b'), PNil))) ) ) *)
 
 
 

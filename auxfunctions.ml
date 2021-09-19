@@ -461,6 +461,8 @@ let rec all_same arr =
 
 let fst arr = List.map (fun x -> fst x) arr
 
+let snd arr = List.map (fun x -> snd x) arr
+
 let rec use_lsubst exp sub =
   match exp with
   | LSubst -> sub
