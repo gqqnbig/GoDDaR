@@ -128,6 +128,9 @@ main ( PPar(PPar(PPar(PPref(AOut('a'), PNil), PPref(AOut('b'), PNil)), POr(PPref
 (* a!.0 || b!.0 || a?.c!.(a?.c!.0 + b?.c!.0) + b?.c!.(a?.c!.0 + b?.c!.0) || c?.c?.0 -> DEADLOCK POSSÍVEL -- por causa da escolha *)
 main ( PPar(PPar(PPar(PPref(AOut('a'), PNil), PPref(AOut('b'), PNil)), POr(PPref(AIn('a'), PPref(AOut('c'), POr(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil)) ))), PPref(AIn('b'), PPref(AOut('c'), POr(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil)) ))))), PPref(AIn('c'), PPref(AIn('c'), PNil))) )
 
+(* a!.0 || b!.0 || a?.c!.b?.c!.0 + b?.c!.a?.c!.0 || c?.c?.0  *)
+
+
 (* Listing 9 -> Alternative fan-in pattern *)
 (* a!.0 || b!.0 || (a?.c!.0 + b!.c!.0 + 0) || (c?.0 + 0) -> DEADLOCK -- porque há 2 works e apenas uma receção *)
 main ( PPar(PPar(PPar(PPref(AOut('a'), PNil), PPref(AOut('b'), PNil)), POr(POr(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil))), PNil)), POr(PPref(AIn('c'), PNil), PNil)) )
@@ -161,3 +164,42 @@ PPref(AIn('c'), POr(PPref(AIn('b'), PPref(AOut('c'), PPref(AOut('b'), PNil))), P
 POr(PPref(AIn('c'), POr(PPref(AIn('a'), PPref(AOut('c'), PPref(AOut('a'), PNil))), PPref(AOut('c'), PNil))),
 PPref(AIn('a'), POr(PPref(AIn('c'), PPref(AOut('a'), PPref(AOut('c'), PNil))), PPref(AOut('a'), PNil))))) )
 
+(* ----------- Jobsched ----------- *)
+(* Um canal fechado consegue sempre receber valores, e neste caso o canal done, quando fechado, é usado para terminar o programa, 
+pelo que se tem de considerar que close(done) envia uma mensagem, caso contrário dá sempre deadlock *)
+(* No entanto há uma discrepância entre o nº de closes e leituras do respetivo canal, uma vez que basta fechar 1 vez e pode ser lido infinitamente *)
+(* a?.0 + b?.0 || a?.0 + b?.0 || a!.(a!.0 + b!.0) + b!.0 *)
+main ( PPar(PPar(POr(PPref(AIn('a'), PNil), PPref(AIn('b'), PNil)), POr(PPref(AIn('a'), PNil), PPref(AIn('b'), PNil))),  POr(PPref(AOut('a'), POr( PPref(AOut('a'), PNil), PPref(AOut('b'), PNil))), PPref(AOut('b'), PNil))) )
+
+(* ----------- select-with-continuation ----------- -> DEADLOCK sempre *)
+(* a?.a!.0 + b!.a!.0 + c?.a!.0 + a!.0 *)
+main ( POr(POr(POr(PPref(AIn('a'), PPref(AOut('a'), PNil)), PPref(AOut('b'), PPref(AOut('a'), PNil))), PPref(AIn('c'), PPref(AOut('a'), PNil))), PPref(AOut('a'), PNil)) )
+
+
+------------------ godel2-benchmarks ------------------
+
+(* ch-as-lock-bad *)
+(* b?.b!.b?.b!.0 || b?.b!.0                       TEM SOLUÇÃO -> Nota: Canal assíncrono                    *)
+main ( PPar(PPref(AIn('b'), PPref(AOut('b'), PPref(AIn('b'), PPref(AOut('b'), PNil)))), PPref(AIn('b'), PPref(AOut('b'), PNil)) ) ) 
+
+(* ch-as-lock-fix / ch-as-lock-race *)
+(* b!.b?.b!.b?.0 || b!.b?.0                       TEM SOLUÇÃO -> Nota: Canal assíncrono                    *)
+main ( PPar(PPref(AOut('b'), PPref(AIn('b'), PPref(AOut('b'), PPref(AIn('b'), PNil)))), PPref(AOut('b'), PPref(AIn('b'), PNil))) )
+
+(* deposit-fix -> Não tem comunicação *)
+(* deposit-race -> Não tem comunicação *)
+(* dine3-chan-fix -> Tem processos recursivos *)
+(* dine3-chan-race -> Tem processos recursivos *)
+(* dine5-chan-fix -> Tem processos recursivos *)
+(* dine5-chan-race -> Tem processos recursivos *)
+(* dine5-chan-deadlock-> Não tem comunicação *)
+(* dine5-fix -> Não tem comunicação *)
+(* dine5-unsafe -> Não tem comunicação *)
+(* loop -> Tem processos recursivos e loops *)
+(* no-race -> Não tem comunicação *)
+(* no-race-mut-bad -> Não tem comunicação *)
+(* no-race-mutex -> Não tem comunicação *)
+(* prod-cons-fix -> Tem processos recursivos *)
+(* prod-cons-race -> Tem processos recursivos *)
+(* simple-race -> Não tem comunicação *)
+(* simple-race-fix -> Não tem comunicação *)

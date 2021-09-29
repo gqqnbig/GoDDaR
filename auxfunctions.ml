@@ -1,5 +1,4 @@
 (* Definition of auxiliary functions *)
-
 open Types
 
 (* ------------------- AUXILIARY FUNCTIONS -------------------- *)
@@ -392,6 +391,11 @@ let rec count_actions exp =
   in reduce count_res
 
 let rec compare_action_counts arr = 
+  let rec rem_assocs eta arr = 
+    if List.mem_assoc eta arr
+    then rem_assocs eta (List.remove_assoc eta arr)
+    else arr
+  in
   match arr with
   | [] -> []
   | (a, b)::tl ->
@@ -404,7 +408,7 @@ let rec compare_action_counts arr =
           | (c, i) -> if (compl_eta a) = c then false else true
         ) tl in
       if b = i
-      then compare_action_counts (List.remove_assoc (compl_eta a) (List.remove_assoc a arr)) (* Usar o filter_compl aqui retira apenas os complementos todos, e não as restantes ações *)
+      then compare_action_counts (rem_assocs (compl_eta a) (rem_assocs a arr)) (* Usar o filter_compl aqui retira apenas os complementos todos, e não as restantes ações *)
       else (
         if b > i then
           a::(compare_action_counts (filter_compl a))
@@ -412,6 +416,11 @@ let rec compare_action_counts arr =
       )
     with
     | Not_found -> a::(compare_action_counts tl)
+
+let rec has_miss_acts arr =
+  match arr with
+  | [] -> false
+  | (a,b)::tl -> ((List.length b) > 0) || has_miss_acts tl
 
 let main_act_verifier exp =
   let rec count_loop arr =
@@ -439,10 +448,7 @@ let main_act_verifier exp =
     let lpar_lor_res = lpar_lor_case exp in
     count_loop lpar_lor_res
 
-let rec has_miss_acts arr =
-  match arr with
-  | [] -> false
-  | (a,b)::tl -> if (List.length b) > 0 then true else has_miss_acts tl
+
   
 (* ------------------- END CORRESPONDING ACTIONS VERIFICATION ------------------- *)
 

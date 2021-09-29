@@ -566,32 +566,6 @@ let main_deadlock_solver arr hd_only =
       ) combined 
     )
 
-(*
-let main exp =
-  let lamExp = toLambda exp in
-  let act_ver = main_act_verifier lamExp in
-  if has_miss_acts act_ver
-  then (printMode fmt lamExp; printf "\n"; print_act_ver act_ver)
-  else
-    let toList = lparToList lamExp  in
-    let res = 
-        if List.length toList <= 2 
-        then (eval [[(lamExp, {print=true; level="1"})]])
-        else let comb_lst = topComb toList in 
-        printFinalArrComb fmt (List.flatten comb_lst); eval (assign_ctx2 comb_lst)
-    in
-    let findings = proc_findings_comb (List.flatten res) in
-    if List.length findings = List.length res
-    then 
-      let _ = printf "\nThe process has a deadlock: every process combination is blocked.\n" in
-        (if !verbose then let _ = printf "\n" in print_list_comb fmt (List.rev (List.flatten res)) else (); main_deadlock_solver_print res)
-    else if List.length findings = 0 
-        then printf "\nThe process is deadlock-free.\n"
-        else
-          (if !verbose then let _ = printf "\n" in print_list_comb fmt (List.rev (List.flatten res)) else (); main_deadlock_solver_print res)
-;;
-*)
-
 let rec find_deadl_exp exp dexp =
   (* printf "exp: "; printMode fmt exp true; printf "dexp: "; printMode fmt dexp true; *)
   if exp = dexp then LSubst else
@@ -601,6 +575,7 @@ let rec find_deadl_exp exp dexp =
   | LList(a, b) -> if b = dexp then LList(a, LSubst) else LList(a, find_deadl_exp b dexp)
   | LNil -> LNil
   | _ -> raise ( RuntimeException "No match")
+
 
 let main exp =
   let lamExp = toLambda exp in
@@ -650,7 +625,8 @@ let main exp =
         let final_res = final_change lamExp (List.filter (fun x -> if x = LNil then false else true) (List.map (fun x -> lchi_to_lpar x ) (fst (List.flatten res)))) all_solv in
         let _ = printf "\nDeadlock(s) solved with algorithm %d:\n" !ds in
         printMode fmt final_res true
-      else 
+      else
+        let _ = printf "\nThe process has a deadlock: some process combination is blocked.\n" in
         let _ = print_list_comb fmt (List.rev (List.flatten res)) in
         let all_solv = det_res_loop (List.filter (fun x -> if x = LNil then false else true) (fst (List.flatten res))) in
         let final_res = final_change lamExp (List.filter (fun x -> if x = LNil then false else true) (List.map (fun x -> lchi_to_lpar x ) (fst (List.flatten res)))) all_solv in
@@ -667,75 +643,35 @@ let main exp =
 
 
 
-(* ------------------- TESTING -------------------- *)
 
-(* main ( PPar( PPar( PPref(AOut('a'), PPref(AIn('b'), PNil)) , PPref(AIn('a'), PNil)) , PPref(AIn('a'), PPref(AOut('a'), PPref(AOut('b'), PNil))) ) ) *)
+(*
 
+LANGUAGE:
+P := 0 | a!.P | a?.P | (P || Q) | (P + Q)
 
+- All names are shared (not linear)
+- We treat sequential and circular deadlocks
 
-(* main( PPar(PPref(AIn('a'), PPref(AOut('b'), PNil)), PPref(AOut('a'), PPref(AIn('b'), PNil)) ) ) *)
-(* main ( POr(PPar(PPref(AOut('a'), PPref(AIn('a'), PNil)), PPref(AIn('b'), PPref(AOut('b'), PPref(AIn('c'), PPref(AOut('c'), PNil))))), PPref(AOut('c'), PPref(AIn('c'), PNil))) ) *)
+*)
 
+(* -- Deadlock -- *)
+(* 1) (a!.a?.0 || b?.b!.c!.c?.0) + c!.c?.0    --->    Case with complete (global) resolution *)
+(* main ( POr(PPar(PPref(AOut('a'), PPref(AIn('a'), PNil)), PPref(AIn('b'), PPref(AOut('b'), PPref(AIn('c'), PPref(AOut('c'), PNil))))), PPref(AOut('c'), PPref(AIn('c'), PNil))) )   *)
 
-(* main ( PPar(PPref(AOut('a'), PPar(PPref(AOut('b'), PPref(AIn('c'), PNil)), PPref(AOut('c'), PPref(AIn('b'), PNil)))), PPref(AIn('a'), PNil)) ) *)
-(* main ( PPar(PPref(AOut('a'), PNil), POr(PPref(AOut('b'), PPref(AIn('b'), PPref(AIn('a'), PNil))), PPref(AIn('a'), PNil))) ) *)
-
-
-
-
-
-
-(* !a || (!b.?b.?a + ?a)  *)
+(* 2) a! || (b!.b?.a? + a?)    --->    Case with partial (local) resolution *)
 (* main (PPar(PPref(AOut('a'), PNil), POr(PPref(AOut('b'), PPref(AIn('b'), PPref(AIn('a'), PNil))), PPref(AIn('a'), PNil)))) *)
 
 
+(* -- Actions missing correspondence    --->    No resolution *)
+(* 3) a?.(c?.0 + d?.0) || a!.e!.0 *)
+(* main ( PPar(PPref(AIn('a'), POr(PPref(AIn('c'), PNil), PPref(AIn('d'), PNil))), PPref(AOut('a'), PPref(AOut('e'), PNil))) )  *)
+
+
+(* -- No deadlock -- *)
+(* 4) a!.(b!.c!.0 || b?.c?.d?.0) || a?.d!.0 *)
+(* main ( PPar(PPref(AOut('a'), PPar(PPref(AOut('b'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AIn('c'), PPref(AIn('d'), PNil))))), PPref(AIn('a'), PPref(AOut('d'), PNil))) ) *)
 
 
 
 
 
-
-(* O 1º algoritmo não funciona neste caso *)
-(* O 2º algoritmo resolve o deadlock no nível inicial, mas se houver deadlocks em níveis abaixo, esses não são resolvidos *)
-
-
-(* 
-1) LPar(LPar(LChi([EEta(AIn('a')); EEta(AIn('c')); EEta(AOut('b'))], [LList(EEta(AIn('b')), LNil); LList(EEta(AIn('a')), LNil); LList(EEta(AOut('a')), LNil)]), LList(EEta(AIn('a')), LNil)), LNil)
-2) LPar(LPar(LList(EEta(AIn('a')), LList(EEta(AIn('b')), LNil)), LList(EEta(AIn('c')), LList(EEta(AIn('a')), LNil))), LList(EEta(AOut('b')), LList(EEta(AOut('a')), LNil))) 
-3) LPar(LPar(LList(EEta(AOut('a')), LList(EEta(AIn('c')), LNil)), LList(EEta(AOut('c')), LList(EEta(AIn('a')), LNil))), LList(EEta(AOut('b')), LList(EEta(AIn('b')), LNil)))
-
-Exemplos.pdf
-3) LPar(LList(EEta(AIn('a')), LList(EEta(AOut('a')), LList(EEta(AIn('b')), LNil))), LList(EEta(AOut('b')), LList(EEta(AIn('a')), LList(EEta(AOut('a')), LNil))) )
-4) LPar(LList(EEta(AIn('a')), LList(EEta(AOut('a')), LList(EEta(AIn('a')), LList(EEta(AIn('a')), LNil)))), LList(EEta(AIn('a')), LList(EEta(AOut('a')), LList(EEta(AOut('a')), LList(EEta(AOut('a')), LNil)))))
-*)
-
-(* LOr(LOr(LList(EEta(AIn('a')), LNil), LList(EEta(AOut('a')), LNil)), LPar(LList(EEta(AOut('a')), LList(EEta(AIn('b')), LNil)) , LList(EEta(AIn('a')), LList(EEta(AOut('b')), LNil)) )) *)
-(* LOr(LList(EEta(AOut('a')), LList(EEta(AIn('b')), LOr(LList(EEta(AOut('c')), LNil), LList(EEta(AIn('c')), LNil)))), LPar(LList(EEta(AIn('a')), LList(EEta(AIn('b')), LNil)), LList(EEta(AOut('a')), LList(EEta(AOut('b')), LNil)))) *)
-(* LList(EEta(AOut('a')), LList(EEta(AIn('b')), LOr(LOr(LList(EEta(AOut('c')), LList(EEta(AOut('b')), LNil)), LList(EEta(AIn('c')), LOr(LList(EEta(AIn('z')), LNil), LList(EEta(AIn('w')), LNil)))), LList(EEta(AIn('a')), LNil) ))) *)
-(* Sem LOr - LPar(LPar(LList(EEta(AIn('a')), LList(EEta(AIn('b')), LNil)), LList(EEta(AOut('b')), LList(EEta(AIn('c')), LNil))), LList(EEta(AOut('a')), LNil)) *)
-(* LPar(LOr(LList(EEta(AOut('a')), LNil), LList(EEta(AIn('b')), LNil)), LOr(LList(EEta(AIn('a')), LNil), LList(EEta(AOut('b')), LNil))) *)
-
-(* LOr(LList(EEta(AOut('a')), LList(EEta(AIn('b')), LOr(LList(EEta(AOut('c')), LNil), LList(EEta(AIn('c')), LNil)))), LPar(LOr(LList(EEta(AIn('a')), LNil), LList(EEta(AIn('b')), LNil)), LOr(LList(EEta(AOut('a')), LNil), LList(EEta(AOut('b')), LNil)))) *)
-(* LPar(LList(EEta(AOut('a')), LOr(LList(EEta(AOut('c')), LNil), LList(EEta(AIn('c')), LNil))), LList(EEta(AIn('a')), LOr(LList(EEta(AIn('d')), LNil), LList(EEta(AOut('d')), LOr(LList(EEta(AIn('z')), LNil), LList(EEta(AOut('z')), LNil))) ))  ) *)
-(* LOr(LList(EEta(AOut('a')), LList(EEta(AIn('b')), LOr(LOr(LList(EEta(AOut('c')), LNil), LList(EEta(AOut('d')), LNil)), LList(EEta(AIn('c')), LNil)))), LPar(LList(EEta(AIn('a')), LList(EEta(AIn('b')), LNil)), LList(EEta(AOut('a')), LList(EEta(AOut('b')), LNil)))) *)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-(* !a || (!b.?b.?a + ?a)  *)
