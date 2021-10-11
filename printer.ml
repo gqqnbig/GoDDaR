@@ -2,7 +2,7 @@
 
 open Format
 open Types
-open Auxfunctions
+open Cmd
 
 let fmt = Format.std_formatter
 

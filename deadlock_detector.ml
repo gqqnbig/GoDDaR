@@ -2,6 +2,7 @@ open Format
 open Types
 open Printer
 open Auxfunctions
+open Cmd
 
 
 (* ------------------- EXCEPTIONS -------------------- *)
@@ -504,6 +505,7 @@ let rec eval arr =
     match arr with
     | [] -> []
     | hd::tl -> append (eval tl) (new_eval hd)
+    (* | hd::tl -> List.fold_left (fun x acc -> (new_eval (List.flatten x))) [] arr *)
 
 let rec top_lvl_extractor exp =
   match exp with
@@ -575,6 +577,7 @@ let rec find_deadl_exp exp dexp =
   | LList(a, b) -> if b = dexp then LList(a, LSubst) else LList(a, find_deadl_exp b dexp)
   | LNil -> LNil
   | _ -> raise ( RuntimeException "No match")
+
 
 
 let main exp =
@@ -674,4 +677,12 @@ P := 0 | a!.P | a?.P | (P || Q) | (P + Q)
 
 
 
+(*)
+main ( PPar(PPar(PPref(AOut('d'), PPref(AIn('a'), PPar(PPref(AIn('b'), PNil), PPref(AIn('e'), PPref(AOut('d'), PNil))))), PPref(AIn('d'), PPref(AOut('e'), PPref(AIn('d'), PNil)))), PPref(AOut('b'), PPref(AOut('a'), PNil))) )
+*)
 
+(*  
+main ( PPar(PPref(AOut('a'), PPar( PPref(AOut('a'), PPar(PPref(AIn('b'), PNil), PPref(AIn('c'), PNil))) , PPref(AOut('d'), PNil))) , PPref(AIn('a'), PPar(PPar(PPar(PPref(AIn('a'), PNil), PPref(AOut('b'), PNil)), PPref(AOut('c'), PNil) ), PPref(AIn('d'), PNil))) ) )
+*)
+
+main ( PPar(PPar(PPar(PPar(PPref(AOut('a'), PPref(AIn('a'), PNil)), PPref(AIn('a'), PPref(AIn('a'), PPref(AOut('a'), PNil)))), PPref(AOut('a'), PPref(AIn('a'), PNil))) , PPref(AOut('a'), PPref(AOut('a'), PPref(AIn('a'), PNil)))), PPref(AOut('a'), PPref(AIn('a'), PNil))) )

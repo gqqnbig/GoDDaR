@@ -1,5 +1,6 @@
 (* Definition of auxiliary functions *)
 open Types
+open Printer
 
 (* ------------------- AUXILIARY FUNCTIONS -------------------- *)
 
@@ -315,7 +316,7 @@ let rec inner_lor_dis exp =
     | hd::tl -> if has_lor hd then (List.rev (inner_lor_dis hd))@(any_has_lor tl) else hd::(any_has_lor tl)
   in any_has_lor one_pass_res
 and lpar_lor_case exp =
-  let calc_lor_exp exp =
+  let rec calc_lor_exp exp =
     match exp with
     | LPar(LOr(a, b), LOr(c, d)) -> LPar(a, c)::LPar(a, d)::LPar(b, c)::LPar(b, d)::[]
     | LPar(LOr(a, b), x) -> LPar(a, x)::LPar(b, x)::[]
@@ -323,8 +324,6 @@ and lpar_lor_case exp =
     | LPar(LPar(LOr(a, b), LOr(c, d)), x) -> LPar(LPar(a, c), x)::LPar(LPar(a, d), x)::LPar(LPar(b, c), x)::LPar(LPar(b, d), x)::[]
     | LPar(LPar(LOr(a, b), c), x) -> LPar(LPar(a, c), x)::LPar(LPar(b,c), x)::[]
     | LPar(LPar(a, LOr(b, c)), x) -> LPar(LPar(a, b), x)::LPar(LPar(a, c), x)::[]
-    | LPar((LList(_,_) as y), (LList(_,_) as z)) when has_inner_lor y -> let inner_res = inner_lor_dis y in List.map (fun x -> LPar(x, z)) inner_res
-    | LPar((LList(_,_) as y), (LList(_,_) as z)) when has_inner_lor z -> let inner_res = inner_lor_dis z in List.map (fun x -> LPar(y, x)) inner_res
     | LPar((LList(_,_) as y), (LList(_,_) as z)) when has_inner_lor y && has_inner_lor z ->
       let inner_res_y = inner_lor_dis y in
       let inner_res_z = inner_lor_dis z in
@@ -335,6 +334,10 @@ and lpar_lor_case exp =
         | hd::tl, h::t -> LPar(hd, h)::(assoc_loop y_arr t z_c)
       in 
       assoc_loop inner_res_y inner_res_z inner_res_z
+    | LPar((LList(_,_) as y), (_ as z)) when has_lor y -> let inner_res = inner_lor_dis y in List.map (fun x -> LPar(x, z)) inner_res
+    | LPar((_ as y), (LList(_,_) as z)) when has_lor z -> let inner_res = inner_lor_dis z in List.map (fun x -> LPar(y, x)) inner_res
+    | LPar((LPar(_, _) as y), (LList(_,_) as z)) when has_lor y -> let res = calc_lor_exp y in List.map (fun x -> LPar(x, z)) res
+    | LPar((LList(_,_) as y), (LPar(_,_) as z)) when has_lor z -> let res = calc_lor_exp z in List.map (fun x -> LPar(y, x)) res 
     | _ -> exp::[]
   in
   let one_pass_res = calc_lor_exp exp in
@@ -438,7 +441,7 @@ let main_act_verifier exp =
       List.map (fun x ->
         if has_inner_lor_2 x = false
         then [x]
-        else 
+        else
           if starts_w_llist x
           then inner_lor_dis x
           else lpar_lor_case x
@@ -479,19 +482,3 @@ let rec use_lsubst exp sub =
 
 
 
-(* ------------------- COMMAND LINE ARGUMENTS -------------------- *)
-
-let usage_msg = "Usage: ./dlock [-v | -s] <file1> [<file2>] ... -o <output>"
-let verbose = ref false
-let simplified = ref false
-let procInput = ref false
-let ds = ref 0
-
-let speclist =
-    [("-v", Arg.Set verbose, "Output debug information");
-     ("-s", Arg.Set simplified, "Output a simpler representation of the process");
-     ("-p", Arg.Set procInput, "Input is a Proc type, which is translated to a Lamba type");
-     ("-ds", Arg.Int (fun i -> if (i!=1 && i!= 2) then raise (Arg.Bad ("Bad argument: Select deadlock resolution algorithm (1 or 2)")) else ds:=i), "Select deadlock resolution algorithm (1 or 2)");
-     ("  ", Arg.Unit (fun () -> ()), "Output the verdict only")]
-
-let cmdParse = Arg.parse speclist (fun x -> raise (Arg.Bad ("Bad argument: " ^ x))) usage_msg
