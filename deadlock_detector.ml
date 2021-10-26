@@ -235,11 +235,11 @@ let case_f_or chi i_pair =
             match elemA_ll, elemB_ll with
             | LOr(_, _), LNil -> let r_chi = reduceChi chi b 0 in case_i r_chi a
             | LNil, LOr(_, _) -> let r_chi = reduceChi chi a 0 in case_i r_chi (b-1)
-            | LOr(_, _), LList(_, _) -> let i_chi = case_i chi a in List.map (fun x -> case_e (List.nth el b) x b) i_chi
-            | LList(_, _), LOr(_, _) -> let i_chi = case_i chi b in List.map (fun x -> case_e (List.nth el a) x a) i_chi
+            | LOr(_, _), LList(_, _) -> let i_chi = case_i chi a in map (fun x -> case_e (List.nth el b) x b) i_chi
+            | LList(_, _), LOr(_, _) -> let i_chi = case_i chi b in map (fun x -> case_e (List.nth el a) x a) i_chi
             | LOr(_, _), LOr(_, _) -> 
                 let n_chi = case_i chi b in
-                List.flatten( List.map (fun x -> case_i x a) n_chi )
+                flatten2( map (fun x -> case_i x a) n_chi )
             | _ -> printMode fmt elemA_ll true; printMode fmt elemB_ll true; raise (RuntimeException "No match in case_f_or\n")
             
 
@@ -413,9 +413,9 @@ let rec eval arr =
             if getParNum oneEval <= 2
             then append (new_eval tl) (new_eval [(oneEval, next_ctx ctx)])
             else (let toList = lparToList oneEval in
-              let combs = List.flatten (topComb toList) in
+              let combs = flatten2 (topComb toList) in
               let i = ref 0 in
-              let combs_ctx = List.map (fun x -> i:=!i+1; (x, {ctx with level = ctx.level ^ "." ^string_of_int !i})) combs in
+              let combs_ctx = map (fun x -> i:=!i+1; (x, {ctx with level = ctx.level ^ "." ^string_of_int !i})) combs in
                 append (new_eval tl) (new_eval combs_ctx))
           ) else (
             printCtxLevel ctx; 
@@ -424,52 +424,52 @@ let rec eval arr =
             let chi_n_prog = can_chi_nested_progress ass_lp in
             match chi_l_prog, chi_n_prog with
             | true, true ->
-              let chi_nested = List.flatten (eval_chi_nested (getNestedLeft ass_lp, ctx)) in
-              let add_after1 = if getParNum ass_lp <= 2 then chi_nested else List.map ( fun x -> addAfterChiEval2 x (assocLeftList (getRestPars (lparToList ass_lp))) ) chi_nested in
-              let chi_list = List.flatten ( eval_chi_list (getNestedLeft ass_lp, ctx)) in
-              let add_after2 = if getParNum ass_lp <= 2 then chi_list else List.map ( fun x -> addAfterChiEval2 x (assocLeftList (getRestPars (lparToList ass_lp))) ) chi_list in
-                List.flatten (
-                List.map (
+              let chi_nested = flatten2 (eval_chi_nested (getNestedLeft ass_lp, ctx)) in
+              let add_after1 = if getParNum ass_lp <= 2 then chi_nested else map ( fun x -> addAfterChiEval2 x (assocLeftList (getRestPars (lparToList ass_lp))) ) chi_nested in
+              let chi_list = flatten2 ( eval_chi_list (getNestedLeft ass_lp, ctx)) in
+              let add_after2 = if getParNum ass_lp <= 2 then chi_list else map ( fun x -> addAfterChiEval2 x (assocLeftList (getRestPars (lparToList ass_lp))) ) chi_list in
+                flatten2 (
+                map (
                   fun x ->
                   match x with
                   | (lp, ctx) ->
                     if getParNum lp <= 2 then append (new_eval tl) (new_eval [x]) else
                     let toList = lparToList lp in
-                    let combs = List.flatten (topComb toList) in
+                    let combs = flatten2 (topComb toList) in
                     let i = ref 0 in
-                    let combs_pairs = List.map (fun y -> i:=!i+1; (y, {ctx with level = ctx.level ^ "." ^ string_of_int !i})) combs in
+                    let combs_pairs = map (fun y -> i:=!i+1; (y, {ctx with level = ctx.level ^ "." ^ string_of_int !i})) combs in
                       append (new_eval tl) (new_eval combs_pairs)
-                ) (add_after1@add_after2)
+                ) (append add_after1 add_after2)
                 )
             | true, false ->
-              let chi_list = List.flatten ( eval_chi_list (getNestedLeft ass_lp, ctx)) in
-              let add_after2 = if getParNum ass_lp <= 2 then chi_list else List.map ( fun x -> addAfterChiEval2 x (assocLeftList (getRestPars (lparToList ass_lp))) ) chi_list in
-                List.flatten (
-                List.map (
+              let chi_list = flatten2 ( eval_chi_list (getNestedLeft ass_lp, ctx)) in
+              let add_after2 = if getParNum ass_lp <= 2 then chi_list else map ( fun x -> addAfterChiEval2 x (assocLeftList (getRestPars (lparToList ass_lp))) ) chi_list in
+                flatten2 (
+                map (
                   fun x ->
                   match x with
                   | (lp, ctx) ->
                     if getParNum lp <= 2 then append (new_eval tl) (new_eval [x]) else
                     let toList = lparToList lp in
-                    let combs = List.flatten (topComb toList) in
+                    let combs = flatten2 (topComb toList) in
                     let i = ref 0 in
-                    let combs_pairs = List.map (fun y -> i:=!i+1; (y, {ctx with level = ctx.level ^ "." ^ string_of_int !i})) combs in
+                    let combs_pairs = map (fun y -> i:=!i+1; (y, {ctx with level = ctx.level ^ "." ^ string_of_int !i})) combs in
                       append (new_eval tl) (new_eval combs_pairs)
                 ) (add_after2)
                 )
             | false, true ->
-              let chi_nested = List.flatten (eval_chi_nested (getNestedLeft ass_lp, ctx)) in
-              let add_after1 = if getParNum ass_lp <= 2 then chi_nested else List.map ( fun x -> addAfterChiEval2 x (assocLeftList (getRestPars (lparToList ass_lp))) ) chi_nested in
-                List.flatten (
-                List.map (
+              let chi_nested = flatten2 (eval_chi_nested (getNestedLeft ass_lp, ctx)) in
+              let add_after1 = if getParNum ass_lp <= 2 then chi_nested else map ( fun x -> addAfterChiEval2 x (assocLeftList (getRestPars (lparToList ass_lp))) ) chi_nested in
+                flatten2 (
+                map (
                   fun x ->
                   match x with
                   | (lp, ctx) ->
                     if getParNum lp <= 2 then append (new_eval tl) (new_eval [x]) else
                     let toList = lparToList lp in
-                    let combs = List.flatten (topComb toList) in
+                    let combs = flatten2 (topComb toList) in
                     let i = ref 0 in
-                    let combs_pairs = List.map (fun y -> i:=!i+1; (y, {ctx with level = ctx.level ^ "." ^ string_of_int !i})) combs in
+                    let combs_pairs = map (fun y -> i:=!i+1; (y, {ctx with level = ctx.level ^ "." ^ string_of_int !i})) combs in
                       append (new_eval tl) (new_eval combs_pairs)
                 ) (add_after1)
                 )                            
@@ -494,7 +494,7 @@ let rec eval arr =
       | (LChi([], []), ctx) -> printCtxLevel ctx; printMode fmt (LNil) ctx.print; append (new_eval tl) [[(LNil, ctx)]]
       | (LChi(el, ll) as a, ctx) when exist_corres el -> 
         printCtxLevel ctx; printMode fmt (LPar(a,LNil)) ctx.print; 
-        append (new_eval tl) (new_eval (List.flatten (eval_chi_nested (LPar(a,LNil), ctx))))
+        append (new_eval tl) (new_eval (flatten2 (eval_chi_nested (LPar(a,LNil), ctx))))
       | (LChi([a], [b]), ctx) -> let p = LList(a, b) in (printCtxLevel ctx; printMode fmt p ctx.print; append (new_eval tl) [[(p, ctx)]]) (* Adicionado por causa da main *)
       | (LChi(_,_) as a, ctx) -> printCtxLevel ctx; printMode fmt a ctx.print; append (new_eval tl) [[hd]]
       | (LList(et, ll) as a, ctx) -> printCtxLevel ctx; printMode fmt a ctx.print; append (new_eval tl) [[hd]]
@@ -504,19 +504,19 @@ let rec eval arr =
   in 
     match arr with
     | [] -> []
-    | hd::tl -> append (eval tl) (new_eval hd)
-    (* | hd::tl -> List.fold_left (fun x acc -> (new_eval (List.flatten x))) [] arr *)
+    | hd::tl -> List.fold_left (fun acc x -> append (new_eval x) acc) [[]] arr
+  (*| hd::tl -> append (eval tl) (new_eval hd)*)
 
 let rec top_lvl_extractor exp =
   match exp with
   | LPar(LNil, LNil) -> []
   | LPar(LList(a, _), LList(b, _)) -> [a;b]
   | LPar(LList(a, _), LNil) | LPar(LNil, LList(a, _)) -> [a]
-  | LPar(LChi(a, _), LList(b, _)) | LPar(LList(b,_), LChi(a, _)) -> a@[b]
-  | LPar(LChi(a, _), LChi(b, _)) -> a@b
+  | LPar(LChi(a, _), LList(b, _)) | LPar(LList(b,_), LChi(a, _)) -> append a [b]
+  | LPar(LChi(a, _), LChi(b, _)) -> append a b
   | LPar(LChi(a, _), LNil) | LPar(LNil, LChi(a, _))-> a
   | LPar(LPar(_,_) as a, LList(b, _)) -> b::(top_lvl_extractor a)
-  | LPar(LPar(_, _) as a, LChi(b, _)) -> b@(top_lvl_extractor a)
+  | LPar(LPar(_, _) as a, LChi(b, _)) -> append b (top_lvl_extractor a)
   | LPar(LPar(_, _) as a, LNil) -> top_lvl_extractor a
   | LList(a, _) -> [a]
   | LChi(a, _) -> a
@@ -562,7 +562,7 @@ let main_deadlock_solver arr hd_only =
   let top_lvl = get_top_lvl p in
   let combined = List.combine p top_lvl in
     List.rev (
-      List.map ( fun x -> 
+      map ( fun x -> 
         match x with
         | (a, b) -> if (!ds = 0  || !ds = 1) then deadlock_solver_1 a b else deadlock_solver_2 a b
       ) combined 
@@ -591,20 +591,21 @@ let main exp =
         if List.length toList <= 2 
         then (eval [[(lamExp, {print=true; level="1"})]])
         else let comb_lst = topComb toList in 
-        printFinalArrComb fmt (List.flatten comb_lst); eval (assign_ctx2 comb_lst true)
+        printFinalArrComb fmt (flatten2 comb_lst); eval (assign_ctx2 comb_lst true)
     in
     let rec det_res_loop arr =
     match arr with
     | [] -> []
-    | hd::tl -> 
+    | hd::tl ->
       let toList1 = lparToList hd in
-      let res1 = (eval [[((lchi_to_lpar hd), {print=false; level="a"})]]) in 
-      let findings = proc_findings_comb (List.flatten res1) in
+      let res1 = (eval [[((lchi_to_lpar hd), {print=false; level="a"})]]) in
+      let flat_res1 = flatten2 res1 in
+      let findings = proc_findings_comb flat_res1 in
       if List.length findings != 0
       then
-        let result = List.hd (List.filter (fun x -> if x = LNil then false else true) (fst (List.flatten res1))) in
-        let deadl_exp = (*printf "\nhd:"; printMode fmt hd true;*)find_deadl_exp hd result in
-        let use_subst = (* printf "result:" ;printMode fmt (List.hd (main_deadlock_solver [result])) true; *)use_lsubst deadl_exp (List.hd (main_deadlock_solver [result] true)) in
+        let result = List.hd (List.filter (fun x -> if x = LNil then false else true) (fst flat_res1)) in
+        let deadl_exp = find_deadl_exp hd result in
+        let use_subst = use_lsubst deadl_exp (List.hd (main_deadlock_solver [result] true)) in
           (det_res_loop (use_subst::tl))
       else hd::(det_res_loop tl)
     in
@@ -615,30 +616,33 @@ let main exp =
         let deadl_exp = find_deadl_exp exp hd in
         let use_subst = use_lsubst deadl_exp hd1 in
           final_change use_subst tl tl1
-    in 
-    let init_findings = (proc_findings_comb (List.flatten res)) in
+    in
+    let _ = printf "%d\n" (List.length res) in
+    let flat_res = flatten2 res in
+    let init_findings = (proc_findings_comb (flat_res)) in
     if List.length init_findings = 0
     then printf "\nThe process is deadlock-free.\n"
     else
-      if List.length init_findings = List.length (List.flatten res)
+      if List.length init_findings = List.length flat_res
       then 
-        let _ = printf "\nThe process has a deadlock: every process combination is blocked.\n" in 
-        let _ = print_list_comb fmt (List.rev (List.flatten res)) in
-        let all_solv = det_res_loop (List.filter (fun x -> if x = LNil then false else true) (fst (List.flatten res))) in
-        let final_res = final_change lamExp (List.filter (fun x -> if x = LNil then false else true) (List.map (fun x -> lchi_to_lpar x ) (fst (List.flatten res)))) all_solv in
+        let _ = printf "\nThe process has a deadlock: every process combination is blocked.\n" in
+        let _ = print_list_comb fmt (List.rev flat_res) in
+        let _ = printf "Size: %d" (List.length flat_res) in
+        let all_solv = det_res_loop (List.filter (fun x -> if x = LNil then false else true) (fst (flatten2 res))) in
+        let final_res = final_change lamExp (List.filter (fun x -> if x = LNil then false else true) (map (fun x -> lchi_to_lpar x ) (fst flat_res))) all_solv in
         let _ = printf "\nDeadlock(s) solved with algorithm %d:\n" !ds in
         printMode fmt final_res true
       else
         let _ = printf "\nThe process has a deadlock: some process combination is blocked.\n" in
-        let _ = print_list_comb fmt (List.rev (List.flatten res)) in
-        let all_solv = det_res_loop (List.filter (fun x -> if x = LNil then false else true) (fst (List.flatten res))) in
-        let final_res = final_change lamExp (List.filter (fun x -> if x = LNil then false else true) (List.map (fun x -> lchi_to_lpar x ) (fst (List.flatten res)))) all_solv in
+        let _ = print_list_comb fmt (List.rev (flatten2 res)) in
+        let all_solv = det_res_loop (List.filter (fun x -> if x = LNil then false else true) (fst (flatten2 res))) in
+        let final_res = final_change lamExp (List.filter (fun x -> if x = LNil then false else true) (map (fun x -> lchi_to_lpar x ) (fst (flatten2 res)))) all_solv in
         let _ = printf "\nDeadlock(s) solved with algorithm %d:\n" !ds in
         if final_res = lamExp
         then 
-          let filter_res = List.filter ( fun x -> match x with (a,b) -> if a = LNil then false else true) (List.flatten res) in
+          let filter_res = List.filter ( fun x -> match x with (a,b) -> if a = LNil then false else true) (flatten2 res) in
           let alter_res = main_deadlock_solver (fst filter_res) false in
-          let rem_nils = List.map (fun x -> remLNils x) alter_res in
+          let rem_nils = map (fun x -> remLNils x) alter_res in
           let f_res = List.combine rem_nils (snd filter_res) in
           print_list_comb fmt f_res
         else printMode fmt final_res true
@@ -675,14 +679,12 @@ P := 0 | a!.P | a?.P | (P || Q) | (P + Q)
 (* main ( PPar(PPref(AOut('a'), PPar(PPref(AOut('b'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AIn('c'), PPref(AIn('d'), PNil))))), PPref(AIn('a'), PPref(AOut('d'), PNil))) ) *)
 
 
-
-
-(*)
-main ( PPar(PPar(PPref(AOut('d'), PPref(AIn('a'), PPar(PPref(AIn('b'), PNil), PPref(AIn('e'), PPref(AOut('d'), PNil))))), PPref(AIn('d'), PPref(AOut('e'), PPref(AIn('d'), PNil)))), PPref(AOut('b'), PPref(AOut('a'), PNil))) )
-*)
-
-(*  
+(*
 main ( PPar(PPref(AOut('a'), PPar( PPref(AOut('a'), PPar(PPref(AIn('b'), PNil), PPref(AIn('c'), PNil))) , PPref(AOut('d'), PNil))) , PPref(AIn('a'), PPar(PPar(PPar(PPref(AIn('a'), PNil), PPref(AOut('b'), PNil)), PPref(AOut('c'), PNil) ), PPref(AIn('d'), PNil))) ) )
 *)
 
-main ( PPar(PPar(PPar(PPar(PPref(AOut('a'), PPref(AIn('a'), PNil)), PPref(AIn('a'), PPref(AIn('a'), PPref(AOut('a'), PNil)))), PPref(AOut('a'), PPref(AIn('a'), PNil))) , PPref(AOut('a'), PPref(AOut('a'), PPref(AIn('a'), PNil)))), PPref(AOut('a'), PPref(AIn('a'), PNil))) )
+(*
+main (PPar(PPar(PPar(PPar(PPar(PPref(AIn('a'), PNil), PPref(AIn('b'), PPref(AOut('a'), PNil))), PPref(AIn('c'), PPref(AOut('b'), PNil))), PPref(AIn('d'), PPref(AOut('c'), PNil))), PPref(AIn('e'), PPref(AOut('d'), PNil))), PPref(AOut('e'), PNil)))
+*)
+
+main (PPar(PPar(PPar(PPar(PPref(AOut('a'), PPref(AIn('b'), PPref(AIn('d'), PNil))), PPref(AOut('a'), PPref(AIn('a'), PNil))), PPref(AOut('b'), PPref(AIn('c'), PNil))), PPref(AOut('c'), PPref(AIn('a'), PNil))), PPref(AOut('d'), PPar(PPref(AOut('e'), PNil), PPref(AIn('e'), PNil)))))

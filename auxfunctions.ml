@@ -4,15 +4,38 @@ open Printer
 
 (* ------------------- AUXILIARY FUNCTIONS -------------------- *)
 
+let map f l =
+  let rec map_aux acc = function
+    | [] -> List.rev acc
+    | x :: xs -> map_aux (f x :: acc) xs
+  in
+  map_aux [] l
+
+(* Tail recursive rev *)
+let rev l =
+    let rec rev l r = match l with
+        | [] -> r
+        | (h::t) -> rev t (h::r)
+    in
+    rev l []
+
 (* Tail recursive array append *)
 let append l1 l2 =
   let rec loop acc l1 l2 =
     match l1, l2 with
-    | [], [] -> List.rev acc
+    | [], [] -> rev acc
     | [], h :: t -> loop (h :: acc) [] t
     | h :: t, l -> loop (h :: acc) t l
     in
     loop [] l1 l2
+
+(* Tail recursive flatten *)
+let flatten2 ll =
+    let rec go acc = function
+    | [] -> rev acc
+    | l :: r -> go (List.rev_append l acc) r
+in
+    go [] ll
 
 (* Enumerates the elements of a list by transforming them into pairs *)
 let rec enumerate list i =
@@ -23,7 +46,7 @@ let rec enumerate list i =
 (* Returns the index of the permutations of the inital process that lead to a deadlock *)
 let proc_findings lst = 
     List.filter (fun y -> if y = -1 then false else true) 
-        (List.map (fun x -> 
+        (map (fun x -> 
             match x with 
             | (a,b) -> if b = LNil then -1 else a) (enumerate lst 0))
 
@@ -56,7 +79,7 @@ let rec combinations head tail toAdd =
     match tail, toAdd with
     | [], _ -> []
     | hd::tl, [] -> (head::hd::tl)::(combinations head tl (hd::toAdd))
-    | hd::tl, _ -> (head::hd::(toAdd@tl))::(combinations head tl (toAdd@[hd]))
+    | hd::tl, _ -> (head::hd::(append toAdd tl))::(combinations head tl (append toAdd [hd]))
 
 (* Iterates the list and applies the combinations function to every element, returning the combinations for the entire list *)
 (* Given comb ['a';'b';'c'] [], outputs [[['a'; 'b'; 'c']; ['a'; 'c'; 'b']]; [['b'; 'c'; 'a']]; []] (which is then flattened) *)
@@ -64,7 +87,7 @@ let rec comb list toAdd =
     match list, toAdd with
     | [], _ -> []
     | hd::tl, [] -> (combinations hd tl [])::(comb tl (hd::toAdd))
-    | hd::tl, _ -> (combinations hd tl toAdd)::(comb tl (toAdd@[hd]))
+    | hd::tl, _ -> (combinations hd tl toAdd)::(comb tl (append toAdd [hd]))
 
 (* Given a list of combinations, this function pairs the first two elements every time it is called *)
 let rec pairExprs exp =
@@ -81,19 +104,20 @@ let rec loopl pExprs =
     | [] -> []
     | hd::tl -> 
         (match hd with
-        | [x;t] -> (pairExprs [hd])@(loopl tl)
-        | [x;m;t] -> ((loopl (pairExprs (combinations x [m;t] [])))@loopl tl)
-        | x::t -> ((loopl (List.map (fun z -> x::z) (pairExprs (List.flatten (comb t []))))@(loopl tl))))    
+        | [x;t] -> append (pairExprs [hd]) (loopl tl)
+        | [x;m;t] -> (append (loopl (pairExprs (combinations x [m;t] []))) (loopl tl))
+        | x::t -> ((loopl (map (fun z -> x::z) (pairExprs (flatten2 (comb t []))))@(loopl tl))))    
 
 (* Top-level function for the combination of functions *)
 let rec topComb list =
-    let comb_res = List.flatten (comb list []) in
+    let comb_res = flatten2 (comb list []) in
         let prdExprs = pairExprs comb_res in
             loopl prdExprs
 
 let proc_findings_comb lst =
+    Format.printf "proc_findings_comb\n";
     List.filter (fun y -> if y = None then false else true)
-    (List.map ( fun x -> 
+    (map ( fun x -> 
         match x with
         | (LNil, _) -> None
         | (_, ctx) -> Some ctx.level
@@ -468,9 +492,9 @@ let rec all_same arr =
   | [hd; tl] -> if hd = tl then true else false
   | hd::md::tl -> if hd = md then all_same (md::tl) else false
 
-let fst arr = List.map (fun x -> fst x) arr
+let fst arr = map (fun x -> fst x) arr
 
-let snd arr = List.map (fun x -> snd x) arr
+let snd arr = map (fun x -> snd x) arr
 
 let rec use_lsubst exp sub =
   match exp with
