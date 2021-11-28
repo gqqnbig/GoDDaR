@@ -1,0 +1,23 @@
+def main.main():
+    let t1 = newchan main.main0.t1_chan0, 0;
+    let t3 = newchan main.main0.t3_chan0, 0;
+    spawn main.main$1(t1);
+    spawn main.main$2(t3);
+    call main.main#3(t1, t3);
+def main.main$1(c1):
+    send c1;
+def main.main$2(c2):
+    send c2;
+def main.main#1(t1, t3):
+    select
+      case recv t1; call main.main#5(t1, t3);
+      case recv t3; call main.main#7(t1, t3);
+    endselect;
+def main.main#3(t1, t3):
+    ifFor (int t11 = 0; (t11<2); t11 = t11 + 1) then call main.main#1(t1, t3); else tau; endif;
+def main.main#4(t1, t3):
+    call main.main#3(t1, t3);
+def main.main#5(t1, t3):
+    call main.main#4(t1, t3);
+def main.main#7(t1, t3):
+    call main.main#4(t1, t3);

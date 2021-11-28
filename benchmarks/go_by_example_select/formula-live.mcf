@@ -1,0 +1,8 @@
+[(Closing_main_maint1 + Sync_main_maint1 + Closing_main_maint3 + Sync_main_maint3 + tau + tausync)*]
+(
+(<SELECT_R_main_main_1t3R_main_maint1>true => mu Z .((<Sync_main_main_1t3>true) || (<Sync_main_maint1>true)) || (<tau>Z || <tausync>Z || <Closing_main_maint1>Z || <Sync_main_maint1>Z || <Closing_main_maint3>Z || <Sync_main_maint3>Z))
+&&
+(<SEND_main_maint3>true => mu Z .(<Sync_main_maint3>true) || (<tau>Z || <tausync>Z || <Closing_main_maint1>Z || <Sync_main_maint1>Z || <Closing_main_maint3>Z || <Sync_main_maint3>Z))
+&&
+(<SELECT_R_main_maint1R_main_maint3>true => mu Z .((<Sync_main_maint1>true) || (<Sync_main_maint3>true)) || (<tau>Z || <tausync>Z || <Closing_main_maint1>Z || <Sync_main_maint1>Z || <Closing_main_maint3>Z || <Sync_main_maint3>Z))
+)

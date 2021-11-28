@@ -1,0 +1,23 @@
+def main.main():
+    let t0 = newchan main.main0.t0_chan0, 0;
+    let t1 = newchan main.main0.t1_chan0, 0;
+    spawn main.x(t1, t0);
+    call main.main#1(t0, t1);
+def main.x(ch, done):
+    call main.x#1(ch, done);
+def main.x#1(ch, done):
+    if call main.x#2(ch, done); else call main.x#3(ch, done); endif;
+def main.x#2(ch, done):
+    send ch;
+    call main.x#1(ch, done);
+def main.x#3(ch, done):
+    send done;
+def main.main#1(t0, t1):
+    select
+      case recv t1; call main.main#2(t0, t1);
+      case recv t0; call main.main#4(t0, t1);
+    endselect;
+def main.main#2(t0, t1):
+    call main.main#1(t0, t1);
+def main.main#4(t0, t1):
+    call main.main#1(t0, t1);

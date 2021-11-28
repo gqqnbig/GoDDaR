@@ -1,0 +1,8 @@
+def main.main():
+    let t0 = newchan main.main0.t0_chan0, 0;
+    spawn main.recv(t0);
+    send t0;
+    close t0;
+def main.recv(ch):
+    recv ch;
+    close ch;

@@ -4,6 +4,7 @@ open Printer
 
 (* ------------------- AUXILIARY FUNCTIONS -------------------- *)
 
+(* Tail recursive map *)
 let map f l =
   let rec map_aux acc = function
     | [] -> List.rev acc
@@ -106,7 +107,7 @@ let rec loopl pExprs =
         (match hd with
         | [x;t] -> append (pairExprs [hd]) (loopl tl)
         | [x;m;t] -> (append (loopl (pairExprs (combinations x [m;t] []))) (loopl tl))
-        | x::t -> ((loopl (map (fun z -> x::z) (pairExprs (flatten2 (comb t []))))@(loopl tl))))    
+        | x::t -> append (loopl (map (fun z -> x::z) (pairExprs (flatten2 (comb t []))))) (loopl tl))
 
 (* Top-level function for the combination of functions *)
 let rec topComb list =
@@ -115,7 +116,6 @@ let rec topComb list =
             loopl prdExprs
 
 let proc_findings_comb lst =
-    Format.printf "proc_findings_comb\n";
     List.filter (fun y -> if y = None then false else true)
     (map ( fun x -> 
         match x with

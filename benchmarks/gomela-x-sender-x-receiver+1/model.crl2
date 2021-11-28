@@ -1,0 +1,37 @@
+act
+tausync; 
+% actions
+Close_main_maint6, Chan_Close_main_maint6, Closing_main_maint6, Select_NSend_main_maint6, Rcv_Select_main_maint6, Sync_main_maint6, Send_main_maint6, Rcv_main_maint6, Send_Select_main_maint6, Select_NRcv_main_maint6, Closed_Chan_Rcv_main_maint6, Rcv_Close_main_maint6, Closed_Chan_Rcv_Select_main_maint6, Select_Rcv_Close_main_maint6;
+% barbs
+SEND_main_maint6, RECV_main_maint6, CHANCLOSED_main_maint6;
+% spawnings
+REQ_MAIN_SENDERMAIN_MAINT6, ACC_MAIN_SENDERMAIN_MAINT6;
+
+proc
+MAIN_MAIN = (REQ_MAIN_SENDERMAIN_MAINT6) . (MAIN_RECEIVERMAIN_MAINT6);
+MAIN_SENDERMAIN_MAINT6 = MAIN_SENDER_3MAIN_MAINT6;
+MAIN_SENDER_3MAIN_MAINT6 = ((tau) . (MAIN_SENDER_1MAIN_MAINT6)) + ((tau) . (tau));
+MAIN_SENDER_1MAIN_MAINT6 = (SEND_main_maint6) + (((Send_main_maint6) + (Send_Select_main_maint6)) . (MAIN_SENDER_3MAIN_MAINT6));
+MAIN_RECEIVERMAIN_MAINT6 = MAIN_RECEIVER_3MAIN_MAINT6;
+MAIN_RECEIVER_3MAIN_MAINT6 = ((tau) . (MAIN_RECEIVER_1MAIN_MAINT6)) + ((tau) . (tau));
+MAIN_RECEIVER_1MAIN_MAINT6 = (RECV_main_maint6) + (((Rcv_main_maint6) + ((Rcv_Select_main_maint6) + (Rcv_Close_main_maint6))) . (MAIN_RECEIVER_3MAIN_MAINT6));
+
+MAIN_MAINT6 = (Chan_Close_main_maint6) . (CLOSED_MAIN_MAINT6);
+
+CLOSED_MAIN_MAINT6 = (CHANCLOSED_main_maint6) + (((Closed_Chan_Rcv_main_maint6) + (Closed_Chan_Rcv_Select_main_maint6)) . (CLOSED_MAIN_MAINT6));
+
+CHANS = MAIN_MAINT6;
+VARS = delta; 
+SYNC = delta; 
+
+init
+allow({SEND_main_maint6, RECV_main_maint6, CHANCLOSED_main_maint6, Closing_main_maint6, Sync_main_maint6, tausync},
+comm({Close_main_maint6|Chan_Close_main_maint6->Closing_main_maint6,
+Select_NSend_main_maint6|Rcv_Select_main_maint6->Sync_main_maint6,
+Send_main_maint6|Rcv_main_maint6->Sync_main_maint6,
+Send_Select_main_maint6|Select_NRcv_main_maint6->Sync_main_maint6,
+Closed_Chan_Rcv_main_maint6|Rcv_Close_main_maint6->Sync_main_maint6,
+Closed_Chan_Rcv_Select_main_maint6|Select_Rcv_Close_main_maint6->Sync_main_maint6
+, REQ_MAIN_SENDERMAIN_MAINT6|ACC_MAIN_SENDERMAIN_MAINT6->tausync
+},
+ CHANS || VARS || SYNC || MAIN_MAIN||(ACC_MAIN_SENDERMAIN_MAINT6 . MAIN_SENDERMAIN_MAINT6)));

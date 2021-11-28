@@ -104,13 +104,13 @@ let rec print_list_comb fmt lst =
         | [] -> ()
         | hd::[] -> 
           (match hd with 
-          | l, c -> 
+          | (l, c) -> 
             if !verbose 
             then (printf "("; print_lambdas fmt l; printf ", %s)" c.level; printf "]";printf " ---> ";print_proc_simple fmt (toProc l))
             else (printf "("; print_proc_simple fmt (toProc l); printf ", %s)" c.level; printf "]"))
         | hd::tl -> 
           (match hd with 
-          | l, c -> 
+          | (l, c) -> 
             if !verbose
             then (printf "("; print_lambdas fmt l; printf ", %s)" c.level; printf "; ---> ";print_proc_simple fmt (toProc l);printf "\n"; find_list tl)
             else (printf "("; print_proc_simple fmt (toProc l); printf ", %s)" c.level; printf "\n"; find_list tl))
