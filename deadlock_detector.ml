@@ -30,7 +30,6 @@ let rec reduceChi chi i_at i =
         if i = i_at then (LChi(tl, tl1)) else join_chis (LChi([hd],[hd1])) (reduceChi (LChi(tl, tl1)) i_at (i+1))
 
 (* Removes the EEta from a LChi's LList at index i_at *)
-(* -> Pode ser condensado <-*)
 let rec correct_chi_lambda ll curr_i i_at =
     match ll with
     | [] -> raise (RuntimeException "correct_chi_lambda failed: Empty lambda list")
@@ -168,7 +167,6 @@ let exists_and_chi elem chi =
 (* Defines the case when there are two correspondent actions and a Chi must be pulled from the level below *)
 (* Example case: a?0 x (b! | a!; 0, (c! | d?; 0, 0)) -> 0 x (b! | c! | d?; 0; 0; 0) *)
 let case_g elem chi =
-    (*printf "Entrei case_g\n"; *)
     match chi with
     | LChi(el, ll) ->
         let i_at = find el elem in
@@ -502,7 +500,6 @@ let rec eval arr =
     match arr with
     | [] -> []
     | hd::tl -> List.fold_left (fun acc x -> append (new_eval x) acc) [[]] arr
-  (*| hd::tl -> append (eval tl) (new_eval hd)*)
 
 let rec top_lvl_extractor exp =
   match exp with
@@ -555,7 +552,6 @@ let rec deadlock_solver_2 exp top_lvl =
     in for_all a b
 
 let main_deadlock_solver arr hd_only =
-  (*let _ = printf "\nDEADLOCK SOLVER\n" in *)
   let p = if hd_only then [List.hd arr] else arr in
   let top_lvl = get_top_lvl p in
   let combined = List.combine p top_lvl in
@@ -567,7 +563,6 @@ let main_deadlock_solver arr hd_only =
     )
 
 let rec find_deadl_exp exp dexp =
-  (* printf "exp: "; printMode fmt exp true; printf "dexp: "; printMode fmt dexp true; *)
   if exp = dexp then LSubst else
   match exp with
   | LPar(a, b) -> if a = dexp then LPar(LSubst, b) else if b = dexp then LPar(a, LSubst) else LPar(find_deadl_exp a dexp, find_deadl_exp b dexp)
@@ -583,7 +578,6 @@ try
   let _ = Printexc.record_backtrace true in
   let lamExp = toLambda exp in
   let act_ver = main_act_verifier lamExp in
-  (* let _ = printf "PASSOU ACT VER\n" in *)
   if has_miss_acts act_ver
   then (printMode fmt lamExp true; printf "\n"; print_act_ver act_ver)
   else 
@@ -611,10 +605,6 @@ try
       else hd::(det_res_loop tl)
     in
     let rec final_change exp dexps solved =
-    (* let _ = printf "\nDEXPS\n" in *)
-    (* let _ = List.iter (fun x -> printMode fmt x true) dexps in *)
-    (* let _ = printf "\nSOLVED\n" in *)
-    (*let _ = List.iter (fun x -> printMode fmt x true) solved in *)
       match dexps, solved with
       | [], [] -> exp
       | hd::tl, [] -> exp
@@ -656,21 +646,9 @@ with
 ;;
 
 
-
-
-(*
-
-LANGUAGE:
-P := 0 | a!.P | a?.P | (P || Q) | (P + Q)
-
-- All names are shared (not linear)
-- We treat sequential and circular deadlocks
-
-*)
-
 (* -- Deadlock -- *)
 (* 1) (a!.a?.0 || b?.b!.c!.c?.0) + c!.c?.0    --->    Case with complete (global) resolution *)
-(* main ( POr(PPar(PPref(AOut('a'), PPref(AIn('a'), PNil)), PPref(AIn('b'), PPref(AOut('b'), PPref(AIn('c'), PPref(AOut('c'), PNil))))), PPref(AOut('c'), PPref(AIn('c'), PNil))) ) *)
+main ( POr(PPar(PPref(AOut('a'), PPref(AIn('a'), PNil)), PPref(AIn('b'), PPref(AOut('b'), PPref(AIn('c'), PPref(AOut('c'), PNil))))), PPref(AOut('c'), PPref(AIn('c'), PNil))) )
 
 (* 2) a! || (b!.b?.a? + a?)    --->    Case with partial (local) resolution *)
 (* main (PPar(PPref(AOut('a'), PNil), POr(PPref(AOut('b'), PPref(AIn('b'), PPref(AIn('a'), PNil))), PPref(AIn('a'), PNil)))) *)
@@ -685,22 +663,3 @@ P := 0 | a!.P | a?.P | (P || Q) | (P + Q)
 (* 4) a!.(b!.c!.0 || b?.c?.d?.0) || a?.d!.0 *)
 (* main ( PPar(PPref(AOut('a'), PPar(PPref(AOut('b'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AIn('c'), PPref(AIn('d'), PNil))))), PPref(AIn('a'), PPref(AOut('d'), PNil))) ) *)
 
-
-
-(* main ( PPar(PPref(AOut('a'), PPar( PPref(AOut('a'), PPar(PPref(AIn('b'), PNil), PPref(AIn('c'), PNil))) , PPref(AOut('d'), PNil))) , PPref(AIn('a'), PPar(PPar(PPar(PPref(AIn('a'), PNil), PPref(AOut('b'), PNil)), PPref(AOut('c'), PNil) ), PPref(AIn('d'), PNil))) ) ) *)
-
-
-(*
-main (PPar(PPar(PPar(PPar(PPar(PPref(AIn('a'), PNil), PPref(AIn('b'), PPref(AOut('a'), PNil))), PPref(AIn('c'), PPref(AOut('b'), PNil))), PPref(AIn('d'), PPref(AOut('c'), PNil))), PPref(AIn('e'), PPref(AOut('d'), PNil))), PPref(AOut('e'), PNil)))
-*)
-
-(*
-main (PPar(PPar(PPar(PPar(PPref(AOut('a'), PPref(AIn('b'), PPref(AIn('d'), PNil))), PPref(AOut('a'), PPref(AIn('a'), PNil))), PPref(AOut('b'), PPref(AIn('c'), PNil))), PPref(AOut('c'), PPref(AIn('a'), PNil))), PPref(AOut('d'), PPar(PPref(AOut('e'), PNil), PPref(AIn('e'), PNil)))))
-*)
-
-(*
-List.iter (fun x-> printMode fmt x true) (case_f_or (LChi([EEta(AIn('a')); EEta(AOut('a'))], [LOr(LList(EEta(AIn('b')), LNil), LList(EEta(AIn('c')), LNil)); LOr(LList(EEta(AOut('d')), LNil), LList(EEta(AOut('e')), LNil))])) (0,1))
-*)
-
-
-eval [[(LPar(LChi([EEta(AIn('a')); EEta(AOut('a'))], [LList(EEta(AIn('b')), LNil); LList(EEta(AIn('c')), LNil)]), LList(EEta(AIn('a')), LNil)), {print=true; level="1"})]]
