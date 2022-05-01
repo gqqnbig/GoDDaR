@@ -1,5 +1,5 @@
 (executable
  (public_name dlock)
  (name deadlock_detector)
- (flags (:standard -warn-error -A))
+ (flags (:standard -w -66 -warn-error -A))
  (libraries dlock))

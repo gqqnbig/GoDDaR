@@ -1,5 +1,5 @@
 (* Definition of auxiliary functions *)
-open Types
+open Dlock.Types
 open Printer
 
 (* ------------------- AUXILIARY FUNCTIONS -------------------- *)

@@ -1,5 +1,5 @@
 open Format
-open Types
+open Dlock.Types
 open Printer
 open Auxfunctions
 open Cmd

@@ -1,7 +1,7 @@
 (* Definition of printing functions for Action, Lambda and Proc types*)
 
 open Format
-open Types
+open Dlock.Types
 open Cmd
 
 let fmt = Format.std_formatter
