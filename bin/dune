@@ -2,7 +2,7 @@
  (public_name dlock)
  (name deadlock_detector)
  (flags (:standard -w -66 -warn-error -A))
- (modules Auxfunctions Cmd Deadlock_detector Printer)
+ (modules Auxfunctions Cmd Deadlock_detector Printer2)
  (libraries dlock))
 
 (executable

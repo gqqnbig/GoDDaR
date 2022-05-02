@@ -1,7 +1,8 @@
 open Format
 open Dlock.Types
 open Dlock.CCS
-open Printer
+open Dlock.Printer
+open Printer2
 open Auxfunctions
 open Cmd
 
