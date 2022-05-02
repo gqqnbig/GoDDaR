@@ -1,9 +1,0 @@
-(executable
- (public_name ccs_parser)
- (name CCS)
- (flags (:standard -w -66 -warn-error -A))
- (libraries dlock))
-
-(menhir (modules CCS_Parser))
-
-(ocamllex CCS_Lexer)

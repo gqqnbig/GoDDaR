@@ -1,3 +1,7 @@
 (library
  (name dlock)
  (flags (:standard -warn-error -A)))
+
+(menhir (modules CCS_Parser))
+
+(ocamllex CCS_Lexer)
