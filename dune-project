@@ -1,4 +1,4 @@
-(lang dune 3.1)
+(lang dune 1.11)
 
 (name dlock)
 
@@ -23,6 +23,6 @@
  (tags
   (topics "to describe" your project)))
 
-(using menhir 2.1)
+(using menhir 2.0)
 
 ; See the complete stanza docs at https://dune.readthedocs.io/en/stable/dune-files.html#dune-project

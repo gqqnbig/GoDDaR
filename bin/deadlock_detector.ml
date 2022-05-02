@@ -1,6 +1,6 @@
 open Format
+open Dlock
 open Dlock.Types
-open Dlock.CCS
 open Dlock.Printer
 open Printer2
 open Auxfunctions
@@ -650,7 +650,7 @@ with
 
 (* -- Deadlock -- *)
 (* 1) (a!.a?.0 || b?.b!.c?.c!.0) + c!.c?.0    --->    Case with complete (global) resolution *)
-main (parse "(a!.a?.0 || b?.b!.c?.c!.0) + c!.c?.0");
+main (CCS.parse "(a!.a?.0 || b?.b!.c?.c!.0) + c!.c?.0");
 
 (* 2) a! || (b!.b?.a? + a?)    --->    Case with partial (local) resolution *)
 (* main (parse "a! || (b!.b?.a? + a?)"); *)

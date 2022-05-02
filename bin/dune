@@ -3,7 +3,8 @@
  (name deadlock_detector)
  (flags (:standard -w -66 -warn-error -A))
  (modules Auxfunctions Cmd Deadlock_detector Printer2)
- (libraries dlock))
+ (libraries dlock)
+ (modes byte))
 
 (executable
  (public_name ccs_parser_test)
