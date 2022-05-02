@@ -649,20 +649,19 @@ with
 
 
 (* -- Deadlock -- *)
-(* 1) (a!.a?.0 || b?.b!.c!.c?.0) + c!.c?.0    --->    Case with complete (global) resolution *)
-(* main ( POr(PPar(PPref(AOut('a'), PPref(AIn('a'), PNil)), PPref(AIn('b'), PPref(AOut('b'), PPref(AIn('c'), PPref(AOut('c'), PNil))))), PPref(AOut('c'), PPref(AIn('c'), PNil))) ) *)
-main (parse "(a!.a?.0 || b?.b!.c!.c?.0) + c!.c?.0");
+(* 1) (a!.a?.0 || b?.b!.c?.c!.0) + c!.c?.0    --->    Case with complete (global) resolution *)
+main (parse "(a!.a?.0 || b?.b!.c?.c!.0) + c!.c?.0");
 
 (* 2) a! || (b!.b?.a? + a?)    --->    Case with partial (local) resolution *)
-(* main (PPar(PPref(AOut('a'), PNil), POr(PPref(AOut('b'), PPref(AIn('b'), PPref(AIn('a'), PNil))), PPref(AIn('a'), PNil)))) *)
+(* main (parse "a! || (b!.b?.a? + a?)"); *)
 
 
 (* -- Actions missing correspondence    --->    No resolution *)
 (* 3) a?.(c?.0 + d?.0) || a!.e!.0 *)
 (* main ( PPar(PPref(AIn('a'), POr(PPref(AIn('c'), PNil), PPref(AIn('d'), PNil))), PPref(AOut('a'), PPref(AOut('e'), PNil))) )  *)
+(* main (parse "a! || (b!.b?.a? + a?)"); *)
 
 
 (* -- No deadlock -- *)
 (* 4) a!.(b!.c!.0 || b?.c?.d?.0) || a?.d!.0 *)
-(* main ( PPar(PPref(AOut('a'), PPar(PPref(AOut('b'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AIn('c'), PPref(AIn('d'), PNil))))), PPref(AIn('a'), PPref(AOut('d'), PNil))) ) *)
-
+(* main (parse "a!.(b!.c!.0 || b?.c?.d?.0) || a?.d!.0"); *)

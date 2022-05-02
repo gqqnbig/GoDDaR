@@ -1,2 +1,3 @@
 (test
- (name dlock))
+ (name ccs_parser)
+ (libraries dlock))
