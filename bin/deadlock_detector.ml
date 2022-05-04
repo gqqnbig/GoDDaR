@@ -1,9 +1,9 @@
 open Format
 open Dlock
+open Dlock.Auxfunctions
 open Dlock.Types
 open Dlock.Printer
 open Printer2
-open Auxfunctions
 open Cmd
 
 
@@ -363,7 +363,8 @@ let rec eval_chi_nested exp =
             | _, _ -> print_lambdas fmt (LPar(l1,l2));raise (RuntimeException "No match in eval_chi inside LChi(), _ \n"))
         end
 
-let rec eval arr =
+(** Receves list of paralel combinations *)
+let eval arr =
   let rec new_eval expInArr =
     match expInArr with
     | [] -> []
@@ -420,7 +421,7 @@ let rec eval arr =
             let chi_n_prog = can_chi_nested_progress ass_lp in
             match chi_l_prog, chi_n_prog with
             | true, true ->
-              let _ = printf "ENTREI TRUE TRUE\n" in
+              (* let _ = printf "ENTREI TRUE TRUE\n" in *)
               let chi_nested = flatten2 (eval_chi_nested (getNestedLeft ass_lp, ctx)) in
               let add_after1 = if getParNum ass_lp <= 2 then chi_nested else map ( fun x -> addAfterChiEval2 x (assocLeftList (getRestPars (lparToList ass_lp))) ) chi_nested in
               let chi_list = flatten2 ( eval_chi_list (getNestedLeft ass_lp, ctx)) in
@@ -565,13 +566,15 @@ let main_deadlock_solver arr hd_only =
     )
 
 let rec find_deadl_exp exp dexp =
-  if exp = dexp then LSubst else
-  match exp with
-  | LPar(a, b) -> if a = dexp then LPar(LSubst, b) else if b = dexp then LPar(a, LSubst) else LPar(find_deadl_exp a dexp, find_deadl_exp b dexp)
-  | LOr(a, b) -> if a = dexp then LOr(LSubst, b) else if b = dexp then LOr(a, LSubst) else LOr(find_deadl_exp a dexp, find_deadl_exp b dexp)
-  | LList(a, b) -> if b = dexp then LList(a, LSubst) else LList(a, find_deadl_exp b dexp)
-  | LNil -> LNil
-  | _ -> raise ( RuntimeException "No match")
+  if exp = dexp then
+    LSubst
+  else
+    match exp with
+    | LPar(a, b) -> if a = dexp then LPar(LSubst, b) else if b = dexp then LPar(a, LSubst) else LPar(find_deadl_exp a dexp, find_deadl_exp b dexp)
+    | LOr(a, b) -> if a = dexp then LOr(LSubst, b) else if b = dexp then LOr(a, LSubst) else LOr(find_deadl_exp a dexp, find_deadl_exp b dexp)
+    | LList(a, b) -> if b = dexp then LList(a, LSubst) else LList(a, find_deadl_exp b dexp)
+    | LNil -> LNil
+    | _ -> raise ( RuntimeException "No match")
 
 
 
@@ -580,15 +583,16 @@ try
   let _ = Printexc.record_backtrace true in
   let lamExp = toLambda exp in
   let act_ver = main_act_verifier lamExp in
-  if has_miss_acts act_ver
-  then (printMode fmt lamExp true; printf "\n"; print_act_ver act_ver)
+  if has_miss_acts act_ver then
+    (printMode fmt lamExp true; printf "\n"; print_act_ver act_ver)
   else 
     let toList = lparToList lamExp  in
     let res = 
-        if List.length toList <= 2 
-        then (eval [[(lamExp, {print=true; level="1"})]])
-        else let comb_lst = topComb toList in 
-        printFinalArrComb fmt (flatten2 comb_lst); eval (assign_ctx2 comb_lst true)
+        if List.length toList <= 2 then
+          (eval [[(lamExp, {print=true; level="1"})]])
+        else
+          let comb_lst = topComb toList in 
+          printFinalArrComb fmt (flatten2 comb_lst); eval (assign_ctx2 comb_lst true)
     in
     let rec det_res_loop arr =
     match arr with
@@ -598,13 +602,13 @@ try
       let res1 = (eval [[((lchi_to_lpar hd), {print=false; level="a"})]]) in
       let flat_res1 = flatten2 res1 in
       let findings = proc_findings_comb flat_res1 in
-      if List.length findings != 0
-      then
-        let result = List.hd (List.filter (fun x -> if x = LNil then false else true) (fst flat_res1)) in
-        let deadl_exp = find_deadl_exp hd result in
-        let use_subst = use_lsubst deadl_exp (List.hd (main_deadlock_solver [result] true)) in
-          (det_res_loop (use_subst::tl))
-      else hd::(det_res_loop tl)
+      if List.length findings != 0 then
+          let result = List.hd (List.filter (fun x -> if x = LNil then false else true) (fst flat_res1)) in
+          let deadl_exp = find_deadl_exp hd result in
+          let use_subst = use_lsubst deadl_exp (List.hd (main_deadlock_solver [result] true)) in
+            (det_res_loop (use_subst::tl))
+        else
+          hd::(det_res_loop tl)
     in
     let rec final_change exp dexps solved =
       match dexps, solved with
@@ -617,11 +621,10 @@ try
     in
     let flat_res = flatten2 res in
     let init_findings = (proc_findings_comb (flat_res)) in
-    if List.length init_findings = 0
-    then printf "\nThe process is deadlock-free.\n"
+    if List.length init_findings = 0 then
+      printf "\nThe process is deadlock-free.\n"
     else
-      if List.length init_findings = List.length flat_res
-      then 
+      if List.length init_findings = List.length flat_res then 
         let _ = printf "\nThe process has a deadlock: every process combination is blocked.\n" in
         let _ = print_list_comb fmt (rev flat_res) in
         (*let all_solv = det_res_loop [(List.hd (List.filter (fun x -> if x = LNil then false else true) (fst (flatten2 res))))] in*)
@@ -635,14 +638,14 @@ try
         let all_solv = det_res_loop (List.filter (fun x -> if x = LNil then false else true) (fst (flatten2 res))) in
         let final_res = final_change lamExp (List.filter (fun x -> if x = LNil then false else true) (map (fun x -> lchi_to_lpar x ) (fst (flatten2 res)))) all_solv in
         let _ = printf "\nDeadlock(s) solved with algorithm %d:\n" !ds in
-        if final_res = lamExp
-        then 
+        if final_res = lamExp then 
           let filter_res = List.filter ( fun x -> match x with (a,b) -> if a = LNil then false else true) (flatten2 res) in
           let alter_res = main_deadlock_solver (fst filter_res) false in
           let rem_nils = map (fun x -> remLNils x) alter_res in
           let f_res = List.combine rem_nils (snd filter_res) in
           print_list_comb fmt f_res
-        else printMode fmt final_res true
+        else
+          printMode fmt final_res true
 with
 | _ -> Printexc.print_backtrace stdout
 ;;

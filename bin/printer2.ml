@@ -79,10 +79,11 @@ let rec print_act_ver arr =
         match hd with
         | (a, []) -> print tl
         | (a, b) -> 
-          if !verbose
-          then (printf "- "; print_etalist_alt fmt b; printf " in "; printMode fmt a true; printf "\n"; print tl)
+          if !verbose then
+            (printf "- "; print_etalist_alt fmt b; printf " in "; printMode fmt a true; printf "\n"; print tl)
           else (
-            if !simplified 
-            then (printf "- "; print_etalist_alt_simple fmt b; printf " in "; printMode fmt a true; print tl))
+            if !simplified then
+              (printf "- "; print_etalist_alt_simple fmt b; printf " in "; printMode fmt a true; print tl)
+          )
   in
   if !verbose || !simplified then printf "Action(s) missing correspondence(s) in process(es):\n"; print arr

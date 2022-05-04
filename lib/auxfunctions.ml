@@ -1,7 +1,6 @@
 (* Definition of auxiliary functions *)
-open Dlock.Types
-open Dlock.Printer
-open Printer2
+open Types
+open Printer
 
 (* ------------------- AUXILIARY FUNCTIONS -------------------- *)
 
@@ -291,10 +290,10 @@ let has_inner_lor exp =
   | LList(a, LOr(_,_)) -> true
   | LList(a, b) -> false
 
-let rec has_inner_lor_2 exp =
+let rec has_lor exp =
   match exp with
-  | LPar(a, b) -> (has_inner_lor_2 a)||(has_inner_lor_2 b)
-  | LList(a, b) -> has_inner_lor_2 b
+  | LPar(a, b) -> (has_lor a)||(has_lor b)
+  | LList(a, b) -> has_lor b
   | LOr(_,_) -> true
   | LNil -> false
 
@@ -303,19 +302,26 @@ let rec lor_disentangler exp =
   | LOr(a, b) -> (lor_disentangler a)@(lor_disentangler b)
   | _ -> [exp]
 
+(** [exp] must start with LList
+    Returns list of all possible executions wrt. LOr *)
 let rec inner_lor_dis exp =
+  (** Returns [exp] with only the LLists until an LOr *)
   let rec calc_prev_exp exp = 
     match exp with
     | LList(a, LOr(_,_)) -> LList(a, LNil)
     | LList(a, b) -> LList(a, calc_prev_exp b)
   in
   let prev_exp = calc_prev_exp exp in
+  (** Returns the first LOr after a sequence of LList *)
   let rec calc_lor_exp exp =
     match exp with
     | LList(a, (LOr(_,_) as x)) -> x
     | LList(a, b) -> calc_lor_exp b 
   in 
   let lor_exp = calc_lor_exp exp in
+  (** Receives the first LOr of the [exp],
+      Returns a list of lambda, of the left side of succesive LOr
+      *)
   let rec lors exp =
     match exp with
     | LList(a, LNil) as e -> [e]
@@ -334,21 +340,28 @@ let rec inner_lor_dis exp =
     | [] -> []
     | hd::tl -> (join prev_exp hd)::(arr_loop tl)
   in
+  (** List of lambda, [lors_arr] with each element prefixed with [prev_exp]*)
   let one_pass_res = arr_loop lors_arr in
   let rec any_has_lor arr =
     match arr with
     | [] -> []
-    | hd::tl -> if has_lor hd then (List.rev (inner_lor_dis hd))@(any_has_lor tl) else hd::(any_has_lor tl)
+    | hd::tl ->
+      if has_lor hd then
+        (List.rev (inner_lor_dis hd))@(any_has_lor tl)
+      else
+        hd::(any_has_lor tl)
   in any_has_lor one_pass_res
-and lpar_lor_case exp =
+let rec lpar_lor_case exp =
   let rec calc_lor_exp exp =
     match exp with
     | LPar(LOr(a, b), LOr(c, d)) -> LPar(a, c)::LPar(a, d)::LPar(b, c)::LPar(b, d)::[]
-    | LPar(LOr(a, b), x) -> LPar(a, x)::LPar(b, x)::[]
-    | LPar(x, LOr(a, b)) -> LPar(x, a)::LPar(x, b)::[]
+    | LPar(LOr(a, b), x        ) -> LPar(a, x)::LPar(b, x)::[]
+    | LPar(x        , LOr(a, b)) -> LPar(x, a)::LPar(x, b)::[]
+
     | LPar(LPar(LOr(a, b), LOr(c, d)), x) -> LPar(LPar(a, c), x)::LPar(LPar(a, d), x)::LPar(LPar(b, c), x)::LPar(LPar(b, d), x)::[]
-    | LPar(LPar(LOr(a, b), c), x) -> LPar(LPar(a, c), x)::LPar(LPar(b,c), x)::[]
-    | LPar(LPar(a, LOr(b, c)), x) -> LPar(LPar(a, b), x)::LPar(LPar(a, c), x)::[]
+    | LPar(LPar(LOr(a, b), c        ), x) -> LPar(LPar(a, c), x)::LPar(LPar(b,c), x)::[]
+    | LPar(LPar(a        , LOr(b, c)), x) -> LPar(LPar(a, b), x)::LPar(LPar(a, c), x)::[]
+
     | LPar((LList(_,_) as y), (LList(_,_) as z)) when has_inner_lor y && has_inner_lor z ->
       let inner_res_y = inner_lor_dis y in
       let inner_res_z = inner_lor_dis z in
@@ -359,20 +372,26 @@ and lpar_lor_case exp =
         | hd::tl, h::t -> LPar(hd, h)::(assoc_loop y_arr t z_c)
       in 
       assoc_loop inner_res_y inner_res_z inner_res_z
-    | LPar((LList(_,_) as y), (_ as z)) when has_lor y -> let inner_res = inner_lor_dis y in List.map (fun x -> LPar(x, z)) inner_res
-    | LPar((_ as y), (LList(_,_) as z)) when has_lor z -> let inner_res = inner_lor_dis z in List.map (fun x -> LPar(y, x)) inner_res
+
+    | LPar((LList(_,_) as y), (_ as z)         ) when has_lor y -> let inner_res = inner_lor_dis y in List.map (fun x -> LPar(x, z)) inner_res
+    | LPar((_ as y)         , (LList(_,_) as z)) when has_lor z -> let inner_res = inner_lor_dis z in List.map (fun x -> LPar(y, x)) inner_res
+    (* Maches above??? *)
     | LPar((LPar(_, _) as y), (LList(_,_) as z)) when has_lor y -> let res = calc_lor_exp y in List.map (fun x -> LPar(x, z)) res
-    | LPar((LList(_,_) as y), (LPar(_,_) as z)) when has_lor z -> let res = calc_lor_exp z in List.map (fun x -> LPar(y, x)) res 
+    | LPar((LList(_,_) as y), (LPar(_,_) as z) ) when has_lor z -> let res = calc_lor_exp z in List.map (fun x -> LPar(y, x)) res 
     | _ -> exp::[]
   in
   let one_pass_res = calc_lor_exp exp in
   let rec any_has_lor arr =
     match arr with
     | [] -> []
-    | hd::tl -> if has_lor hd then (lpar_lor_case hd)@(any_has_lor tl) else hd::(any_has_lor tl)
+    | hd::tl ->
+          if has_lor hd then
+          (lpar_lor_case hd)@(any_has_lor tl)
+        else
+          hd::(any_has_lor tl)
   in
   any_has_lor one_pass_res
-     
+
 let rec lor_assign arr =
   match arr with
   | [] -> []
@@ -383,6 +402,11 @@ let rec reduce_arr arr i =
   | (a, b)::[] -> (a, i+b)
   | (a, b)::tl -> reduce_arr tl (i+b)
 
+(** Returns a list of pairs (acting as a map/associative array) with the first item being the 
+    [eta] action and the second being the counter of occurences of prefixes with that action
+
+    TODO: Does not deal with choice?
+    *)
 let rec count_actions exp =
   let rec count exp arr =
     match exp with
@@ -402,23 +426,18 @@ let rec count_actions exp =
     match arr with
     | [] -> []
     | ((a, b) as hd)::tl -> 
-      let f_arr = 
-        List.filter (
-          fun x ->
-          match x with
-          | (c, i) -> if c = a then true else false
-        ) arr in
+      let f_arr = List.filter ( fun (c, _) -> c = a) arr in
       let red_res = reduce_arr f_arr 0 in
-      let rem_arr = 
-        List.filter (
-          fun x ->
-          match x with
-          | (c, i) -> if c != a then true else false
-        ) arr in
+      let rem_arr = List.filter ( fun (c, _) -> c <> a) arr in
         red_res::(reduce rem_arr)
   in reduce count_res
 
-let rec compare_action_counts arr = 
+(** Receives [(eta * int) list], list of pairs (eta, int), with int being the count of that [eta]
+    actions in the expression.
+
+    Returns the list of [eta]s with an unequal counter compared to [compl_eta eta] *)
+let rec compare_action_counts (arr : (eta * int) list) = 
+  (** Like List.remove_assoc, but removes all, not just the first *)
   let rec rem_assocs eta arr = 
     if List.mem_assoc eta arr
     then rem_assocs eta (List.remove_assoc eta arr)
@@ -426,31 +445,38 @@ let rec compare_action_counts arr =
   in
   match arr with
   | [] -> []
-  | (a, b)::tl ->
+  | (eta, eta_count)::tl ->
     try
-      let i = List.assoc (compl_eta a) arr in
-      let filter_compl a =
-        List.filter (
-          fun x ->
-          match x with
-          | (c, i) -> if (compl_eta a) = c then false else true
-        ) tl in
-      if b = i
-      then compare_action_counts (rem_assocs (compl_eta a) (rem_assocs a arr)) (* Usar o filter_compl aqui retira apenas os complementos todos, e não as restantes ações *)
+      let eta' = compl_eta eta in
+      let i = List.assoc eta' arr in
+      let filter_compl = List.filter (fun (c, i) -> eta' <> c) tl in
+      if eta_count = i then
+        compare_action_counts (rem_assocs eta' (rem_assocs eta arr)) (* Usar o filter_compl aqui retira apenas os complementos todos, e não as restantes ações *)
       else (
-        if b > i then
-          a::(compare_action_counts (filter_compl a))
-        else (compl_eta a)::(compare_action_counts (filter_compl a))
+        if eta_count > i then
+          eta::(compare_action_counts filter_compl)
+        else
+          eta'::(compare_action_counts filter_compl)
       )
     with
-    | Not_found -> a::(compare_action_counts tl)
+    | Not_found -> eta::(compare_action_counts tl)
 
+(** Checks if [b' list] is not empty *)
 let rec has_miss_acts arr =
   match arr with
   | [] -> false
   | (a,b)::tl -> ((List.length b) > 0) || has_miss_acts tl
 
+(** Receives a lambda representation of a process
+
+    Returns [(lambda * eta list) list]. Generates a list of lambdas, (all the possible executions?)
+    and for each one return a list of [eta]/actions with an unequal occurence counter compared to
+    [compl_eta eta] *)
 let main_act_verifier exp =
+  (** Receives a list of lambda.
+
+      Returns [(lambda * eta list) list], with each pair being, the expression from the first list
+      with a ist of the [eta]s with an unequal occurence counter compared to [compl_eta eta] *)
   let rec count_loop arr =
     match arr with
     | [] -> []
@@ -459,17 +485,17 @@ let main_act_verifier exp =
       let comp_res = compare_action_counts count_res in
       (hd, comp_res)::(count_loop tl))
   in
-  if starts_w_lor exp
-  then
+  if starts_w_lor exp then
     let disent = lor_disentangler exp in
     let lpar_lor_res = 
       List.map (fun x ->
-        if has_inner_lor_2 x = false
-        then [x]
+        if not (has_lor x) then
+          [x]
         else
-          if starts_w_llist x
-          then inner_lor_dis x
-          else lpar_lor_case x
+          if starts_w_llist x then
+            inner_lor_dis x
+          else
+            lpar_lor_case x
       ) disent in
     count_loop (List.flatten lpar_lor_res)
   else
