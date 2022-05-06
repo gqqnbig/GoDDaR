@@ -1,6 +1,5 @@
 (library
- (name dlock)
- (flags (:standard -warn-error -A)))
+ (name dlock))
 
 (menhir (modules CCS_Parser))
 
