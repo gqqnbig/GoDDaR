@@ -79,7 +79,7 @@ let rec lparToChi lpar =
 
 (* Retrieves the LChi at position i_at in list *)
 let get_chi_at list i_at =
-    let f_list = List.filteri (fun i _ -> if i = i_at then true else false) list in (List.hd f_list)
+    let f_list = List.filteri (fun i _ -> i = i_at ) list in (List.hd f_list)
 
 (* Pulls the next Eta and arranges Chi's ll*)
 let case_e elem chi i_at =
@@ -89,7 +89,7 @@ let case_e elem chi i_at =
             let nth_elem = List.nth el at_index in
                 let nth_ll = List.nth ll at_index in
                     match nth_ll with
-                    | LNil -> LChi(List.filteri (fun i _ -> if i!=at_index then true else false) el, List.filteri (fun i _ -> if i!=at_index then true else false) ll) 
+                    | LNil -> LChi(List.filteri (fun i _ -> i!=at_index) el, List.filteri (fun i _ -> i!=at_index) ll) 
                     | _ when i_at = -1-> LChi(subst_first el nth_elem (find_chi_lambda chi 0 at_index), correct_chi_lambda ll 0 at_index)
                     | _ when i_at != -1 -> LChi(subst_at el (find_chi_lambda chi 0 at_index) 0 at_index, correct_chi_lambda ll 0 at_index)
 
@@ -164,7 +164,7 @@ let exists_and_chi elem chi =
                             | LChi(_, _) -> true
                             | _ -> false
                         else false) ll in 
-                            if List.length res = 1 then true else false
+                            List.length res = 1
 
 (* Defines the case when there are two correspondent actions and a Chi must be pulled from the level below *)
 (* Example case: a?0 x (b! | a!; 0, (c! | d?; 0, 0)) -> 0 x (b! | c! | d?; 0; 0; 0) *)
@@ -172,8 +172,8 @@ let case_g elem chi =
     match chi with
     | LChi(el, ll) ->
         let i_at = find el elem in
-            let f_el = List.filteri ( fun i _ -> if i!=i_at then true else false) el in
-                let f_ll = List.filteri ( fun i _ -> if i!=i_at then true else false) ll in
+            let f_el = List.filteri ( fun i _ -> i!=i_at) el in
+                let f_ll = List.filteri ( fun i _ -> i!=i_at) ll in
                     join_chis (LChi(f_el, f_ll)) (get_chi_at ll i_at)
 
 (* Checks if elem exists in el by trying to get its index. If so, also checks if there is a LPar at i_at in ll. *)
@@ -190,7 +190,7 @@ let exists_and_par elem chi =
                             | LPar(_, _) -> true
                             | _ -> false
                         else false) ll in 
-                            if List.length res = 1 then true else false
+                            List.length res = 1
 
 (* For the case where a parallel composition is prefixed by some other action *)
 (* Example case: a?.0 x (a! | b?; (b!.0 || c?.0); 0) -> (b! || c? || b?; 0; 0; 0) *)
@@ -198,8 +198,8 @@ let case_h elem chi at_i =
     match chi with
     | LChi(el, ll) ->
         let i_at = if at_i = -1 then find el elem else at_i in
-            let f_el = List.filteri ( fun i _ -> if i!=i_at then true else false) el in
-                let f_ll = List.filteri ( fun i _ -> if i!=i_at then true else false) ll in
+            let f_el = List.filteri ( fun i _ -> i!=i_at) el in
+                let f_ll = List.filteri ( fun i _ -> i!=i_at) ll in
                     join_chis (LChi(f_el, f_ll)) (lparToChi (get_chi_at ll i_at))
 
 (* For the case where a choice is nested in a Chi's ll *)
@@ -603,7 +603,7 @@ try
       let flat_res1 = flatten2 res1 in
       let findings = proc_findings_comb flat_res1 in
       if List.length findings != 0 then
-          let result = List.hd (List.filter (fun x -> if x = LNil then false else true) (fst flat_res1)) in
+          let result = List.hd (List.filter (fun x -> x <> LNil) (fst flat_res1)) in
           let deadl_exp = find_deadl_exp hd result in
           let use_subst = use_lsubst deadl_exp (List.hd (main_deadlock_solver [result] true)) in
             (det_res_loop (use_subst::tl))
@@ -620,28 +620,28 @@ try
           final_change use_subst tl tl1
     in
     let flat_res = flatten2 res in
-    let init_findings = (proc_findings_comb (flat_res)) in
+    let init_findings = (proc_findings_comb flat_res) in
     if List.length init_findings = 0 then
       printf "\nThe process is deadlock-free.\n"
     else
       if List.length init_findings = List.length flat_res then 
         let _ = printf "\nThe process has a deadlock: every process combination is blocked.\n" in
         let _ = print_list_comb fmt (rev flat_res) in
-        (*let all_solv = det_res_loop [(List.hd (List.filter (fun x -> if x = LNil then false else true) (fst (flatten2 res))))] in*)
-        let all_solv = det_res_loop (List.filter (fun x -> if x = LNil then false else true) (fst (flatten2 res))) in
-        let final_res = final_change lamExp (List.filter (fun x -> if x = LNil then false else true) (map (fun x -> lchi_to_lpar x ) (fst flat_res))) all_solv in
+        (*let all_solv = det_res_loop [(List.hd (List.filter (fun x -> x <> LNil) (fst (flatten2 res))))] in*)
+        let all_solv = det_res_loop (List.filter (fun x -> x <> LNil) (fst (flatten2 res))) in
+        let final_res = final_change lamExp (List.filter (fun x -> x <> LNil) (map lchi_to_lpar (fst flat_res))) all_solv in
         let _ = printf "\nDeadlock(s) solved with algorithm %d:\n" !ds in
         printMode fmt final_res true
       else
         let _ = printf "\nThe process has a deadlock: some process combination is blocked.\n" in
         let _ = print_list_comb fmt (rev (flatten2 res)) in
-        let all_solv = det_res_loop (List.filter (fun x -> if x = LNil then false else true) (fst (flatten2 res))) in
-        let final_res = final_change lamExp (List.filter (fun x -> if x = LNil then false else true) (map (fun x -> lchi_to_lpar x ) (fst (flatten2 res)))) all_solv in
+        let all_solv = det_res_loop (List.filter (fun x -> x <> LNil) (fst (flatten2 res))) in
+        let final_res = final_change lamExp (List.filter (fun x -> x <> LNil) (map lchi_to_lpar (fst (flatten2 res)))) all_solv in
         let _ = printf "\nDeadlock(s) solved with algorithm %d:\n" !ds in
         if final_res = lamExp then 
-          let filter_res = List.filter ( fun x -> match x with (a,b) -> if a = LNil then false else true) (flatten2 res) in
+          let filter_res = List.filter ( fun (a,_) -> a <> LNil ) (flatten2 res) in
           let alter_res = main_deadlock_solver (fst filter_res) false in
-          let rem_nils = map (fun x -> remLNils x) alter_res in
+          let rem_nils = map remLNils alter_res in
           let f_res = List.combine rem_nils (snd filter_res) in
           print_list_comb fmt f_res
         else

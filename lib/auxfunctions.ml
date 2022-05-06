@@ -46,7 +46,7 @@ let rec enumerate list i =
 
 (* Returns the index of the permutations of the inital process that lead to a deadlock *)
 let proc_findings lst = 
-    List.filter (fun y -> if y = -1 then false else true) 
+    List.filter (fun y -> y <> -1) 
         (map (fun x -> 
             match x with 
             | (a,b) -> if b = LNil then -1 else a) (enumerate lst 0))
@@ -116,7 +116,7 @@ let rec topComb list =
             loopl prdExprs
 
 let proc_findings_comb lst =
-    List.filter (fun y -> if y = None then false else true)
+    List.filter (fun y -> y <> None)
     (map ( fun x -> 
         match x with
         | (LNil, _) -> None
@@ -173,7 +173,7 @@ let rec getParNum exp =
     | _ -> 0
 
 let rec getRestPars list =
-    let i = ref 0 in List.filter (fun x -> i:= !i+1; if !i < 3 then false else true) list
+    let i = ref 0 in List.filter (fun x -> i:= !i+1; !i >= 3) list
 
 let addAfterChiEval2 pair exp =
     match pair with
@@ -220,26 +220,26 @@ let rec has_nested_chi exp =
 let rec can_chi_progress exp =
     match exp with
     | LPar(LChi(el,ll), LList(EEta(AIn(j)), l)) 
-    | LPar(LList(EEta(AIn(j)), l), LChi(el, ll)) -> if find_corres_list el (EEta(AOut(j))) 0 != [] || find_all_corres el el 0 0 != [] then true else false
+    | LPar(LList(EEta(AIn(j)), l), LChi(el, ll)) -> find_corres_list el (EEta(AOut(j))) 0 != [] || find_all_corres el el 0 0 != []
     | LPar(LChi(el,ll), LList(EEta(AOut(j)), l)) 
-    | LPar(LList(EEta(AOut(j)), l), LChi(el, ll)) -> if find_corres_list el (EEta(AIn(j))) 0 != [] || find_all_corres el el 0 0 != [] then true else false
-    | LChi(el, ll) | LPar(LChi(el, ll), _) | LPar(_, LChi(el, ll)) -> if find_all_corres el el 0 0 != [] then true else false
+    | LPar(LList(EEta(AOut(j)), l), LChi(el, ll)) -> find_corres_list el (EEta(AIn(j))) 0 != [] || find_all_corres el el 0 0 != []
+    | LChi(el, ll) | LPar(LChi(el, ll), _) | LPar(_, LChi(el, ll)) -> find_all_corres el el 0 0 != []
     | LPar(l1, _) -> can_chi_progress l1
     | _ -> false
 
 let rec can_chi_list_progress exp =
     match exp with
     | LPar(LChi(el, ll), LList(EEta(AIn(j)), l))
-    | LPar(LList(EEta(AIn(j)), l), LChi(el, ll)) -> if find_corres_list el (EEta(AOut(j))) 0 != [] then true else false
+    | LPar(LList(EEta(AIn(j)), l), LChi(el, ll)) -> find_corres_list el (EEta(AOut(j))) 0 != []
     | LPar(LChi(el,ll), LList(EEta(AOut(j)), l)) 
-    | LPar(LList(EEta(AOut(j)), l), LChi(el, ll)) -> if find_corres_list el (EEta(AIn(j))) 0 != [] then true else false
+    | LPar(LList(EEta(AOut(j)), l), LChi(el, ll)) -> find_corres_list el (EEta(AIn(j))) 0 != []
     | LPar(l1, _) -> can_chi_list_progress l1
     | _ -> false
 
 let rec can_chi_nested_progress exp =
     match exp with
     | LChi(el, ll) | LPar(LChi(el, ll), LNil) | LPar(LNil, LChi(el, ll)) 
-    | LPar(LChi(el, ll), LList(_,_)) | LPar(LList(_,_), LChi(el, ll)) -> if find_all_corres el el 0 0 != [] then true else false
+    | LPar(LChi(el, ll), LList(_,_)) | LPar(LList(_,_), LChi(el, ll)) -> find_all_corres el el 0 0 != []
     | LPar(l1, _) -> can_chi_nested_progress l1
     | _ -> false
         
@@ -516,7 +516,7 @@ let rec rem_print_ctx arr =
 let rec all_same arr =
   match arr with
   | [hd] -> true
-  | [hd; tl] -> if hd = tl then true else false
+  | [hd; tl] -> hd = tl
   | hd::md::tl -> if hd = md then all_same (md::tl) else false
 
 let fst arr = map (fun x -> fst x) arr
