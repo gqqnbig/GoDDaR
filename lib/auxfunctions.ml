@@ -165,7 +165,7 @@ let rec lparToList exp =
   match exp with
   | LPar(l, r) -> lparToList l @ lparToList r
   | _ -> [exp]
-    
+
 let assocLeft exp =
   let toList = lparToList exp in
   let rec assoc list =
@@ -265,7 +265,7 @@ let rec can_chi_nested_progress exp =
   | LPar(LChi(el, ll), LList(_,_)) | LPar(LList(_,_), LChi(el, ll)) -> find_all_corres el el 0 0 != []
   | LPar(l1, _) -> can_chi_nested_progress l1
   | _ -> false
-        
+
 let rec has_nested_or exp =
   match exp with
   | LOr(_,_)
