@@ -1,6 +1,7 @@
 open Format
 open Dlock
 open Dlock.Auxfunctions
+open Dlock.Main_act_verifier_orig
 open Dlock.Types
 open Dlock.Types.Eta
 open Dlock.Printer
