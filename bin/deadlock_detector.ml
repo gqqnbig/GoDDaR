@@ -646,6 +646,7 @@ with
 | _ -> Printexc.print_backtrace stdout
 ;;
 
+if (!process = "") then (
 
 (* -- Deadlock -- *)
 (* 1) (a!.a?.0 || b?.b!.c!.c?.0) + c!.c?.0    --->    Case with complete (global) resolution *)
@@ -665,3 +666,5 @@ main (parse "(a!.a?.0 || b?.b!.c!.c?.0) + c!.c?.0");
 (* 4) a!.(b!.c!.0 || b?.c?.d?.0) || a?.d!.0 *)
 (* main ( PPar(PPref(AOut('a'), PPar(PPref(AOut('b'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AIn('c'), PPref(AIn('d'), PNil))))), PPref(AIn('a'), PPref(AOut('d'), PNil))) ) *)
 
+) else
+  main (parse !process)
