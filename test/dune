@@ -1,3 +1,9 @@
 (test
  (name ccs_parser)
+ (modules ccs_parser)
+ (libraries dlock))
+
+(test
+ (name main_act_verifier)
+ (modules main_act_verifier)
  (libraries dlock))

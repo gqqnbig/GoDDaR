@@ -2,6 +2,7 @@
 
 open Format
 open Types
+open Types.Eta
 
 let fmt = Format.std_formatter
 
@@ -40,7 +41,7 @@ and print_lambdalist fmt lst =
     match lst with
     | [] -> ()
     | hd::[] -> fprintf fmt "%a" print_lambdas hd
-    | hd::tl -> fprintf fmt "%a, " print_lambdas hd; print_lambdalist fmt tl
+    | hd::tl -> fprintf fmt "%a | " print_lambdas hd; print_lambdalist fmt tl
 
 let rec print_etalist_alt fmt lst =
   match lst with

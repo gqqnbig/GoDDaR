@@ -2,6 +2,7 @@ open Format
 open Dlock
 open Dlock.Auxfunctions
 open Dlock.Types
+open Dlock.Types.Eta
 open Dlock.Printer
 open Printer2
 open Cmd

@@ -14,14 +14,24 @@ type proc =
     | PPref of action * proc
     | PPar of proc * proc
 
-type eta = 
-    | EEta of action
+module Eta =
+    struct 
+    type eta = 
+        | EEta of action
+    type t = eta
+    let compare a b = 
+        match (a, b) with
+        | EEta(AIn(a)), EEta(AIn(b)) -> 0
+        | EEta(AOut(a)), EEta(AOut(b)) -> 0
+        | EEta(AOut(a)), EEta(AIn(b)) -> -1
+        | EEta(AIn(a)), EEta(AOut(b)) -> +1
+end
 
 type lambda = 
     | LNil
     | LOr of lambda * lambda
-    | LList of eta * lambda
-    | LChi of eta list * lambda list
+    | LList of Eta.eta * lambda
+    | LChi of Eta.eta list * lambda list
     | LPar of lambda * lambda
     | LSubst
 
@@ -43,7 +53,7 @@ let rec toLambda proc =
 
 let toAction eta =
     match eta with
-    | EEta(a) -> a
+    | Eta.EEta(a) -> a
 
 let rec toProc lambda =
     match lambda with
@@ -76,8 +86,8 @@ let conc_lvl ctx lvl = {ctx with level = ctx.level ^ "." ^ lvl}
 
 let compl_eta eta =
     match eta with
-    | EEta(AIn(k)) -> EEta(AOut(k))
-    | EEta(AOut(k)) -> EEta(AIn(k))
+    | Eta.EEta(AIn(k)) -> Eta.EEta(AOut(k))
+    | Eta.EEta(AOut(k)) -> Eta.EEta(AIn(k))
 
 let isLPar exp =
     match exp with

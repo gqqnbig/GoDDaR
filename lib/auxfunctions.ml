@@ -1,5 +1,6 @@
 (* Definition of auxiliary functions *)
 open Types
+open Types.Eta
 open Printer
 
 (* ------------------- AUXILIARY FUNCTIONS -------------------- *)
@@ -323,8 +324,10 @@ let rec lor_disentangler exp =
   | _ -> [exp]
 
 (** [exp] must start with LList
+
     Returns list of all possible executions wrt. LOr *)
 let rec inner_lor_dis exp =
+
   (** Returns [exp] with only the LLists until an LOr *)
   let rec calc_prev_exp exp = 
     match exp with
@@ -429,7 +432,6 @@ let rec reduce_arr arr i =
 (** Returns a list of pairs (acting as a map/associative array) with the first item being the 
     [eta] action and the second being the counter of occurences of prefixes with that action
 
-    TODO: Does not deal with choice?
     *)
 let rec count_actions exp =
   let rec count exp arr =
@@ -501,7 +503,7 @@ let main_act_verifier exp =
   (** Receives a list of lambda.
 
       Returns [(lambda * eta list) list], with each pair being, the expression from the first list
-      with a ist of the [eta]s with an unequal occurence counter compared to [compl_eta eta] *)
+      with a list of the [eta]s with an unequal occurence counter compared to [compl_eta eta] *)
   let rec count_loop arr =
     match arr with
     | [] -> []

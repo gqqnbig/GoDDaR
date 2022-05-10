@@ -42,6 +42,7 @@ let parse_and_test (s: string) (p: Types.proc) =
       | Success -> Format.fprintf fmt "SUCCESS:"; (Printer.print_proc_simple fmt p);Format.printf "\n";
 ;;
 
+Format.fprintf fmt "CCS_PARSER:\n";
 parse_and_test "(a!.a?.0 || b?.b!.c?.c!.0) + c!.c?.0" ( POr(PPar(PPref(AOut('a'), PPref(AIn('a'), PNil)), PPref(AIn('b'), PPref(AOut('b'), PPref(AIn('c'), PPref(AOut('c'), PNil))))), PPref(AOut('c'), PPref(AIn('c'), PNil))) );
 parse_and_test "a!.0 || (b!.b?.a?.0 + a?.0)" (PPar(PPref(AOut('a'), PNil), POr(PPref(AOut('b'), PPref(AIn('b'), PPref(AIn('a'), PNil))), PPref(AIn('a'), PNil))));
 parse_and_test "a?.(c?.0 + d?.0) || a!.e!.0" (PPar(PPref(AIn('a'), POr(PPref(AIn('c'), PNil), PPref(AIn('d'), PNil))), PPref(AOut('a'), PPref(AOut('e'), PNil))) );
