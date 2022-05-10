@@ -507,10 +507,13 @@ let rec top_lvl_extractor exp =
   match exp with
   | LPar(LNil, LNil) -> []
   | LPar(LList(a, _), LList(b, _)) -> [a;b]
-  | LPar(LList(a, _), LNil) | LPar(LNil, LList(a, _)) -> [a]
-  | LPar(LChi(a, _), LList(b, _)) | LPar(LList(b,_), LChi(a, _)) -> append a [b]
+  | LPar(LList(a, _), LNil)
+  | LPar(LNil, LList(a, _)) -> [a]
+  | LPar(LChi(a, _), LList(b, _))
+  | LPar(LList(b,_), LChi(a, _)) -> append a [b]
   | LPar(LChi(a, _), LChi(b, _)) -> append a b
-  | LPar(LChi(a, _), LNil) | LPar(LNil, LChi(a, _))-> a
+  | LPar(LChi(a, _), LNil)
+  | LPar(LNil, LChi(a, _))-> a
   | LPar(LPar(_,_) as a, LList(b, _)) -> b::(top_lvl_extractor a)
   | LPar(LPar(_, _) as a, LChi(b, _)) -> append b (top_lvl_extractor a)
   | LPar(LPar(_, _) as a, LNil) -> top_lvl_extractor a
@@ -578,6 +581,30 @@ let rec find_deadl_exp exp dexp =
     | _ -> raise ( RuntimeException "No match")
 
 
+let rec det_res_loop arr =
+match arr with
+| [] -> []
+| hd::tl ->
+  let toList1 = lparToList hd in
+  let res1 = (eval [[((lchi_to_lpar hd), {print=false; level="a"})]]) in
+  let flat_res1 = flatten2 res1 in
+  let findings = proc_findings_comb flat_res1 in
+  if List.length findings != 0 then
+    let result = List.hd (List.filter (fun x -> x <> LNil) (fst flat_res1)) in
+    let deadl_exp = find_deadl_exp hd result in
+    let use_subst = use_lsubst deadl_exp (List.hd (main_deadlock_solver [result] true)) in
+      (det_res_loop (use_subst::tl))
+  else
+    hd::(det_res_loop tl)
+
+let rec final_change exp dexps solved =
+  match dexps, solved with
+  | [], [] -> exp
+  | hd::tl, [] -> exp
+  | hd::tl, hd1::tl1 -> 
+    let deadl_exp = find_deadl_exp exp hd in
+    let use_subst = use_lsubst deadl_exp hd1 in
+      final_change use_subst tl tl1
 
 let main exp =
   try
@@ -588,38 +615,15 @@ let main exp =
     if has_miss_acts act_ver then
       (printMode fmt lamExp true; printf "\n"; print_act_ver act_ver)
     else 
+      (* Deadlock detection *)
       let toList = lparToList lamExp  in
       let res = 
         if List.length toList <= 2 then
           (eval [[(lamExp, {print=true; level="1"})]])
         else
           let comb_lst = topComb toList in 
-          printFinalArrComb fmt (flatten2 comb_lst); eval (assign_ctx2 comb_lst true)
-      in
-      let rec det_res_loop arr =
-      match arr with
-      | [] -> []
-      | hd::tl ->
-        let toList1 = lparToList hd in
-        let res1 = (eval [[((lchi_to_lpar hd), {print=false; level="a"})]]) in
-        let flat_res1 = flatten2 res1 in
-        let findings = proc_findings_comb flat_res1 in
-        if List.length findings != 0 then
-          let result = List.hd (List.filter (fun x -> x <> LNil) (fst flat_res1)) in
-          let deadl_exp = find_deadl_exp hd result in
-          let use_subst = use_lsubst deadl_exp (List.hd (main_deadlock_solver [result] true)) in
-            (det_res_loop (use_subst::tl))
-        else
-          hd::(det_res_loop tl)
-      in
-      let rec final_change exp dexps solved =
-        match dexps, solved with
-        | [], [] -> exp
-        | hd::tl, [] -> exp
-        | hd::tl, hd1::tl1 -> 
-          let deadl_exp = find_deadl_exp exp hd in
-          let use_subst = use_lsubst deadl_exp hd1 in
-            final_change use_subst tl tl1
+            printFinalArrComb fmt (flatten2 comb_lst);
+            eval (assign_ctx2 comb_lst true)
       in
       let flat_res = flatten2 res in
       let init_findings = (proc_findings_comb flat_res) in
