@@ -364,18 +364,18 @@ let eval arr =
   | [] -> []
   | ((l, ctx) as hd)::tl ->
     begin
-    let _ = printCtxLevel ctx in
+    printCtxLevel ctx;
     match l with
     | LOr(l1, l2) ->
       let ass_lo = assocLeft l in
-      let _ = printMode fmt ass_lo ctx.print in
+      printMode fmt ass_lo ctx.print;
       let ctx_l = conc_lvl ctx "1" in
       let ctx_r = conc_lvl ctx "2" in
         append (new_eval tl) (new_eval [(getL1 ass_lo, ctx_l); (getL2 ass_lo, ctx_r)])
     | LPar(l1, l2) ->
       let ass_lp = assocLeft l in
-      if has_nested_or ass_lp then
-        let _ = printMode fmt ass_lp ctx.print in
+      if has_nested_or ass_lp then (
+        printMode fmt ass_lp ctx.print;
         let ctx_l = conc_lvl ctx "1" in
         let ctx_r = conc_lvl ctx "2" in
         match getNestedLeft ass_lp with
@@ -394,7 +394,7 @@ let eval arr =
             let add_after_r = addAfterChiEval2 (LPar(a,c), ctx_r) (assocLeftList (getRestPars (lparToList ass_lp))) in
               append (new_eval tl) (new_eval [add_after_l; add_after_r])
         | _ -> printMode fmt (getNestedLeft ass_lp) true; raise (RuntimeException "No match in new_eval OR")
-      else
+      ) else
         if has_nested_chi ass_lp = false then (
           printMode fmt ass_lp ctx.print;
           let oneEval = sStepEval ass_lp in
@@ -413,7 +413,7 @@ let eval arr =
           let chi_n_prog = can_chi_nested_progress ass_lp in
           match chi_l_prog, chi_n_prog with
           | true, true ->
-            (* let _ = printf "ENTREI TRUE TRUE\n" in *)
+            (* printf "ENTREI TRUE TRUE\n";*)
             let chi_nested = flatten2 (eval_chi_nested (getNestedLeft ass_lp, ctx)) in
             let add_after1 = if getParNum ass_lp <= 2 then chi_nested else map ( fun x -> addAfterChiEval2 x (assocLeftList (getRestPars (lparToList ass_lp))) ) chi_nested in
             let chi_list = flatten2 ( eval_chi_list (getNestedLeft ass_lp, ctx)) in
@@ -619,7 +619,7 @@ let rec final_change exp dexps solved =
 
 let main exp =
   try
-    let _ = Printexc.record_backtrace true in
+    Printexc.record_backtrace true;
     let lamExp = toLambda exp in
     (* Process Completeness Verification *)
     let act_ver = main_act_verifier lamExp in
@@ -641,20 +641,20 @@ let main exp =
       if List.length init_findings = 0 then
         printf "\nThe process is deadlock-free.\n"
       else
-        if List.length init_findings = List.length flat_res then 
-          let _ = printf "\nThe process has a deadlock: every process combination is blocked.\n" in
-          let _ = print_list_comb fmt (rev flat_res) in
+        if List.length init_findings = List.length flat_res then (
+          printf "\nThe process has a deadlock: every process combination is blocked.\n";
+          print_list_comb fmt (rev flat_res);
           (*let all_solv = det_res_loop [(List.hd (List.filter (fun x -> x <> LNil) (fst (flatten2 res))))] in*)
           let all_solv = det_res_loop (List.filter (fun x -> x <> LNil) (fst (flatten2 res))) in
           let final_res = final_change lamExp (List.filter (fun x -> x <> LNil) (map lchi_to_lpar (fst flat_res))) all_solv in
-          let _ = printf "\nDeadlock(s) solved with algorithm %d:\n" !ds in
+          printf "\nDeadlock(s) solved with algorithm %d:\n" !ds;
           printMode fmt final_res true
-        else
-          let _ = printf "\nThe process has a deadlock: some process combination is blocked.\n" in
-          let _ = print_list_comb fmt (rev (flatten2 res)) in
+        ) else (
+          printf "\nThe process has a deadlock: some process combination is blocked.\n";
+          print_list_comb fmt (rev (flatten2 res));
           let all_solv = det_res_loop (List.filter (fun x -> x <> LNil) (fst (flatten2 res))) in
           let final_res = final_change lamExp (List.filter (fun x -> x <> LNil) (map lchi_to_lpar (fst (flatten2 res)))) all_solv in
-          let _ = printf "\nDeadlock(s) solved with algorithm %d:\n" !ds in
+          printf "\nDeadlock(s) solved with algorithm %d:\n" !ds;
           if final_res = lamExp then 
             let filter_res = List.filter ( fun (a,_) -> a <> LNil ) (flatten2 res) in
             let alter_res = main_deadlock_solver (fst filter_res) false in
@@ -663,6 +663,7 @@ let main exp =
             print_list_comb fmt f_res
           else
             printMode fmt final_res true
+        )
   with
   | _ -> Printexc.print_backtrace stdout
 ;;
