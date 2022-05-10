@@ -4,9 +4,3 @@
  (modules Cmd Deadlock_detector Printer2)
  (libraries dlock)
  (modes byte))
-
-(executable
- (public_name ccs_parser_test)
- (name ccs_parser_test)
- (modules ccs_parser_test)
- (libraries dlock))
