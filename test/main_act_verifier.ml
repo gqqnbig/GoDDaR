@@ -43,7 +43,9 @@ List.iter (fun exp ->
   let lambda = toLambda (parse exp) in
   test 
     exp
-    (List.map (fun (lambda, eta_list) -> List.rev (lparToList lambda), eta_list) (Main_act_verifier_orig.main_act_verifier lambda))
+    (List.map (fun (lambda, eta_list) -> (
+        List.filter (fun l -> l<>LNil) (List.rev (lparToList lambda)), eta_list
+      )) (Main_act_verifier_orig.main_act_verifier lambda))
     (List.map (fun (lambda, eta_list) -> (
         List.filter (fun l -> l<>LNil) (lparToList lambda), eta_list
       )) (List.rev (Main_act_verifier.main_act_verifier lambda)))
@@ -58,4 +60,5 @@ List.iter (fun exp ->
   "(a!.0 + b!.0) || (a?.0 + b?.0)";
   "(a!.0 || b!.0) || (a?.0 + b?.0)";
   "(a!.0 || b!.0) || (a?.b?.0 + b?.a?.0)";
+  "a!.0 || (a?.0 + 0)";
 ]
