@@ -137,7 +137,7 @@ let case_f (LChi(el, ll) as chi) i_pair =
                  (match r_chi with
                  | LChi (el1, ll1) ->
                   let chi_lambdaA = find_chi_lambda r_chi 0 a in
-                    (LChi(subst_at el1 chi_lambdaA 0 a, correct_chi_lambda ll1 0 a)))                    
+                    (LChi(subst_at el1 chi_lambdaA 0 a, correct_chi_lambda ll1 0 a)))
     )
   else
     let chi_lambdaA = find_chi_lambda chi 0 a in
@@ -234,7 +234,7 @@ let case_f_or (LChi(el, ll) as chi) ((a, b) as i_pair) =
   | LList(_, _), LOr(_, _) -> let i_chi = case_i chi b in map (fun x -> case_e (List.nth el a) x a) i_chi
   | LOr(_, _), LOr(_, _) -> let n_chi = case_i chi b in flatten2( map (fun x -> case_i x a) n_chi )
   | _ -> printMode fmt elemA_ll true; printMode fmt elemB_ll true; raise (RuntimeException "No match in case_f_or\n")
-            
+
 
 let rec has_lpar_in_chi chi =
   match chi with
@@ -358,25 +358,23 @@ let rec eval_chi_nested ((LPar(l1, l2), ctx) as exp) =
           iter corres_l 1
       | _, _ -> print_lambdas fmt (LPar(l1,l2));raise (RuntimeException "No match in eval_chi inside LChi(), _ \n"))
 
-(** Receves list of paralel combinations *)
 let eval arr =
   let rec new_eval expInArr =
   match expInArr with
   | [] -> []
-  | hd::tl ->
+  | ((l, ctx) as hd)::tl ->
     begin
-    match hd with
-    | (LOr(l1, l2) as lo, ctx) ->
-      let ass_lo = assocLeft lo in
-      let _ = printCtxLevel ctx in
+    let _ = printCtxLevel ctx in
+    match l with
+    | LOr(l1, l2) ->
+      let ass_lo = assocLeft l in
       let _ = printMode fmt ass_lo ctx.print in
       let ctx_l = conc_lvl ctx "1" in
       let ctx_r = conc_lvl ctx "2" in
         append (new_eval tl) (new_eval [(getL1 ass_lo, ctx_l); (getL2 ass_lo, ctx_r)])
-    | (LPar(l1, l2) as lp, ctx) ->
-      let ass_lp = assocLeft lp in
+    | LPar(l1, l2) ->
+      let ass_lp = assocLeft l in
       if has_nested_or ass_lp then
-        let _ = printCtxLevel ctx in
         let _ = printMode fmt ass_lp ctx.print in
         let ctx_l = conc_lvl ctx "1" in
         let ctx_r = conc_lvl ctx "2" in
@@ -394,22 +392,22 @@ let eval arr =
           else
             let add_after_l = addAfterChiEval2 (LPar(a,b), ctx_l) (assocLeftList (getRestPars (lparToList ass_lp))) in
             let add_after_r = addAfterChiEval2 (LPar(a,c), ctx_r) (assocLeftList (getRestPars (lparToList ass_lp))) in
-              append (new_eval tl) (new_eval [add_after_l; add_after_r])                        
+              append (new_eval tl) (new_eval [add_after_l; add_after_r])
         | _ -> printMode fmt (getNestedLeft ass_lp) true; raise (RuntimeException "No match in new_eval OR")
       else
         if has_nested_chi ass_lp = false then (
-          printCtxLevel ctx;
           printMode fmt ass_lp ctx.print;
           let oneEval = sStepEval ass_lp in
-          if getParNum oneEval <= 2
-          then append (new_eval tl) (new_eval [(oneEval, next_ctx ctx)])
-          else (let toList = lparToList oneEval in
+          if getParNum oneEval <= 2 then
+            append (new_eval tl) (new_eval [(oneEval, next_ctx ctx)])
+          else (
+            let toList = lparToList oneEval in
             let combs = flatten2 (topComb toList) in
             let i = ref 0 in
             let combs_ctx = map (fun x -> i:=!i+1; (x, {ctx with level = ctx.level ^ "." ^string_of_int !i})) combs in
-              append (new_eval tl) (new_eval combs_ctx))
+              append (new_eval tl) (new_eval combs_ctx)
+          )
         ) else (
-          printCtxLevel ctx; 
           printMode fmt ass_lp ctx.print;
           let chi_l_prog = can_chi_list_progress ass_lp in
           let chi_n_prog = can_chi_nested_progress ass_lp in
@@ -466,7 +464,7 @@ let eval arr =
                         append (new_eval tl) (new_eval combs_pairs)
                 )
                 (add_after1)
-              )                            
+              )
           | false, false ->
             let n_left = getNestedLeft ass_lp in
             match n_left with
@@ -487,16 +485,29 @@ let eval arr =
               else
                 append (new_eval tl) (new_eval [addAfterChiEval2 (l1, ctx) (assocLeftList (getRestPars (lparToList ass_lp)))])
             | _ -> printMode fmt ass_lp true; raise (RuntimeException "No match in new_eval_1")
-        ) 
-    | (LChi([], []), ctx) -> printCtxLevel ctx; printMode fmt (LNil) ctx.print; append (new_eval tl) [[(LNil, ctx)]]
-    | (LChi(el, ll) as a, ctx) when exist_corres el -> 
-      printCtxLevel ctx; printMode fmt (LPar(a,LNil)) ctx.print; 
-      append (new_eval tl) (new_eval (flatten2 (eval_chi_nested (LPar(a,LNil), ctx))))
-    | (LChi([a], [b]), ctx) -> let p = LList(a, b) in (printCtxLevel ctx; printMode fmt p ctx.print; append (new_eval tl) [[(p, ctx)]]) (* Adicionado por causa da main *)
-    | (LChi(_,_) as a, ctx) -> printCtxLevel ctx; printMode fmt a ctx.print; append (new_eval tl) [[hd]]
-    | (LList(et, ll) as a, ctx) -> printCtxLevel ctx; printMode fmt a ctx.print; append (new_eval tl) [[hd]]
-    | (LNil, ctx) -> printCtxLevel ctx; printMode fmt (LNil) ctx.print; append (new_eval tl) [[(LNil, ctx)]]
-    | (_ as err, ctx) -> printMode fmt err true; raise (RuntimeException "No match in new_eval")
+        )
+    | LChi([], []) ->
+      printMode fmt (LNil) ctx.print;
+      append (new_eval tl) [[(LNil, ctx)]]
+    | LChi(el, ll) when exist_corres el -> 
+      printMode fmt (LPar(l,LNil)) ctx.print; 
+      append (new_eval tl) (new_eval (flatten2 (eval_chi_nested (LPar(l,LNil), ctx))))
+    | LChi([a], [b]) ->
+      let p = LList(a, b) in
+        (printMode fmt p ctx.print;
+        append (new_eval tl) [[(p, ctx)]]) (* Adicionado por causa da main *)
+    | LChi(_,_) ->
+      printMode fmt l ctx.print;
+      append (new_eval tl) [[hd]]
+    | LList(et, ll) ->
+      printMode fmt l ctx.print;
+      append (new_eval tl) [[hd]]
+    | LNil ->
+      printMode fmt (LNil) ctx.print;
+      append (new_eval tl) [[(LNil, ctx)]]
+    | _ as err ->
+      printMode fmt err true;
+      raise (RuntimeException "No match in new_eval")
     end
   in 
     match arr with
@@ -659,7 +670,7 @@ let main exp =
 
 (* -- Deadlock -- *)
 (* 1) (a!.a?.0 || b?.b!.c?.c!.0) + c!.c?.0    --->    Case with complete (global) resolution *)
-(* main (CCS.parse "(a!.a?.0 || b?.b!.c?.c!.0) + c!.c?.0"); *)
+main (CCS.parse "(a!.a?.0 || b?.b!.c?.c!.0) + c!.c?.0");
 
 (* 2) a! || (b!.b?.a? + a?)    --->    Case with partial (local) resolution *)
 (* main (parse "a! || (b!.b?.a? + a?)"); *)
