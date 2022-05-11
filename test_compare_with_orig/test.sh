@@ -19,7 +19,7 @@ while read line; do
 	verbosity_v=("-v" "v")
 	verbosity_d=("-s" "s")
 	verbosity_x=("  " "-")
-	verbosities=( verbosity_v verbosity_d verbosity_x)
+	verbosities=(verbosity_v verbosity_d)
 
 	deadlock_algo_1=("-ds=1" "d1")
 	deadlock_algo_2=("-ds=2" "d2")
@@ -28,7 +28,7 @@ while read line; do
 	declare -n verbosity deadlock_algo
 	for verbosity in "${verbosities[@]}"; do
 		for deadlock_algo in "${deadlock_algos[@]}"; do
-			OUTPUT_FILE="$OUTPUT_DIR"/out_"$name-${verbosity[1]}-${deadlock_algo[1]}.txt"
+			OUTPUT_FILE="$OUTPUT_DIR"/out_"${name}_${verbosity[1]}_${deadlock_algo[1]}.txt"
 			# echo "$OUTPUT_FILE ${verbosity[0]} ${deadlock_algo[0]} ${verbosity[1]} ${deadlock_algo[1]} $name $process"
 			set -x 
 			dune exec $@ -- dlock ${verbosity[0]} ${deadlock_algo[0]} -p "$process" > "$OUTPUT_FILE" 2>/dev/null
