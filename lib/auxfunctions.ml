@@ -92,22 +92,15 @@ let rec lparToList exp =
   | LPar(l, r) -> lparToList l @ lparToList r
   | _ -> [exp]
 
+let rec assocLeftList list =
+  match list with
+  | [hd] -> hd
+  | hd::tl::[] -> LPar(tl, hd)
+  | hd::md::tl -> LPar(LPar(assocLeftList tl, md), hd)
+
 let assocLeft exp =
   let toList = lparToList exp in
-  let rec assoc list =
-    match list with
-    | [hd] -> hd
-    | hd::tl::[] -> LPar(tl, hd)
-    | hd::md::tl -> LPar(LPar(assoc tl, md), hd)
-  in assoc (List.rev toList)
-
-let assocLeftList list =
-  let rec assoc list =
-    match list with
-    | [hd] -> hd
-    | hd::tl::[] -> LPar(hd, tl)
-    | hd::md::tl -> LPar(LPar(hd, md), assoc tl)
-  in assoc list
+  assocLeftList (List.rev toList)
 
 let rec getNestedLeft exp =
   match exp with
