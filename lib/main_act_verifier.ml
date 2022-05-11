@@ -1,5 +1,6 @@
 open Types
 open Types.Eta
+open Auxfunctions
 
 
 (* This tupple store some data about a possible execution of the program
@@ -39,7 +40,7 @@ let possible_executions exp =
             | LOr(a, b) -> (eta_sequences, (a, eta_sequence)::tl_parallel_processes)::
                             (eta_sequences, (b, eta_sequence)::tl_parallel_processes)::[]
             (* Add the extra parallel process  *)
-            | LPar(a, b) -> [(eta_sequences, (a, eta_sequence)::(b, eta_sequence)::tl_parallel_processes)]
+            | LPar(a, b) -> [(eta_sequences, (a, eta_sequence)::(b, [])::tl_parallel_processes)]
             | LNil -> [((List.rev eta_sequence)::eta_sequences, tl_parallel_processes)]
             | LSubst
             | LChi(_,_) -> failwith "LSubst|LChi should not appear here!"
@@ -87,13 +88,17 @@ let main_act_verifier (exp: lambda) : (lambda * t list) list =
     let list_of_channel_counter = List.of_seq (Hashtbl.to_seq channel_counter) in
     let unbalenced_actions = List.filter (fun (channel, counter) -> counter <> 0) list_of_channel_counter in
 
-    (List.fold_left (fun lambda eta_list -> (
-      let lambda_LList = List.fold_right (fun eta lambda -> LList(eta, lambda)) eta_list LNil in
-      LPar(lambda, lambda_LList)
-    )) LNil possible_execution),
+    (* Paralelize the [LList]s *)
+    assocLeftList (List.map (
+      fun eta_list -> (
+          (*[Eta list] to [LList]/[lambda]*)
+          List.fold_right (fun eta lambda -> LList(eta, lambda)) eta_list LNil
+        )
+      ) possible_execution
+    ),
     List.map (fun pair -> chan_delta_to_eta pair) unbalenced_actions
   ) res
 
 
 let has_miss_acts ( list : (lambda * t list) list ) =
-  List.exists (fun (lambda, eta_list) -> (List.length eta_list) = 0) list
+  List.exists (fun (lambda, eta_list) -> (List.length eta_list) <> 0) list
