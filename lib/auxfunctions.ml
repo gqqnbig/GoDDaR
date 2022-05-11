@@ -59,32 +59,38 @@ let proc_findings_comb lst =
       | (_, ctx) -> Some ctx.level
     ) lst)
 
-let rec find_all_corres list dlist i j = 
-  match list, dlist with
-  | [], [] -> [] 
-  | [], dhd::dtl -> find_all_corres dtl dtl (j+1) (j+1)
-  | hd::tl, dhd::dtl ->
-    (match hd, dhd with
-    | EEta(AIn(a)), EEta(AOut(b)) when a = b ->
-      if i < j then
-        (i,j)::(find_all_corres tl dlist (i+1) j)
-      else
-        (j,i)::(find_all_corres tl dlist (i+1) j)
-    | EEta(AOut(a)), EEta(AIn(b)) when a = b ->
-      if i < j then
-        (i,j)::(find_all_corres tl dlist (i+1) j)
-      else
-        (j,i)::(find_all_corres tl dlist (i+1) j)
-    | _, _ -> find_all_corres tl dlist (i+1) j)
+let rec find_all_corres list dlist = 
+  let rec do_find_all_corres list dlist i j =
+    match list, dlist with
+    | [], [] -> [] 
+    | [], dhd::dtl -> do_find_all_corres dtl dtl (j+1) (j+1)
+    | hd::tl, dhd::dtl ->
+      (match hd, dhd with
+      | EEta(AIn(a)), EEta(AOut(b)) when a = b ->
+        if i < j then
+          (i,j)::(do_find_all_corres tl dlist (i+1) j)
+        else
+          (j,i)::(do_find_all_corres tl dlist (i+1) j)
+      | EEta(AOut(a)), EEta(AIn(b)) when a = b ->
+        if i < j then
+          (i,j)::(do_find_all_corres tl dlist (i+1) j)
+        else
+          (j,i)::(do_find_all_corres tl dlist (i+1) j)
+      | _, _ -> do_find_all_corres tl dlist (i+1) j)
+  in
+    do_find_all_corres list dlist 0 0
 
-let rec find_corres_list el eta i =
-  match el with
-  | [] -> []
-  | hd::tl ->
-    if hd = eta then
-      i::(find_corres_list tl eta (i+1))
-    else
-      find_corres_list tl eta (i+1)
+let find_corres_list el eta =
+  let rec do_find_corres_list el eta i =
+    match el with
+    | [] -> []
+    | hd::tl ->
+      if hd = eta then
+        i::(do_find_corres_list tl eta (i+1))
+      else
+        do_find_corres_list tl eta (i+1)
+  in
+  do_find_corres_list el eta 0
 
 (* Retrieves the lambdas from a LPar type and adds them to a list *)
 let rec lparToList exp = 
@@ -162,26 +168,26 @@ let rec has_nested_chi exp =
 let rec can_chi_progress exp =
   match exp with
   | LPar(LChi(el,ll), LList(EEta(AIn(j)), l)) 
-  | LPar(LList(EEta(AIn(j)), l), LChi(el, ll)) -> find_corres_list el (EEta(AOut(j))) 0 != [] || find_all_corres el el 0 0 != []
+  | LPar(LList(EEta(AIn(j)), l), LChi(el, ll)) -> find_corres_list el (EEta(AOut(j))) <> [] || find_all_corres el el <> []
   | LPar(LChi(el,ll), LList(EEta(AOut(j)), l)) 
-  | LPar(LList(EEta(AOut(j)), l), LChi(el, ll)) -> find_corres_list el (EEta(AIn(j))) 0 != [] || find_all_corres el el 0 0 != []
-  | LChi(el, ll) | LPar(LChi(el, ll), _) | LPar(_, LChi(el, ll)) -> find_all_corres el el 0 0 != []
+  | LPar(LList(EEta(AOut(j)), l), LChi(el, ll)) -> find_corres_list el (EEta(AIn(j)))  <> [] || find_all_corres el el <> []
+  | LChi(el, ll) | LPar(LChi(el, ll), _) | LPar(_, LChi(el, ll)) -> find_all_corres el el <> []
   | LPar(l1, _) -> can_chi_progress l1
   | _ -> false
 
 let rec can_chi_list_progress exp =
   match exp with
   | LPar(LChi(el, ll), LList(EEta(AIn(j)), l))
-  | LPar(LList(EEta(AIn(j)), l), LChi(el, ll)) -> find_corres_list el (EEta(AOut(j))) 0 != []
+  | LPar(LList(EEta(AIn(j)), l), LChi(el, ll)) -> find_corres_list el (EEta(AOut(j))) <> []
   | LPar(LChi(el,ll), LList(EEta(AOut(j)), l)) 
-  | LPar(LList(EEta(AOut(j)), l), LChi(el, ll)) -> find_corres_list el (EEta(AIn(j))) 0 != []
+  | LPar(LList(EEta(AOut(j)), l), LChi(el, ll)) -> find_corres_list el (EEta(AIn(j))) <> []
   | LPar(l1, _) -> can_chi_list_progress l1
   | _ -> false
 
 let rec can_chi_nested_progress exp =
   match exp with
   | LChi(el, ll) | LPar(LChi(el, ll), LNil) | LPar(LNil, LChi(el, ll)) 
-  | LPar(LChi(el, ll), LList(_,_)) | LPar(LList(_,_), LChi(el, ll)) -> find_all_corres el el 0 0 != []
+  | LPar(LChi(el, ll), LList(_,_)) | LPar(LList(_,_), LChi(el, ll)) -> find_all_corres el el <> []
   | LPar(l1, _) -> can_chi_nested_progress l1
   | _ -> false
 

@@ -300,10 +300,10 @@ let rec eval_chi_list ((LPar(l1, l2), ctx) as exp) =
       (
         match et with
       | EEta(AOut(k)) when List.exists((=) (EEta(AIn(k)))) el ->
-        let inds = find_corres_list el (EEta(AIn(k))) 0 in
+        let inds = find_corres_list el (EEta(AIn(k))) in
         iter inds (EEta(AIn(k))) 1
       | EEta(AIn(k)) when List.exists((=) (EEta(AOut(k)))) el ->
-        let inds = find_corres_list el (EEta(AOut(k))) 0 in
+        let inds = find_corres_list el (EEta(AOut(k))) in
         iter inds (EEta(AOut(k))) 1
       )
 
@@ -348,12 +348,12 @@ let rec eval_chi_nested ((LPar(l1, l2), ctx) as exp) =
       | LChi(_,_), LChi(_,_) -> 
         let (LChi(el1, ll) as joined) = join_chis l1 l2 in
           if exist_corres el1 then
-            let corres_l = find_all_corres el1 el1 0 0 in
+            let corres_l = find_all_corres el1 el1 in
               iter corres_l 1
           else
             [[(joined, ctx)]]
       | LChi(_,_),  _ | _, LChi(_,_) when exist_corres el ->
-        let corres_l = find_all_corres el el 0 0 in
+        let corres_l = find_all_corres el el in
           iter corres_l 1
       | _, _ -> print_lambdas fmt (LPar(l1,l2));raise (RuntimeException "No match in eval_chi inside LChi(), _ \n"))
 
