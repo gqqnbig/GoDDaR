@@ -380,7 +380,7 @@ let eval arr =
         match getNestedLeft ass_lp with
         | LPar(LOr(a,b), c) -> 
           if getParNum ass_lp <=2 then
-            append (new_eval tl) (new_eval [(LPar(a, c), ctx_l); (LPar(b,c), ctx_r)])
+            append (new_eval tl) (new_eval [(LPar(a, c), ctx_l); (LPar(b, c), ctx_r)])
           else 
             let add_after_l = addAfterChiEval2 (LPar(a,c), ctx_l) (assocLeftList (getRestPars (lparToList ass_lp))) in
             let add_after_r = addAfterChiEval2 (LPar(b,c), ctx_r) (assocLeftList (getRestPars (lparToList ass_lp))) in
@@ -426,8 +426,7 @@ let eval arr =
                     let i = ref 0 in
                     let combs_pairs = map (fun y -> i:=!i+1; (y, {ctx with level = ctx.level ^ "." ^ string_of_int !i})) combs in
                       append (new_eval tl) (new_eval combs_pairs)
-                )
-                (append add_after1 add_after2)
+                ) (append add_after1 add_after2)
               )
           | true, false ->
             let chi_list = flatten2 ( eval_chi_list (getNestedLeft ass_lp, ctx)) in
@@ -467,7 +466,7 @@ let eval arr =
             match n_left with
             | LPar(LChi([], []), LNil) | LPar(LNil, LChi([], [])) -> 
               if getParNum ass_lp <= 2 then
-                append (new_eval tl) [[(LNil, ctx)]] 
+                append (new_eval tl) [(LNil, ctx)] 
               else
                 append (new_eval tl) (new_eval [addAfterChiEval2 (LNil, ctx) (assocLeftList (getRestPars (lparToList ass_lp)))])
             | LPar((LChi(_,_) as l1), (LList(_,_) as l2)) | LPar((LList(_,_) as l1), (LChi(_,_) as l2))
@@ -485,31 +484,39 @@ let eval arr =
         )
     | LChi([], []) ->
       printMode fmt (LNil) ctx.print;
-      append (new_eval tl) [[(LNil, ctx)]]
+      append (new_eval tl) [(LNil, ctx)]
     | LChi(el, ll) when exist_corres el -> 
       printMode fmt (LPar(l,LNil)) ctx.print; 
       append (new_eval tl) (new_eval (flatten2 (eval_chi_nested (LPar(l,LNil), ctx))))
     | LChi([a], [b]) ->
       let p = LList(a, b) in
         (printMode fmt p ctx.print;
-        append (new_eval tl) [[(p, ctx)]]) (* Adicionado por causa da main *)
+        append (new_eval tl) [(p, ctx)]) (* Adicionado por causa da main *)
     | LChi(_,_) ->
       printMode fmt l ctx.print;
-      append (new_eval tl) [[hd]]
+      append (new_eval tl) [hd]
     | LList(et, ll) ->
       printMode fmt l ctx.print;
-      append (new_eval tl) [[hd]]
+      append (new_eval tl) [hd]
     | LNil ->
       printMode fmt (LNil) ctx.print;
-      append (new_eval tl) [[(LNil, ctx)]]
+      append (new_eval tl) [(LNil, ctx)]
     | _ as err ->
       printMode fmt err true;
       raise (RuntimeException "No match in new_eval")
-    end
-  in 
-    match arr with
-    | [] -> []
-    | hd::tl -> List.fold_left (fun acc x -> append (new_eval x) acc) [[]] arr
+  end
+
+(** Receves (lambda * print context) list list
+
+   Iterate through the [arr] list, obtain the [new_eval elem] for each element, and return the
+   concatenation of the results from each [new_eval]
+
+   Similar to [List.flatten(List.map (fun x -> new_eval x) arr)]
+    *)
+let eval arr =
+  (*Format.printf "eval: %i\n" (List.length arr);*)
+  List.flatten (List.map (fun x -> new_eval x ) arr)
+  (* List.fold_left (fun acc x -> append (new_eval x) acc) [[]] arr *)
 
 let rec top_lvl_extractor exp =
   match exp with
@@ -595,10 +602,9 @@ match arr with
 | hd::tl ->
   let toList1 = lparToList hd in
   let res1 = (eval [[((lchi_to_lpar hd), {print=false; level="a"})]]) in
-  let flat_res1 = flatten2 res1 in
-  let findings = proc_findings_comb flat_res1 in
+  let findings = proc_findings_comb res1 in
   if List.length findings != 0 then
-    let result = List.hd (List.filter (fun x -> x <> LNil) (fst flat_res1)) in
+    let result = List.hd (List.filter (fun x -> x <> LNil) (fst res1)) in
     let deadl_exp = find_deadl_exp hd result in
     let use_subst = use_lsubst deadl_exp (List.hd (main_deadlock_solver [result] true)) in
       (det_res_loop (use_subst::tl))
@@ -633,27 +639,26 @@ let main exp =
             printFinalArrComb fmt (flatten2 comb_lst);
             eval (assign_ctx2 comb_lst true)
       in
-      let flat_res = flatten2 res in
-      let init_findings = (proc_findings_comb flat_res) in
+      let init_findings = (proc_findings_comb res) in
       if List.length init_findings = 0 then
         printf "\nThe process is deadlock-free.\n"
       else
-        if List.length init_findings = List.length flat_res then (
+        if List.length init_findings = List.length res then (
           printf "\nThe process has a deadlock: every process combination is blocked.\n";
-          print_list_comb fmt (rev flat_res);
+          print_list_comb fmt (rev res);
           (*let all_solv = det_res_loop [(List.hd (List.filter (fun x -> x <> LNil) (fst (flatten2 res))))] in*)
-          let all_solv = det_res_loop (List.filter (fun x -> x <> LNil) (fst (flatten2 res))) in
-          let final_res = final_change lamExp (List.filter (fun x -> x <> LNil) (map lchi_to_lpar (fst flat_res))) all_solv in
+          let all_solv = det_res_loop (List.filter (fun x -> x <> LNil) (fst res)) in
+          let final_res = final_change lamExp (List.filter (fun x -> x <> LNil) (map lchi_to_lpar (fst res))) all_solv in
           printf "\nDeadlock(s) solved with algorithm %d:\n" !ds;
           printMode fmt final_res true
         ) else (
           printf "\nThe process has a deadlock: some process combination is blocked.\n";
-          print_list_comb fmt (rev (flatten2 res));
-          let all_solv = det_res_loop (List.filter (fun x -> x <> LNil) (fst (flatten2 res))) in
-          let final_res = final_change lamExp (List.filter (fun x -> x <> LNil) (map lchi_to_lpar (fst (flatten2 res)))) all_solv in
+          print_list_comb fmt (rev res);
+          let all_solv = det_res_loop (List.filter (fun x -> x <> LNil) (fst res)) in
+          let final_res = final_change lamExp (List.filter (fun x -> x <> LNil) (map lchi_to_lpar (fst res))) all_solv in
           printf "\nDeadlock(s) solved with algorithm %d:\n" !ds;
           if final_res = lamExp then 
-            let filter_res = List.filter ( fun (a,_) -> a <> LNil ) (flatten2 res) in
+            let filter_res = List.filter ( fun (a,_) -> a <> LNil ) res in
             let alter_res = main_deadlock_solver (fst filter_res) false in
             let rem_nils = map remLNils alter_res in
             let f_res = List.combine rem_nils (snd filter_res) in
