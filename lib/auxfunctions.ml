@@ -108,6 +108,13 @@ let assocLeft exp =
   let toList = lparToList exp in
   assocLeftList (List.rev toList)
 
+(** Receives [exp]
+
+    preconditions:
+     * [assocLeft exp]
+
+    Returns the left innermost [LPar] expression
+    *)
 let rec getNestedLeft exp =
   match exp with
   | LPar(LNil, _)
@@ -141,12 +148,13 @@ let rec hasLNil exp =
   | LPar(l1, l2) -> hasLNil l1 || hasLNil l2
   | _ -> false
 
+(** Strips the expression from containing [LNil] located inside [LPar] *)
 let rec remLNils exp =
   let rec rem exp =
     match exp with
     | LPar(LNil, LNil) -> LNil
-    | LPar(_ as a, LNil) -> rem a
-    | LPar(LNil, (_ as b)) -> rem b 
+    | LPar(a, LNil) -> rem a
+    | LPar(LNil, b) -> rem b 
     | LPar(a, b) -> LPar(rem a, rem b)
     | _ -> exp
   in
@@ -156,6 +164,10 @@ let rec remLNils exp =
   done; 
   !currExp
 
+(**
+  Checks if the given expression has a nested [LChi], or is an [LChi].
+    The given expression must be [assocLeft] first.
+*)
 let rec has_nested_chi exp =
   match exp with
   | LChi(_, _) -> true
@@ -165,32 +177,35 @@ let rec has_nested_chi exp =
   | LPar(l1, _) -> has_nested_chi l1
   | _ -> false
 
-let rec can_chi_progress exp =
-  match exp with
-  | LPar(LChi(el,ll), LList(EEta(AIn(j)), l)) 
-  | LPar(LList(EEta(AIn(j)), l), LChi(el, ll)) -> find_corres_list el (EEta(AOut(j))) <> [] || find_all_corres el el <> []
-  | LPar(LChi(el,ll), LList(EEta(AOut(j)), l)) 
-  | LPar(LList(EEta(AOut(j)), l), LChi(el, ll)) -> find_corres_list el (EEta(AIn(j)))  <> [] || find_all_corres el el <> []
-  | LChi(el, ll) | LPar(LChi(el, ll), _) | LPar(_, LChi(el, ll)) -> find_all_corres el el <> []
-  | LPar(l1, _) -> can_chi_progress l1
-  | _ -> false
-
+(**
+  Checks if the given expression can progress by finding a syncronization between two co-actions,
+    one in the left side of [LChi] another in the left side of [LList]
+    The given expression must be [assocLeft] first.
+*)
 let rec can_chi_list_progress exp =
   match exp with
-  | LPar(LChi(el, ll), LList(EEta(AIn(j)), l))
-  | LPar(LList(EEta(AIn(j)), l), LChi(el, ll)) -> find_corres_list el (EEta(AOut(j))) <> []
-  | LPar(LChi(el,ll), LList(EEta(AOut(j)), l)) 
-  | LPar(LList(EEta(AOut(j)), l), LChi(el, ll)) -> find_corres_list el (EEta(AIn(j))) <> []
+  | LPar(LChi(el, ll), LList(eta, l))
+  | LPar(LList((eta), l), LChi(el, ll)) -> find_corres_list el (compl_eta eta) <> []
   | LPar(l1, _) -> can_chi_list_progress l1
   | _ -> false
 
+(**
+  Checks if the given expression can progress by finding a syncronization between two co-actions,
+    both in the left side of a [LChi]
+    The given expression must be [assocLeft] first.
+*)
 let rec can_chi_nested_progress exp =
   match exp with
-  | LChi(el, ll) | LPar(LChi(el, ll), LNil) | LPar(LNil, LChi(el, ll)) 
-  | LPar(LChi(el, ll), LList(_,_)) | LPar(LList(_,_), LChi(el, ll)) -> find_all_corres el el <> []
+  | LChi(el, ll)
+  | LPar(LNil, LChi(el, ll)) 
+  | LPar(LList(_,_), LChi(el, ll)) -> find_all_corres el el <> []
   | LPar(l1, _) -> can_chi_nested_progress l1
   | _ -> false
 
+(**
+  Checks if the given expression has a nested [LOr], or is an [LOr].
+    The given expression must be [assocLeft] first.
+    *)
 let rec has_nested_or exp =
   match exp with
   | LOr(_,_)

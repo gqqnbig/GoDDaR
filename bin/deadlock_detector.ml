@@ -238,14 +238,26 @@ let rec has_lpar_in_chi chi =
       | LPar(_, _) -> true
       | _ -> has_lpar_in_chi (LChi(etl, ltl))
 
+(**
+  Evaluate [LPar], receives each side of [LPar] seperatly. 
+
+  If both sides consist of [LList], then try to syncronize:
+    - If the [Eta] in both sides are complementary, then a syncronization can occur and
+        an updated [LPar] is returned, with the remaining expression in the right side of the [LList]s
+        This is what necessitates the generation of all permutations
+    - If syncronization is not possible, then return the appropriate LChi
+*)
 let eval_par lhs rhs =
   match lhs, rhs with
   | LList(EEta(a),l1), LList(EEta(b),l2) ->
       begin
           match a, b with
-          | AIn(k), AOut(j) -> if k = j then LPar(l1, l2) else LChi([EEta(a);EEta(b)], l1::l2::[]) (* Case A and Case B*)
-          | AOut(k), AIn(j) -> if k = j then LPar(l1, l2) else LChi([EEta(a);EEta(b)], l1::l2::[]) (* Case A and Case B *)
-          | _, _ -> LChi([EEta(a);EEta(b)], l1::l2::[])                                            (* Case B *)
+          | AIn(k), AOut(j) | AOut(k), AIn(j) -> (* Case A and Case B *)
+            if k = j then
+              LPar(l1, l2)
+            else
+              LChi([EEta(a);EEta(b)], l1::l2::[])
+          | _, _ -> LChi([EEta(a);EEta(b)], l1::l2::[]) (* Case B *)
       end
   | LNil, _ -> rhs
   | _, LNil -> lhs
@@ -253,6 +265,17 @@ let eval_par lhs rhs =
   | _, LPar(LNil, LNil) -> lhs (* Added just for new_eval *)
   | _, _ -> printMode fmt (LPar(lhs,rhs)) true;printf "-> ";raise (RuntimeException "No match in eval_par\n")
 
+(**
+    Inital exp preconditions:
+      Must be [assocLeft]
+      Must be [LPar]
+      [not has_nested_or]
+      [not has_nested_chi]
+    
+    This function steps through the expression finding the inner most [LPar], evaluates the [LPar],
+      performing the syncronization if possible, generating the [LChi] if possible, or just 
+      returns the non [LNil] side of the [LPar] if one of the side is [LNil].
+   *)
 let rec sStepEval exp =
   match exp with
   | LNil -> LNil
@@ -263,7 +286,9 @@ let rec sStepEval exp =
   | LPar((LPar(_,_) as l1), (LList(_,_) as l2))
   | LPar((LPar(_,_) as l1), (LChi(_,_) as l2)) 
   | LPar((LPar(_,_) as l1), (LOr(_,_) as l2)) -> LPar(sStepEval l1, sStepEval l2)
-  | LPar(l1, l2) -> let res = eval_par l1 l2 in remLNils res
+  | LPar(l1, l2) ->
+    let res = eval_par l1 l2 in
+    remLNils res
 
 let rec eval_chi_list ((LPar(l1, l2), ctx) as exp) =
   match l1, l2 with
@@ -344,7 +369,7 @@ let rec eval_chi_nested ((LPar(l1, l2), ctx) as exp) =
             else
               (iter tl (i+1))@([[(remLNils (LPar(l1, (case_f l2 hd))), n_ctx)]])
     in
-      (match l1, l2 with
+      match l1, l2 with
       | LChi(_,_), LChi(_,_) -> 
         let (LChi(el1, ll) as joined) = join_chis l1 l2 in
           if exist_corres el1 then
@@ -352,17 +377,20 @@ let rec eval_chi_nested ((LPar(l1, l2), ctx) as exp) =
               iter corres_l 1
           else
             [[(joined, ctx)]]
-      | LChi(_,_),  _ | _, LChi(_,_) when exist_corres el ->
+      | LChi(_,_),  _
+      | _, LChi(_,_) when exist_corres el ->
         let corres_l = find_all_corres el el in
           iter corres_l 1
-      | _, _ -> print_lambdas fmt (LPar(l1,l2));raise (RuntimeException "No match in eval_chi inside LChi(), _ \n"))
+      | _, _ -> print_lambdas fmt (LPar(l1,l2));raise (RuntimeException "No match in eval_chi inside LChi(), _ \n")
 
-let eval arr =
-  let rec new_eval expInArr =
-  match expInArr with
-  | [] -> []
-  | ((l, ctx) as hd)::tl ->
-    begin
+(** Receives a (lambda * print_ctx) list, each corresponding to a possible execution of the program
+
+Returns the deadlocked executions*)
+let rec new_eval expInArr =
+match expInArr with
+| [] -> []
+| ((l, ctx) as hd)::tl ->
+  begin
     printCtxLevel ctx;
     match l with
     | LOr(l1, l2) ->
@@ -370,9 +398,11 @@ let eval arr =
       printMode fmt ass_lo ctx.print;
       let ctx_l = conc_lvl ctx "1" in
       let ctx_r = conc_lvl ctx "2" in
+      (* Add evalutate the two new possible executions and continue evaluating the rest *)
         append (new_eval tl) (new_eval [(getL1 ass_lo, ctx_l); (getL2 ass_lo, ctx_r)])
     | LPar(l1, l2) ->
       let ass_lp = assocLeft l in
+      (* If [LPar] has a nested [LOr] *)
       if has_nested_or ass_lp then (
         printMode fmt ass_lp ctx.print;
         let ctx_l = conc_lvl ctx "1" in
@@ -394,7 +424,9 @@ let eval arr =
               append (new_eval tl) (new_eval [add_after_l; add_after_r])
         | _ -> printMode fmt (getNestedLeft ass_lp) true; raise (RuntimeException "No match in new_eval OR")
       ) else
+        (* If [LPar] doesn't have a nested [LOr] *)
         if has_nested_chi ass_lp = false then (
+          (* If [LPar] doesn't have a nested [LChi] *)
           printMode fmt ass_lp ctx.print;
           let oneEval = sStepEval ass_lp in
           if getParNum oneEval <= 2 then
@@ -407,12 +439,16 @@ let eval arr =
               append (new_eval tl) (new_eval combs_ctx)
           )
         ) else (
+          (* If [LPar] has a nested [LChi] *)
+
           printMode fmt ass_lp ctx.print;
+          (* if the nested [LChi] contains actions that can synchronize with actions in some other [LList] *)
           let chi_l_prog = can_chi_list_progress ass_lp in
+          (* if the nested [LChi] has nested corresponding actions *)
           let chi_n_prog = can_chi_nested_progress ass_lp in
+
           match chi_l_prog, chi_n_prog with
           | true, true ->
-            (* printf "ENTREI TRUE TRUE\n";*)
             let chi_nested = flatten2 (eval_chi_nested (getNestedLeft ass_lp, ctx)) in
             let add_after1 = if getParNum ass_lp <= 2 then chi_nested else map ( fun x -> addAfterChiEval2 x (assocLeftList (getRestPars (lparToList ass_lp))) ) chi_nested in
             let chi_list = flatten2 ( eval_chi_list (getNestedLeft ass_lp, ctx)) in
