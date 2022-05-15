@@ -46,6 +46,24 @@ let rec find list elem =
   | [] -> -1 (* Not found *)
   | hd::tl -> if hd = elem then 0 else 1 + find tl elem 
 
+let findi f list =
+  let rec do_findi f list counter =
+    match list with
+    | [] -> [] (* Not found *)
+    | hd::tl ->
+      if f hd then
+        counter::(do_findi f tl (counter+1))
+      else
+        do_findi f tl (counter+1)
+  in
+    do_findi f list 0
+
+let partition (p: 'a -> bool) l =
+  let rec part yes no = function
+    | [] -> (rev yes, rev no)
+    | x :: l -> if p x then part (x :: yes) no l else part yes (x :: no) l in
+  part [] [] l
+
 (* Removes the first occurrence of elem in list *)
 let rec filter_first list elem = 
   match list with

@@ -100,6 +100,7 @@ let rec lparToList exp =
 
 let rec assocLeftList list =
   match list with
+  | [] -> LNil
   | [hd] -> hd
   | hd::tl::[] -> LPar(tl, hd)
   | hd::md::tl -> LPar(LPar(assocLeftList tl, md), hd)

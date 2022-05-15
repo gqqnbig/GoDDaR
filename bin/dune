@@ -4,3 +4,10 @@
  (modules Deadlock_detector)
  (libraries dlock)
  (modes byte))
+
+(executable
+ (public_name dlock2)
+ (name deadlock_detector2)
+ (modules Deadlock_detector2)
+ (libraries dlock)
+ (modes byte))
