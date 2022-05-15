@@ -1,4 +1,3 @@
-open Dlock.Types
 (* ------------------- COMMAND LINE ARGUMENTS -------------------- *)
 
 let usage_msg = "Usage: ./dlock [-v | -s | -ds] <file1>"

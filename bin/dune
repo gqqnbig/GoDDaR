@@ -1,6 +1,6 @@
 (executable
  (public_name dlock)
  (name deadlock_detector)
- (modules Cmd Deadlock_detector Printer2)
+ (modules Deadlock_detector)
  (libraries dlock)
  (modes byte))

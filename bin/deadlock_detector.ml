@@ -6,8 +6,7 @@ open Dlock.Types
 open Dlock.Types.Eta
 open Dlock.Printer
 open Dlock.List2
-open Printer2
-open Cmd
+open Dlock.Cmd
 
 
 (* ------------------- EXCEPTIONS -------------------- *)
