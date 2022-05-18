@@ -1,5 +1,4 @@
 open Types
-open Types.Eta
 open Auxfunctions
 
 
@@ -64,7 +63,7 @@ let chan_delta_to_eta (chan, delta) =
 
     Returns [(lambda * eta list) list]. Generates a list of lambdas, and for each one return a
     list of [eta]/actions with an unequal occurence counter compared to [compl_eta eta] *)
-let main_act_verifier (exp: lambda) : (lambda * t list) list =
+let main_act_verifier (exp: lambda) : (lambda * eta list) list =
   let res = possible_executions exp in
   (* For each possible_execution, transform the list of eta sequence to a tupple [(lambda * eta list)].
     [lambda] is the representation of the process execution and [eta list] the list of unbalenced actions.
@@ -100,5 +99,5 @@ let main_act_verifier (exp: lambda) : (lambda * t list) list =
   ) res
 
 
-let has_miss_acts ( list : (lambda * t list) list ) =
+let has_miss_acts ( list : (lambda * eta list) list ) =
   List.exists (fun (lambda, eta_list) -> (List.length eta_list) <> 0) list

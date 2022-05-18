@@ -14,26 +14,23 @@ type proc =
     | PPref of action * proc
     | PPar of proc * proc
 
-module Eta =
-    struct 
-    type eta = 
-        | EEta of action
-    type t = eta
-    let compare a b = 
-        match (a, b) with
-        | EEta(AIn(a)), EEta(AIn(b)) -> 0
-        | EEta(AOut(a)), EEta(AOut(b)) -> 0
-        | EEta(AOut(a)), EEta(AIn(b)) -> -1
-        | EEta(AIn(a)), EEta(AOut(b)) -> +1
-end
+type eta = 
+    | EEta of action
 
-type lambda = 
+type eta_tagged = 
+    | EEtaTagged of action * int
+
+type 'a lambda_base = 
     | LNil
-    | LOr of lambda * lambda
-    | LList of Eta.eta * lambda
-    | LChi of Eta.eta list * lambda list
-    | LPar of lambda * lambda
+    | LOr of 'a lambda_base * 'a lambda_base
+    | LList of 'a * 'a lambda_base
+    | LChi of 'a list * 'a lambda_base list
+    | LPar of 'a lambda_base * 'a lambda_base
     | LSubst
+
+type lambda = eta lambda_base
+
+type lambda_tagged = eta_tagged lambda_base
 
 (* Print_context *)
 type print_ctx =
@@ -44,6 +41,33 @@ type print_ctx =
 
 (* ---------- Functions ----------  *)
 
+let rec lambdaToLambdaTagged (exp: lambda): lambda_tagged = 
+    let i = ref 0 in
+    let rec etaToEtaTagged (EEta(a): eta): eta_tagged =
+        EEtaTagged(a, (i := !i+1; !i))
+    in
+    let rec do_lambdaToLambdaTagged exp =
+        match exp with
+        | LNil -> LNil
+        | LSubst -> LSubst
+        | LPar(a, b) -> LPar(do_lambdaToLambdaTagged a, do_lambdaToLambdaTagged b)
+        | LChi(a, b) -> LChi(List.map etaToEtaTagged a, List.map (do_lambdaToLambdaTagged) b)
+        | LOr(a, b) -> LOr(do_lambdaToLambdaTagged a, do_lambdaToLambdaTagged b)
+        | LList(e, l) -> LList(etaToEtaTagged e, do_lambdaToLambdaTagged l)
+    in do_lambdaToLambdaTagged exp
+
+let rec etaTaggedToEta (EEtaTagged(a, _): eta_tagged): eta =
+    EEta(a)
+
+let rec lambdaTaggedToLambda (exp: lambda_tagged): lambda = 
+    match exp with
+    | LNil -> LNil
+    | LSubst -> LSubst
+    | LPar(a, b) -> LPar(lambdaTaggedToLambda a, lambdaTaggedToLambda b)
+    | LChi(a, b) -> LChi(List.map etaTaggedToEta a, List.map (lambdaTaggedToLambda) b)
+    | LOr(a, b) -> LOr(lambdaTaggedToLambda a, lambdaTaggedToLambda b)
+    | LList(e, l) -> LList(etaTaggedToEta e, lambdaTaggedToLambda l)
+
 let rec toLambda proc =
     match proc with
     | PNil -> LNil
@@ -53,7 +77,7 @@ let rec toLambda proc =
 
 let toAction eta =
     match eta with
-    | Eta.EEta(a) -> a
+    | EEta(a) -> a
 
 let rec toProc lambda =
     match lambda with
@@ -84,10 +108,14 @@ let next_ctx ctx = {ctx with level = ctx.level ^ ".1"}
 
 let conc_lvl ctx lvl = {ctx with level = ctx.level ^ "." ^ lvl}
 
+let compl_action action = 
+    match action with
+    | AIn(k) -> AOut(k)
+    | AOut(k) -> AIn(k)
+
 let compl_eta eta =
     match eta with
-    | Eta.EEta(AIn(k)) -> Eta.EEta(AOut(k))
-    | Eta.EEta(AOut(k)) -> Eta.EEta(AIn(k))
+    | EEta(action) -> EEta(compl_action action)
 
 let isLPar exp =
     match exp with

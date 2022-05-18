@@ -1,6 +1,5 @@
 (* Definition of auxiliary functions *)
 open Types
-open Types.Eta
 open Printer
 open List2
 

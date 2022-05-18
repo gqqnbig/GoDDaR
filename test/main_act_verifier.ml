@@ -1,11 +1,8 @@
 open Dlock
 open Dlock.Auxfunctions
 open Dlock.Types
-open Dlock.Types.Eta
 open Dlock.CCS
 open Dlock.Printer
-
-module SetChar = Set.Make(Eta)
 
 let test exp_string (res0, has_miss_acts0) (res1, has_miss_acts1)= 
   (* Check if lambdas are equal, if the unbalanced actions are the same, even if reordered, and if
@@ -13,7 +10,9 @@ let test exp_string (res0, has_miss_acts0) (res1, has_miss_acts1)=
   let equal_res res0 res1 = 
     (List.compare_lengths res0 res1) = 0
     &&  (List.equal (fun (l1, el1) (l2, el2) -> (
-        l1 = l2 && SetChar.equal (SetChar.of_list el1) (SetChar.of_list el2)
+        List.equal (=) (List.sort compare l1) (List.sort compare l2)
+        && List.equal (=) (List.sort compare el1) (List.sort compare el2)
+        (* && SetChar.equal (SetChar.of_list el1) (SetChar.of_list el2) *)
       )) res0 res1)
     && (has_miss_acts0 = has_miss_acts1)
   in

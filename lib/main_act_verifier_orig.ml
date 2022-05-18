@@ -1,5 +1,4 @@
 open Types
-open Types.Eta
 
 (* ------------------- BEGIN CORRESPONDING ACTIONS VERIFICATION ------------------- *)
 
