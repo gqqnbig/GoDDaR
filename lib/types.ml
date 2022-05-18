@@ -156,3 +156,61 @@ let lchi_to_lpar exp =
     in
     loop a b
   | _ -> exp
+
+(** lambda flattned
+
+This is an attempt to provide a normalized version of the lambda type, such that it can be compared
+and sorted correctly *)
+module LambdaFlattened =
+    struct
+    type 'a lambda_flattened = 
+      | LList of 'a * 'a lambda_flattened
+      | LPar of 'a lambda_flattened list
+      | LOr of 'a lambda_flattened list
+      | LNil
+
+    let rec lambdaLParToLambdaFlattenedLPar (exp: lambda): 'a lambda_flattened = 
+      let rec do_lambdaLParToLambdaFlattenedLPar (exp: lambda): 'a lambda_flattened list = 
+        match exp with
+        | LPar(l, r) -> (do_lambdaLParToLambdaFlattenedLPar l) @ (do_lambdaLParToLambdaFlattenedLPar r)
+        | LNil -> []
+        | _ -> [lambdaToLambdaFlattened exp]
+      in
+      LPar(List.sort compare (do_lambdaLParToLambdaFlattenedLPar exp))
+    and lambdaLOrToLambdaFlattenedLOr (exp: 'a lambda_base): 'a lambda_flattened = 
+      let rec do_lambdaLOrToLambdaFlattenedLOr (exp: lambda): 'a lambda_flattened list = 
+        match exp with
+        | LOr(l, r) -> (do_lambdaLOrToLambdaFlattenedLOr l) @ (do_lambdaLOrToLambdaFlattenedLOr r)
+        | LNil -> []
+        | _ -> [lambdaToLambdaFlattened exp]
+      in
+      LOr(List.sort compare (do_lambdaLOrToLambdaFlattenedLOr exp))
+    and lambdaToLambdaFlattened (lambda: 'a lambda_base): 'a lambda_flattened = 
+      match lambda with
+      | LList(eta, l) -> LList(eta, lambdaToLambdaFlattened l)
+      | LPar(_, _) -> lambdaLParToLambdaFlattenedLPar lambda
+      | LOr(_, _) -> lambdaLOrToLambdaFlattenedLOr lambda
+      | LNil -> LNil
+      | LChi(_,_) | LSubst -> failwith "not supported"
+    
+    let rec lambdaFlattenedToLambda (lambda_flattened: 'a lambda_flattened): 'a lambda_base = 
+      let rec fold_LOr list: 'a lambda_base =
+        match list with
+        | [] -> LNil
+        | [hd] -> hd
+        | hd::tl::[] -> LOr(tl, hd)
+        | hd::md::tl -> LOr(LOr(fold_LOr tl, md), hd)
+      in
+      let rec fold_LPar list: 'a lambda_base =
+        match list with
+        | [] -> LNil
+        | [hd] -> hd
+        | hd::tl::[] -> LPar(tl, hd)
+        | hd::md::tl -> LPar(LPar(fold_LPar tl, md), hd)
+      in
+      match lambda_flattened with
+      | LList(eta, l) -> LList(eta, lambdaFlattenedToLambda l)
+      | LPar(lambda_list) -> fold_LPar (List.map lambdaFlattenedToLambda lambda_list)
+      | LOr(lambda_list) -> fold_LOr (List.map lambdaFlattenedToLambda lambda_list)
+      | LNil -> LNil
+end
