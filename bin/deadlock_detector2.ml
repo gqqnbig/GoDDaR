@@ -131,14 +131,11 @@ let rec deadlock_solver_2 (lambda: lambda_tagged) (deadlocked_top_environment: e
   match lambda with
   | LList((EEtaTagged(AOut(c), tag) as eta), l) when List.mem (EEtaTagged(AOut(c), tag)) deadlocked_top_environment ->
       LPar(LList(eta, LNil), deadlock_solver_2 l deadlocked_top_environment)
-  | LList((EEtaTagged(AOut(c), tag) as eta), l) when List.mem (EEtaTagged(AIn(c), tag)) deadlocked_top_environment ->
+  | LList( EEtaTagged(AOut(c), tag)        , l) when List.mem (EEtaTagged(AIn(c) , tag)) deadlocked_top_environment ->
       deadlock_solver_2 l deadlocked_top_environment
-
   | LList((EEtaTagged(AIn(c), tag) as eta), l) when List.mem (EEtaTagged(AIn(c), tag)) deadlocked_top_environment ->
       LPar(LList(EEtaTagged(AOut(c), tag), LNil), LList(eta, deadlock_solver_2 l deadlocked_top_environment))
-
   | LList(eta, l) -> LList(eta, deadlock_solver_2 l deadlocked_top_environment)
-
   | LPar(a, b) -> LPar(deadlock_solver_2 a deadlocked_top_environment, deadlock_solver_2 b deadlocked_top_environment)
   | LOr(a, b) -> LOr(deadlock_solver_2 a deadlocked_top_environment, deadlock_solver_2 b deadlocked_top_environment)
   | LNil -> LNil
@@ -155,19 +152,23 @@ let main exp =
     else (
       let lamTaggedExp = lambdaToLambdaTagged lamExp in
       let deadlocked_executions = (eval lamTaggedExp) in
-      printf "\nDeadlocks:\n";
-      List.iter (
-        fun ((lambdas_sync, lambdas_no_sync, print_ctx): possible_execution) (* deadlock *) ->
-          assert (List.length lambdas_no_sync = 0);
-          if List.length lambdas_sync <> 0 then
-            printCtxLevel_noln print_ctx;
-            printMode fmt (lambdaTaggedToLambda (assocLeftList lambdas_sync)) print_ctx.print;
-      ) deadlocked_executions;
-      let deadlocked_top_environments = List.flatten (List.map top_environment deadlocked_executions) in
-      (* List.iter (fun eta -> (print_eta_tagged fmt eta; printf "\n")) deadlocked_top_environments; *)
-      printf "Solved deadlocked:\n";
-      let deadlock_solver = if !ds < 2 then deadlock_solver_1 else deadlock_solver_2 in
-        printMode fmt (lambdaTaggedToLambda (deadlock_solver lamTaggedExp deadlocked_top_environments)) true
+      if deadlocked_executions = [] then
+        printf "\nNo deadlocks!\n"
+      else (
+        printf "\nDeadlocks:\n";
+        List.iter (
+          fun ((lambdas_sync, lambdas_no_sync, print_ctx): possible_execution) (* deadlock *) ->
+            assert (List.length lambdas_no_sync = 0);
+            if List.length lambdas_sync <> 0 then
+              printCtxLevel_noln print_ctx;
+              printMode fmt (lambdaTaggedToLambda (assocLeftList lambdas_sync)) print_ctx.print;
+        ) deadlocked_executions;
+        let deadlocked_top_environments = List.flatten (List.map top_environment deadlocked_executions) in
+        (* List.iter (fun eta -> (print_eta_tagged fmt eta; printf "\n")) deadlocked_top_environments; *)
+        printf "Solved deadlocked:\n";
+        let deadlock_solver = if !ds < 2 then deadlock_solver_1 else deadlock_solver_2 in
+          printMode fmt (lambdaTaggedToLambda (deadlock_solver lamTaggedExp deadlocked_top_environments)) true
+      )
     )
   with
   | _ -> Printexc.print_backtrace stdout
