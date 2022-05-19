@@ -41,25 +41,27 @@ let test exp_string ((res0: (eta LambdaFlattened.lambda_flattened * eta list) li
 ;;
 
 Format.fprintf fmt "MAIN_ACT_VERIFIER:\n";
-let test_pass =
-  List.for_all (fun exp -> 
+let test_pass = ref true in
+  List.iter (fun exp -> 
     let lambda = toLambda (parse exp) in
-    test 
-      exp
-      begin
-        let res = (Main_act_verifier_orig.main_act_verifier lambda) in
-          (
-            (List.map (fun (lambda, eta_list) -> ( (LambdaFlattened.lambdaToLambdaFlattened lambda), List.sort compare eta_list)) res),
-            Main_act_verifier_orig.has_miss_acts res
-          )
-      end
-      begin
-        let res = List.rev (Main_act_verifier.main_act_verifier lambda) in
-          (
-            (List.map (fun (lambda, eta_list) -> ( LambdaFlattened.lambdaToLambdaFlattened lambda, List.sort compare eta_list)) res),
-            Main_act_verifier.has_miss_acts res
-          )
-      end
+    test_pass := (
+      test 
+        exp
+        (
+          let res = (Main_act_verifier_orig.main_act_verifier lambda) in
+            (
+              (List.map (fun (lambda, eta_list) -> ( (LambdaFlattened.lambdaToLambdaFlattened lambda), List.sort compare eta_list)) res),
+              Main_act_verifier_orig.has_miss_acts res
+            )
+        )
+        (
+          let res = List.rev (Main_act_verifier.main_act_verifier lambda) in
+            (
+              (List.map (fun (lambda, eta_list) -> ( LambdaFlattened.lambdaToLambdaFlattened lambda, List.sort compare eta_list)) res),
+              Main_act_verifier.has_miss_acts res
+            )
+        )
+      ) && !test_pass
   ) [
     "a!.a?.0 || (b!.x?.0 + (b?.0 + c?.0) )";
     "a!.a?.0 || (b!.0 + (b?.0 + c?.0) )";
@@ -76,6 +78,3 @@ let test_pass =
     "a?.(c?.0 + d?.0) || a!.e!.0";
     (* "a?.(a!.0 + a!.0)"; Crashes original*)
   ]
-in
-  if not test_pass then
-    exit 1
