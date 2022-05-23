@@ -653,15 +653,18 @@ let rec final_change exp dexps solved =
     let use_subst = use_lsubst deadl_exp hd1 in
       final_change use_subst tl tl1
 
-let main exp =
+let main exp: lambda list * lambda list (*deadlocked processes * resolved process*)=
   try
     Printexc.record_backtrace true;
     let lamExp = toLambda exp in
     (* Process Completeness Verification *)
     let act_ver = main_act_verifier lamExp in
-    if has_miss_acts act_ver then
-      (printMode fmt lamExp true; printf "\n"; print_act_ver act_ver)
-    else 
+    if has_miss_acts act_ver then (
+      printMode fmt lamExp true;
+      printf "\n";
+      print_act_ver act_ver;
+      ([], [])
+    ) else 
       (* Deadlock detection *)
       let toList = lparToList lamExp  in
       let res = 
@@ -673,9 +676,10 @@ let main exp =
             eval (assign_ctx2 comb_lst true)
       in
       let init_findings = (proc_findings_comb res) in
-      if List.length init_findings = 0 then
-        printf "\nThe process is deadlock-free.\n"
-      else
+      if List.length init_findings = 0 then(
+        printf "\nThe process is deadlock-free.\n";
+        ([], [])
+      ) else
         if List.length init_findings = List.length res then (
           printf "\nThe process has a deadlock: every process combination is blocked.\n";
           print_list_comb fmt (rev res);
@@ -683,21 +687,25 @@ let main exp =
           let all_solv = det_res_loop (List.filter (fun x -> x <> LNil) (fst res)) in
           let final_res = final_change lamExp (List.filter (fun x -> x <> LNil) (map lchi_to_lpar (fst res))) all_solv in
           printf "\nDeadlock(s) solved with algorithm %d:\n" !ds;
-          printMode fmt final_res true
+          printMode fmt final_res true;
+          ((map lchi_to_lpar (fst res)), [final_res])
         ) else (
           printf "\nThe process has a deadlock: some process combination is blocked.\n";
           print_list_comb fmt (rev res);
           let all_solv = det_res_loop (List.filter (fun x -> x <> LNil) (fst res)) in
           let final_res = final_change lamExp (List.filter (fun x -> x <> LNil) (map lchi_to_lpar (fst res))) all_solv in
           printf "\nDeadlock(s) solved with algorithm %d:\n" !ds;
-          if final_res = lamExp then 
+          if final_res = lamExp then (
             let filter_res = List.filter ( fun (a,_) -> a <> LNil ) res in
             let alter_res = main_deadlock_solver (fst filter_res) false in
             let rem_nils = map remLNils alter_res in
             let f_res = List.combine rem_nils (snd filter_res) in
-            print_list_comb fmt f_res
-          else
-            printMode fmt final_res true
+            print_list_comb fmt f_res;
+            ((map lchi_to_lpar (fst res)), (fst f_res))
+          ) else ( 
+            printMode fmt final_res true;
+            ((map lchi_to_lpar (fst res)), [final_res])
+          )
         )
   with
-  | _ -> Printexc.print_backtrace stdout
+  | _ -> Printexc.print_backtrace stdout; exit 1

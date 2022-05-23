@@ -7,3 +7,8 @@
  (name main_act_verifier)
  (modules main_act_verifier)
  (libraries dlock))
+
+(test
+ (name deadlock_detector)
+ (modules deadlock_detector)
+ (libraries dlock))

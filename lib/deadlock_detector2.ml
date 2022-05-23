@@ -17,6 +17,11 @@ type possible_execution =
                       and as such need to be processed before the previous list*)
   print_ctx
 
+let possible_executionToLambda ((lambdas_sync, lambdas_no_sync, print_ctx) as execution: possible_execution): lambda =
+  let lambdas_sync = List.map lambdaTaggedToLambda lambdas_sync in
+  let lambdas_no_sync = List.map lambdaTaggedToLambda lambdas_no_sync in
+  assocLeftList (lambdas_sync@lambdas_no_sync)
+
 let eval_without_sync ((lambdas_sync, lambdas_no_sync, print_ctx) as execution: possible_execution) =
   match lambdas_no_sync with
   | [] -> [execution]
@@ -136,20 +141,24 @@ let rec deadlock_solver_2 (lambda: lambda_tagged) (deadlocked_top_environment: e
   | LNil -> LNil
   | LSubst | LChi(_, _) -> failwith "These shouldn't appear"
 
-let main exp =
+let main exp: lambda list * lambda list (*deadlocked processes * resolved process*) =
   try
     Printexc.record_backtrace true;
     let lamExp = toLambda exp in
     (* Process Completeness Verification *)
     let act_ver = main_act_verifier lamExp in
-    if has_miss_acts act_ver then
-      (printMode fmt lamExp true; printf "\n"; print_act_ver act_ver)
-    else (
+    if has_miss_acts act_ver then (
+      printMode fmt lamExp true;
+      printf "\n";
+      print_act_ver act_ver;
+      ([], [])
+    ) else (
       let lamTaggedExp = lambdaToLambdaTagged lamExp in
       let deadlocked_executions = (eval lamTaggedExp) in
-      if deadlocked_executions = [] then
-        printf "\nNo deadlocks!\n"
-      else (
+      if deadlocked_executions = [] then (
+        printf "\nNo deadlocks!\n";
+        ([], [])
+      ) else (
         printf "\nDeadlocks:\n";
         List.iter (
           fun ((lambdas_sync, lambdas_no_sync, print_ctx): possible_execution) (* deadlock *) ->
@@ -162,8 +171,11 @@ let main exp =
         (* List.iter (fun eta -> (print_eta_tagged fmt eta; printf "\n")) deadlocked_top_environments; *)
         printf "Solved deadlocked:\n";
         let deadlock_solver = if !ds < 2 then deadlock_solver_1 else deadlock_solver_2 in
-          printMode fmt (lambdaTaggedToLambda (deadlock_solver lamTaggedExp deadlocked_top_environments)) true
+        let solved_exp = (lambdaTaggedToLambda (deadlock_solver lamTaggedExp deadlocked_top_environments)) in
+          printMode fmt solved_exp true;
+          let deadlocked_executions_lambda = List.map possible_executionToLambda deadlocked_executions in
+          (deadlocked_executions_lambda, [solved_exp])
       )
     )
   with
-  | _ -> Printexc.print_backtrace stdout
+  | _ -> Printexc.print_backtrace stdout; exit 1

@@ -159,7 +159,7 @@ let lchi_to_lpar exp =
 
 (** lambda flattned
 
-This is an attempt to provide a normalized version of the lambda type, such that it can be compared
+This is an attempt to provide a canonical version of the lambda type, such that it can be compared
 and sorted correctly *)
 module LambdaFlattened =
     struct
@@ -168,6 +168,10 @@ module LambdaFlattened =
       | LPar of 'a lambda_flattened list
       | LOr of 'a lambda_flattened list
       | LNil
+    
+    type t = eta lambda_flattened
+
+    let compare = compare
 
     let rec lambdaLParToLambdaFlattenedLPar (exp: lambda): 'a lambda_flattened = 
       let rec do_lambdaLParToLambdaFlattenedLPar (exp: lambda): 'a lambda_flattened list = 

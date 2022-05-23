@@ -48,17 +48,17 @@ let test_pass = ref true in
       test 
         exp
         (
-          let res = (Main_act_verifier_orig.main_act_verifier lambda) in
+          let result = (Main_act_verifier_orig.main_act_verifier lambda) in
             (
-              (List.map (fun (lambda, eta_list) -> ( (LambdaFlattened.lambdaToLambdaFlattened lambda), List.sort compare eta_list)) res),
-              Main_act_verifier_orig.has_miss_acts res
+              (List.map (fun (lambda, eta_list) -> ( (LambdaFlattened.lambdaToLambdaFlattened lambda), List.sort compare eta_list)) result),
+              Main_act_verifier_orig.has_miss_acts result
             )
         )
         (
-          let res = List.rev (Main_act_verifier.main_act_verifier lambda) in
+          let result = List.rev (Main_act_verifier.main_act_verifier lambda) in
             (
-              (List.map (fun (lambda, eta_list) -> ( LambdaFlattened.lambdaToLambdaFlattened lambda, List.sort compare eta_list)) res),
-              Main_act_verifier.has_miss_acts res
+              (List.map (fun (lambda, eta_list) -> ( LambdaFlattened.lambdaToLambdaFlattened lambda, List.sort compare eta_list)) result),
+              Main_act_verifier.has_miss_acts result
             )
         )
       ) && !test_pass

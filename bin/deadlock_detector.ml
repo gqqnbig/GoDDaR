@@ -28,16 +28,6 @@ if (!process = "") then (
 (* 4) a!.(b!.c!.0 || b?.c?.d?.0) || a?.d!.0 *)
 (* main (parse "a!.(b!.c!.0 || b?.c?.d?.0) || a?.d!.0"); *)
 
-(* Crashes *)
-(* main (CCS.parse "a!.a?.0 || b!.b?.0 || ( c!.c?.0 + (d!.d?.0 || e!.e?.0) )"); *)
-
-(* main (CCS.parse "a!.b?.0 || b!.a?.0 || c!.d?.0 || d!.c?.0"); *)
-(* main (CCS.parse "a!.b?.0 || a?.b!.0 || a!.a?.0"); *)
-
-(* main (CCS.parse "a!.b?.0 || a?.b!.0 || (a!.a?.0 + b!.b?.0)"); *)
-(* main (CCS.parse "a!.b?.0 || b!.a?.0"); *)
-(* main (CCS.parse "( c?.0 + s?.0 ) || (c!.0 + s!.0)"); *)
-
 main (CCS.parse "a!.a?.0" )
 ) else
   main (CCS.parse !process)
