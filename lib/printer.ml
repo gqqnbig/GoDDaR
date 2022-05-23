@@ -4,6 +4,8 @@ open Format
 open Types
 open Cmd
 
+let null_fmt = Format.make_formatter ( fun _ _ _ -> () ) (fun _ -> ())
+
 (* ----------- Action ----------- *)
 
 let print_action fmt a =

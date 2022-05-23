@@ -217,4 +217,8 @@ module LambdaFlattened =
       | LPar(lambda_list) -> fold_LPar (List.map lambdaFlattenedToLambda lambda_list)
       | LOr(lambda_list) -> fold_LOr (List.map lambdaFlattenedToLambda lambda_list)
       | LNil -> LNil
+
+    let canonicalizeLambda lambda =
+        lambdaFlattenedToLambda (lambdaToLambdaFlattened lambda)
+
 end

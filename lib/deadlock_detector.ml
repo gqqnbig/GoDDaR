@@ -681,7 +681,7 @@ let main fmt2 exp: bool * lambda list * lambda list (*passed act_ver * deadlocke
       let init_findings = (proc_findings_comb res) in
       if List.length init_findings = 0 then(
         fprintf !fmt "\nThe process is deadlock-free.\n";
-        (true, [], [])
+        (true, [], [lamExp])
       ) else
         if List.length init_findings = List.length res then (
           fprintf !fmt "\nThe process has a deadlock: every process combination is blocked.\n";

@@ -10,8 +10,6 @@ let bool_to_string b =
   | true  -> "true "
   | false -> "false"
 
-let null_fmt = Format.make_formatter ( fun _ _ _ -> () ) (fun _ -> ())
-
 let lambdaFlattenedToProc l: proc =
   toProc (LambdaFlattened.lambdaFlattenedToLambda l)
 
@@ -22,6 +20,7 @@ let convert_res (passed_act_ver, deadlocked0, resolved0) =
    LambdaFlattenedSet.of_list (List.map LambdaFlattened.lambdaToLambdaFlattened resolved0  ))
 
 let compare_res (passed_act_ver0, deadlocked0, resolved0) (passed_act_ver1, deadlocked1, resolved1): bool =
+  passed_act_ver0 = passed_act_ver1 &&
   LambdaFlattenedSet.compare deadlocked0 deadlocked1 == 0 &&
   LambdaFlattenedSet.compare resolved0 resolved1 == 0 
 
@@ -40,6 +39,7 @@ let print_res fmt (passed_act_ver0, deadlocked0, resolved0) (passed_act_ver1, de
   let deadlocked1 = LambdaFlattenedSet.elements deadlocked1 in
   let resolved0   = LambdaFlattenedSet.elements resolved0 in
   let resolved1   = LambdaFlattenedSet.elements resolved1 in
+  fprintf fmt " passed_act_ver: 0: %b, 1: %b\n" passed_act_ver0 passed_act_ver1;
   fprintf fmt " Deadlocked: \n";
   fprintf fmt "  0\n";
   List.iter (fun l -> fprintf fmt "   "; print_proc_simple fmt (lambdaFlattenedToProc l); fprintf fmt "\n") deadlocked0;

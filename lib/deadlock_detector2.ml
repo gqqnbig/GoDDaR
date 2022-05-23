@@ -141,6 +141,21 @@ let rec deadlock_solver_2 (lambda: lambda_tagged) (deadlocked_top_environment: e
   | LNil -> LNil
   | LSubst | LChi(_, _) -> failwith "These shouldn't appear"
 
+
+(* A single iteration of a deadlock detection and resolution *)
+let rec detect_and_resolve fmt lambdaTaggedExp =
+  let deadlocked_executions = (eval fmt lambdaTaggedExp) in
+  if deadlocked_executions = [] then (
+    (true, [], [lambdaTaggedExp])
+  ) else (
+    let deadlocked_top_environments = List.flatten (List.map top_environment deadlocked_executions) in
+    (* List.iter (fun eta -> (print_eta_tagged fmt eta; fprintf fmt "\n")) deadlocked_top_environments; *)
+    let deadlock_solver = if !ds < 2 then deadlock_solver_1 else deadlock_solver_2 in
+    let solved_exp = (deadlock_solver lambdaTaggedExp deadlocked_top_environments) in
+    let deadlocked_executions_lambda = List.map possible_executionToLambda deadlocked_executions in
+    (true, deadlocked_executions_lambda, [solved_exp])
+  )
+
 let main fmt exp: bool * lambda list * lambda list (*passed act_ver * deadlocked processes * resolved process*)=
   try
     Printexc.record_backtrace true;
@@ -153,29 +168,30 @@ let main fmt exp: bool * lambda list * lambda list (*passed act_ver * deadlocked
       print_act_ver fmt act_ver;
       (false, [], [])
     ) else (
-      let lamTaggedExp = lambdaToLambdaTagged lamExp in
-      let deadlocked_executions = (eval fmt lamTaggedExp) in
-      if deadlocked_executions = [] then (
+      let lambdaTaggedExp = lambdaToLambdaTagged lamExp in
+      (* Ideally, we would just loop until no dealdock is found and discard the intermediary results.
+         But the original implementation returns the first set of deadlocks and the fully deadlock
+         resolved expression, so here we do the same. *)
+      let (passed_act_ver, deadlocks, resolved) = detect_and_resolve fmt lambdaTaggedExp in
+
+      let rec detect_and_resolve_loop (passed_act_ver, deadlocked, resolved) = 
+        if deadlocked = [] then
+          (passed_act_ver, deadlocked, List.map lambdaTaggedToLambda resolved)
+        else
+          let res = detect_and_resolve null_fmt (List.hd resolved) in
+          detect_and_resolve_loop res
+      in
+      let (_, _, resolved) = detect_and_resolve_loop (passed_act_ver, deadlocks, resolved) in
+
+      if deadlocks = [] then (
         fprintf fmt "\nNo deadlocks!\n";
-        (false, [], [])
       ) else (
         fprintf fmt "\nDeadlocks:\n";
-        List.iter (
-          fun ((lambdas_sync, lambdas_no_sync, print_ctx): possible_execution) (* deadlock *) ->
-            assert (List.length lambdas_no_sync = 0);
-            if List.length lambdas_sync <> 0 then
-              printCtxLevel_noln fmt print_ctx;
-              printMode fmt (lambdaTaggedToLambda (assocLeftList lambdas_sync)) print_ctx.print;
-        ) deadlocked_executions;
-        let deadlocked_top_environments = List.flatten (List.map top_environment deadlocked_executions) in
-        List.iter (fun eta -> (print_eta_tagged fmt eta; fprintf fmt "\n")) deadlocked_top_environments;
-        fprintf fmt "Solved deadlocked:\n";
-        let deadlock_solver = if !ds < 2 then deadlock_solver_1 else deadlock_solver_2 in
-        let solved_exp = (lambdaTaggedToLambda (deadlock_solver lamTaggedExp deadlocked_top_environments)) in
-          printMode fmt solved_exp true;
-          let deadlocked_executions_lambda = List.map possible_executionToLambda deadlocked_executions in
-          (false, deadlocked_executions_lambda, [solved_exp])
-      )
+        List.iter ( fun lambda -> printMode fmt lambda true;) deadlocks;
+        fprintf fmt "Resolved:\n";
+        printMode fmt (List.hd resolved) true
+      );
+      (passed_act_ver, deadlocks, resolved)
     )
   with
   | _ -> Printexc.print_backtrace stdout; exit 1
