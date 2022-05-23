@@ -5,45 +5,81 @@ open Format
 
 module LambdaFlattenedSet = Set.Make(LambdaFlattened)
 
-let fmt = Format.std_formatter
+let bool_to_string b =
+  match b with
+  | true  -> "true "
+  | false -> "false"
+
 let null_fmt = Format.make_formatter ( fun _ _ _ -> () ) (fun _ -> ())
 
 let lambdaFlattenedToProc l: proc =
   toProc (LambdaFlattened.lambdaFlattenedToLambda l)
 
-let conv_res (deadlocked0, solved0) =
-  ( LambdaFlattenedSet.of_list (List.map LambdaFlattened.lambdaToLambdaFlattened deadlocked0),
-    LambdaFlattenedSet.of_list (List.map LambdaFlattened.lambdaToLambdaFlattened solved0    ))
+let convert_res (passed_act_ver, deadlocked0, resolved0) =
+  let deadlocked0_no_LNil = List.filter (fun l -> l <> LNil) deadlocked0 in
+  (passed_act_ver,
+   LambdaFlattenedSet.of_list (List.map LambdaFlattened.lambdaToLambdaFlattened deadlocked0_no_LNil),
+   LambdaFlattenedSet.of_list (List.map LambdaFlattened.lambdaToLambdaFlattened resolved0  ))
 
-let compare_res (deadlocked0, solved0) (deadlocked1, solved1): bool =
+let compare_res (passed_act_ver0, deadlocked0, resolved0) (passed_act_ver1, deadlocked1, resolved1): bool =
   LambdaFlattenedSet.compare deadlocked0 deadlocked1 == 0 &&
-  LambdaFlattenedSet.compare solved0 solved1 == 0 
+  LambdaFlattenedSet.compare resolved0 resolved1 == 0 
 
-let print_res (deadlocked0, solved0) (deadlocked1, solved1): unit =
-  let deadlocked0 = List.of_seq (LambdaFlattenedSet.to_seq deadlocked0) in
-  let deadlocked1 = List.of_seq (LambdaFlattenedSet.to_seq deadlocked1) in
-  let solved0 = List.of_seq (LambdaFlattenedSet.to_seq solved0) in
-  let solved1 = List.of_seq (LambdaFlattenedSet.to_seq solved1) in
-  fprintf fmt "Deadlocked: \n0\n";
-  List.iter (fun l -> print_proc_simple fmt (lambdaFlattenedToProc l); fprintf fmt "\n") deadlocked0;
-  fprintf fmt "1\n";
-  List.iter (fun l -> print_proc_simple fmt (lambdaFlattenedToProc l); fprintf fmt "\n") deadlocked1;
-  fprintf fmt "Solved: \n0\n";
-  List.iter (fun l -> print_proc_simple fmt (lambdaFlattenedToProc l); fprintf fmt "\n") solved0;
-  fprintf fmt "1\n";
-  List.iter (fun l -> print_proc_simple fmt (lambdaFlattenedToProc l); fprintf fmt "\n") solved1
-
-let test (exp: string) = 
-  fprintf fmt "DEADLOCK_DETECTOR:\n";
-  let proc = CCS.parse exp in
-  let result0 = conv_res (Deadlock_detector.main  null_fmt proc) in
-  let result1 = conv_res (Deadlock_detector2.main null_fmt proc) in
-  if compare_res result0 result1 then
-    fprintf fmt "PASSED: %s\n" exp
-  else (
-    fprintf fmt "FAILED: %s\n" exp;
+let print_res_summary fmt exp (passed_act_ver0, deadlocked0, resolved0) : unit =
+  let len_deadlocked = (LambdaFlattenedSet.cardinal deadlocked0) in
+  fprintf fmt "act_ver: %s #deadlock: %i, exp: %s" (bool_to_string passed_act_ver0) len_deadlocked exp;
+  if len_deadlocked > 0 then (
+    fprintf fmt ", resolved: ";
+    let [@warning "-8"] hd::_ = (LambdaFlattenedSet.elements resolved0) in
+    print_proc_simple fmt (lambdaFlattenedToProc hd);
   );
-    print_res result0 result1
+  fprintf fmt "\n"
+
+let print_res fmt (passed_act_ver0, deadlocked0, resolved0) (passed_act_ver1, deadlocked1, resolved1): unit =
+  let deadlocked0 = LambdaFlattenedSet.elements deadlocked0 in
+  let deadlocked1 = LambdaFlattenedSet.elements deadlocked1 in
+  let resolved0   = LambdaFlattenedSet.elements resolved0 in
+  let resolved1   = LambdaFlattenedSet.elements resolved1 in
+  fprintf fmt " Deadlocked: \n";
+  fprintf fmt "  0\n";
+  List.iter (fun l -> fprintf fmt "   "; print_proc_simple fmt (lambdaFlattenedToProc l); fprintf fmt "\n") deadlocked0;
+  fprintf fmt "  1\n";
+  List.iter (fun l -> fprintf fmt "   "; print_proc_simple fmt (lambdaFlattenedToProc l); fprintf fmt "\n") deadlocked1;
+  fprintf fmt " Solved: \n";
+  fprintf fmt "  0\n";
+  List.iter (fun l -> fprintf fmt "   "; print_proc_simple fmt (lambdaFlattenedToProc l); fprintf fmt "\n") resolved0;
+  fprintf fmt "  1\n";
+  List.iter (fun l -> fprintf fmt "   "; print_proc_simple fmt (lambdaFlattenedToProc l); fprintf fmt "\n") resolved1
+
+let test fmt (exp: string) = 
+  let proc = CCS.parse exp in
+  let result0 = convert_res (Deadlock_detector.main  null_fmt proc) in
+  let result1 = convert_res (Deadlock_detector2.main null_fmt proc) in
+  if compare_res result0 result1 then (
+    fprintf fmt "PASSED:";
+    print_res_summary fmt exp result0
+  ) else (
+    fprintf fmt "FAILED: %s\n" exp;
+    print_res fmt result0 result1
+  );
 ;;
 
-test "(a!.a?.0 || b?.b!.c?.c!.0) + c!.c?.0"
+let fmt = Format.std_formatter in (
+  fprintf fmt "DEADLOCK_DETECTOR:\n";
+  test fmt "a!.a?.0 || (b!.x?.0 + (b?.0 + c?.0) )";
+  test fmt "a!.a?.0 || (b!.0 + (b?.0 + c?.0) )";
+  test fmt "a!.0 || (b!.0 + (b?.0 + c?.0) )";
+  test fmt "a!.0 || (b?.0 + c?.0)";
+  test fmt "(a!.0 + a?.0) || (b?.0 + c?.0)";
+  test fmt "a!.0 || a?.0";
+  test fmt "a!.b?.0 || a?.b!.0";
+  test fmt "(a!.0 + b!.0) || (a?.0 + b?.0)";
+  test fmt "(a!.0 || b!.0) || (a?.0 + b?.0)";
+  test fmt "(a!.0 || b!.0) || (a?.b?.0 + b?.a?.0)";
+  test fmt "a!.0 || (a?.0 + 0)";
+  test fmt "(a!.(b!.c!.0 || b?.c?.d?.0) || a?.d!.0)";
+  test fmt "a?.(c?.0 + d?.0) || a!.e!.0";
+  test fmt "(a!.a?.0 || b?.b!.0) + c!.c?.0";
+  test fmt "(a!.a?.0 || b?.b!.c?.c!.0) + c!.c?.0";
+  test fmt "a!.0 || (b!.b?.a?.0 + a?.0)";
+)

@@ -655,7 +655,7 @@ let rec final_change exp dexps solved =
     let use_subst = use_lsubst deadl_exp hd1 in
       final_change use_subst tl tl1
 
-let main fmt2 exp: lambda list * lambda list (*deadlocked processes * resolved process*)=
+let main fmt2 exp: bool * lambda list * lambda list (*passed act_ver * deadlocked processes * resolved process*)=
   try
     Printexc.record_backtrace true;
     fmt := fmt2;
@@ -666,7 +666,7 @@ let main fmt2 exp: lambda list * lambda list (*deadlocked processes * resolved p
       printMode !fmt lamExp true;
       fprintf !fmt "\n";
       print_act_ver !fmt act_ver;
-      ([], [])
+      (false, [], [])
     ) else 
       (* Deadlock detection *)
       let toList = lparToList lamExp  in
@@ -681,7 +681,7 @@ let main fmt2 exp: lambda list * lambda list (*deadlocked processes * resolved p
       let init_findings = (proc_findings_comb res) in
       if List.length init_findings = 0 then(
         fprintf !fmt "\nThe process is deadlock-free.\n";
-        ([], [])
+        (true, [], [])
       ) else
         if List.length init_findings = List.length res then (
           fprintf !fmt "\nThe process has a deadlock: every process combination is blocked.\n";
@@ -691,7 +691,7 @@ let main fmt2 exp: lambda list * lambda list (*deadlocked processes * resolved p
           let final_res = final_change lamExp (List.filter (fun x -> x <> LNil) (map lchi_to_lpar (fst res))) all_solv in
           fprintf !fmt "\nDeadlock(s) solved with algorithm %d:\n" !ds;
           printMode !fmt final_res true;
-          ((map lchi_to_lpar (fst res)), [final_res])
+          (true, (map lchi_to_lpar (fst res)), [final_res])
         ) else (
           fprintf !fmt "\nThe process has a deadlock: some process combination is blocked.\n";
           print_list_comb !fmt (rev res);
@@ -704,10 +704,10 @@ let main fmt2 exp: lambda list * lambda list (*deadlocked processes * resolved p
             let rem_nils = map remLNils alter_res in
             let f_res = List.combine rem_nils (snd filter_res) in
             print_list_comb !fmt f_res;
-            ((map lchi_to_lpar (fst res)), (fst f_res))
+            (true, (map lchi_to_lpar (fst res)), (fst f_res))
           ) else ( 
             printMode !fmt final_res true;
-            ((map lchi_to_lpar (fst res)), [final_res])
+            (true, (map lchi_to_lpar (fst res)), [final_res])
           )
         )
   with
