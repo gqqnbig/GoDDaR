@@ -27,4 +27,4 @@ let () = cmdParse
 (* main (parse "a!.(b!.c!.0 || b?.c?.d?.0) || a?.d!.0"); *)
 
 if (!process <> "") then
-  ignore (main (CCS.parse !process))
+  ignore (main Format.std_formatter (CCS.parse !process))

@@ -34,12 +34,12 @@ let parse_and_test (s: string) (p: Types.proc) =
     match proc_equals parsed p with
       | Failure(p1, p2) -> (
         Format.fprintf fmt "FAILED:\n";
-        Format.fprintf fmt "GOT          :"; (Printer.print_proc_simple fmt p1);Format.printf "\n"; 
-        Format.fprintf fmt "EXPECTED     :"; (Printer.print_proc_simple fmt p2);Format.printf "\n"; 
-        Format.fprintf fmt "GOT FULL     :"; (Printer.print_proc_simple fmt parsed);Format.printf "\n"; 
-        Format.fprintf fmt "EXPECTED FULL:"; (Printer.print_proc_simple fmt p);Format.printf "\n"; 
+        Format.fprintf fmt "GOT          :"; (Printer.print_proc_simple fmt p1);     Format.fprintf fmt "\n"; 
+        Format.fprintf fmt "EXPECTED     :"; (Printer.print_proc_simple fmt p2);     Format.fprintf fmt "\n"; 
+        Format.fprintf fmt "GOT FULL     :"; (Printer.print_proc_simple fmt parsed); Format.fprintf fmt "\n"; 
+        Format.fprintf fmt "EXPECTED FULL:"; (Printer.print_proc_simple fmt p);      Format.fprintf fmt "\n"; 
         exit 1)
-      | Success -> Format.fprintf fmt "SUCCESS:"; (Printer.print_proc_simple fmt p);Format.printf "\n";
+      | Success -> Format.fprintf fmt "SUCCESS:"; (Printer.print_proc_simple fmt p); Format.fprintf fmt "\n";
 ;;
 
 Format.fprintf fmt "CCS_PARSER:\n";

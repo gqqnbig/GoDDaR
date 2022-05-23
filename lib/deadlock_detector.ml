@@ -15,6 +15,8 @@ exception RuntimeException of string
 
 let () = cmdParse 
 
+let fmt = ref Format.std_formatter
+
 (* ------------------- AUXILIARY FUNCTIONS -------------------- *)
 
 (* Defines the joining of two LChi or between a LList and a LChi *)
@@ -44,7 +46,7 @@ let rec correct_chi_lambda ll curr_i i_at =
       | LList(EEta(_), LPar(m1, m2)) -> LPar(m1,m2)::tl
       | LList(EEta(_), LOr(m1,m2)) -> LOr(m1,m2)::tl
       | LNil -> tl
-      | _ -> print_lambdas fmt hd ;raise (RuntimeException "correct_chi_lambda failed: No match "))
+      | _ -> print_lambdas !fmt hd ;raise (RuntimeException "correct_chi_lambda failed: No match "))
     else
       hd::(correct_chi_lambda tl (curr_i+1) i_at)
 
@@ -56,7 +58,7 @@ let rec find_chi_lambda (LChi(et, hd::tl)) curr_i i_at =
     | LList(a, LNil) -> a
     | LList(a, LPar(_, _)) -> a
     | LList(a, LOr(_,_)) -> a
-    | _ -> print_lambdas fmt hd ;raise (RuntimeException "find_chi_lambda failed: Unexpected match")) (* Pode ser preciso para o 3º caso*)
+    | _ -> print_lambdas !fmt hd ;raise (RuntimeException "find_chi_lambda failed: Unexpected match")) (* Pode ser preciso para o 3º caso*)
   else
     find_chi_lambda (LChi(et, tl)) (curr_i+1) i_at
 
@@ -78,7 +80,7 @@ let rec lparToChi lpar =
           | LPar(_,_), LNil -> lparToChi m1
           | LNil, _ -> m2
           | _, LNil -> m1)
-  | _ -> print_lambdas fmt lpar ;raise (RuntimeException "lparToChi failed: Not a LPar.")
+  | _ -> print_lambdas !fmt lpar ;raise (RuntimeException "lparToChi failed: Not a LPar.")
 
 (* Retrieves the LChi at position i_at in list *)
 let get_chi_at list i_at =
@@ -209,9 +211,9 @@ let rec case_i chi i_at =
         | LOr(LList(a, b), LNil) -> [LChi(subst_at el a 0 i_at, subst_at ll b 0 i_at); LChi(el, subst_at ll (LNil) 0 i_at)]
         | LOr(LNil, LList(a, b)) -> [LChi(el, subst_at ll (LNil) 0 i_at); LChi(subst_at el a 0 i_at, subst_at ll b 0 i_at)]
         | LOr(LNil, LNil) -> [LChi(el, subst_at ll (LNil) 0 i_at)]
-        | _ -> print_lambdas fmt n_or; raise (RuntimeException "No match in treat_or inside case_i\n")
+        | _ -> print_lambdas !fmt n_or; raise (RuntimeException "No match in treat_or inside case_i\n")
       in treat_or chi i_at l_or
-  | _ -> print_lambdas fmt chi; raise (RuntimeException "No match in case_i\n")
+  | _ -> print_lambdas !fmt chi; raise (RuntimeException "No match in case_i\n")
 
 let case_f_or (LChi(el, ll) as chi) ((a, b) as i_pair) =
   let elemA_el = List.nth el a in 
@@ -224,7 +226,7 @@ let case_f_or (LChi(el, ll) as chi) ((a, b) as i_pair) =
   | LOr(_, _), LList(_, _) -> let i_chi = case_i chi a in map (fun x -> case_e (List.nth el b) x b) i_chi
   | LList(_, _), LOr(_, _) -> let i_chi = case_i chi b in map (fun x -> case_e (List.nth el a) x a) i_chi
   | LOr(_, _), LOr(_, _) -> let n_chi = case_i chi b in flatten2( map (fun x -> case_i x a) n_chi )
-  | _ -> printMode fmt elemA_ll true; printMode fmt elemB_ll true; raise (RuntimeException "No match in case_f_or\n")
+  | _ -> printMode !fmt elemA_ll true; printMode !fmt elemB_ll true; raise (RuntimeException "No match in case_f_or\n")
 
 
 let rec has_lpar_in_chi chi =
@@ -260,7 +262,7 @@ let eval_par lhs rhs =
   | _, LNil -> lhs
   | LPar(LNil, LNil), _ -> rhs (* Added just for new_eval *)
   | _, LPar(LNil, LNil) -> lhs (* Added just for new_eval *)
-  | _, _ -> printMode fmt (LPar(lhs,rhs)) true;printf "-> ";raise (RuntimeException "No match in eval_par\n")
+  | _, _ -> printMode !fmt (LPar(lhs,rhs)) true; fprintf !fmt "-> ";raise (RuntimeException "No match in eval_par\n")
 
 (**
     Inital exp preconditions:
@@ -296,8 +298,8 @@ let rec eval_chi_list ((LPar(l1, l2), ctx) as exp) =
       | [] -> []
       | hd::tl -> 
           let n_ctx = {ctx with level = ctx.level ^ "." ^ string_of_int i} in 
-          printCtxLevel1 n_ctx (List.nth el hd) et hd;
-          printMode fmt (LPar(l1,l2)) n_ctx.print;
+          printCtxLevel1 !fmt n_ctx (List.nth el hd) et hd;
+          printMode !fmt (LPar(l1,l2)) n_ctx.print;
           match l1, l2 with
           | LChi(_, _), LList(_, _) ->
               if has_lpar_in_chi l1 && (isLPar (List.nth ll hd)) then
@@ -339,10 +341,10 @@ let rec eval_chi_nested ((LPar(l1, l2), ctx) as exp) =
       | hd::tl -> 
         let n_ctx = {ctx with level = ctx.level ^ "." ^ string_of_int i} in 
         if isLChi l1 && isLChi l2 then
-          printCtxLevel2 n_ctx (getEl (join_chis l1 l2)) hd 
+          printCtxLevel2 !fmt n_ctx (getEl (join_chis l1 l2)) hd 
         else
-          printCtxLevel2 n_ctx el hd;
-          printMode fmt (LPar(l1,l2)) n_ctx.print;
+          printCtxLevel2 !fmt n_ctx el hd;
+          printMode !fmt (LPar(l1,l2)) n_ctx.print;
           match l1, l2 with
           | LChi(_, _), LChi(_, _) ->
             let n_chi = join_chis l1 l2 in
@@ -378,7 +380,7 @@ let rec eval_chi_nested ((LPar(l1, l2), ctx) as exp) =
       | _, LChi(_,_) when exist_corres el ->
         let corres_l = find_all_corres el el in
           iter corres_l 1
-      | _, _ -> print_lambdas fmt (LPar(l1,l2));raise (RuntimeException "No match in eval_chi inside LChi(), _ \n")
+      | _, _ -> print_lambdas !fmt (LPar(l1,l2));raise (RuntimeException "No match in eval_chi inside LChi(), _ \n")
 
 (** Receives a (lambda * print_ctx) list, each corresponding to a possible execution of the program
 
@@ -388,11 +390,11 @@ match expInArr with
 | [] -> []
 | ((l, ctx) as hd)::tl ->
   begin
-    printCtxLevel ctx;
+    printCtxLevel !fmt ctx;
     match l with
     | LOr(l1, l2) ->
       let ass_lo = assocLeft l in
-      printMode fmt ass_lo ctx.print;
+      printMode !fmt ass_lo ctx.print;
       let ctx_l = conc_lvl ctx "1" in
       let ctx_r = conc_lvl ctx "2" in
       (* Add evalutate the two new possible executions and continue evaluating the rest *)
@@ -401,7 +403,7 @@ match expInArr with
       let ass_lp = assocLeft l in
       (* If [LPar] has a nested [LOr] *)
       if has_nested_or ass_lp then (
-        printMode fmt ass_lp ctx.print;
+        printMode !fmt ass_lp ctx.print;
         let ctx_l = conc_lvl ctx "1" in
         let ctx_r = conc_lvl ctx "2" in
         match getNestedLeft ass_lp with
@@ -419,12 +421,12 @@ match expInArr with
             let add_after_l = addAfterChiEval2 (LPar(a,b), ctx_l) (assocLeftList (getRestPars (lparToList ass_lp))) in
             let add_after_r = addAfterChiEval2 (LPar(a,c), ctx_r) (assocLeftList (getRestPars (lparToList ass_lp))) in
               append (new_eval tl) (new_eval [add_after_l; add_after_r])
-        | _ -> printMode fmt (getNestedLeft ass_lp) true; raise (RuntimeException "No match in new_eval OR")
+        | _ -> printMode !fmt (getNestedLeft ass_lp) true; raise (RuntimeException "No match in new_eval OR")
       ) else
         (* If [LPar] doesn't have a nested [LOr] *)
         if has_nested_chi ass_lp = false then (
           (* If [LPar] doesn't have a nested [LChi] *)
-          printMode fmt ass_lp ctx.print;
+          printMode !fmt ass_lp ctx.print;
           let oneEval = sStepEval ass_lp in
           if getParNum oneEval <= 2 then
             append (new_eval tl) (new_eval [(oneEval, next_ctx ctx)])
@@ -438,7 +440,7 @@ match expInArr with
         ) else (
           (* If [LPar] has a nested [LChi] *)
 
-          printMode fmt ass_lp ctx.print;
+          printMode !fmt ass_lp ctx.print;
           (* if the nested [LChi] contains actions that can synchronize with actions in some other [LList] *)
           let chi_l_prog = can_chi_list_progress ass_lp in
           (* if the nested [LChi] has nested corresponding actions *)
@@ -513,29 +515,29 @@ match expInArr with
                 append (new_eval tl) (new_eval [(l1, ctx)])
               else
                 append (new_eval tl) (new_eval [addAfterChiEval2 (l1, ctx) (assocLeftList (getRestPars (lparToList ass_lp)))])
-            | _ -> printMode fmt ass_lp true; raise (RuntimeException "No match in new_eval_1")
+            | _ -> printMode !fmt ass_lp true; raise (RuntimeException "No match in new_eval_1")
         )
     | LChi([], []) ->
-      printMode fmt (LNil) ctx.print;
+      printMode !fmt (LNil) ctx.print;
       append (new_eval tl) [(LNil, ctx)]
     | LChi(el, ll) when exist_corres el -> 
-      printMode fmt (LPar(l,LNil)) ctx.print; 
+      printMode !fmt (LPar(l,LNil)) ctx.print; 
       append (new_eval tl) (new_eval (flatten2 (eval_chi_nested (LPar(l,LNil), ctx))))
     | LChi([a], [b]) ->
       let p = LList(a, b) in
-        (printMode fmt p ctx.print;
+        (printMode !fmt p ctx.print;
         append (new_eval tl) [(p, ctx)]) (* Adicionado por causa da main *)
     | LChi(_,_) ->
-      printMode fmt l ctx.print;
+      printMode !fmt l ctx.print;
       append (new_eval tl) [hd]
     | LList(et, ll) ->
-      printMode fmt l ctx.print;
+      printMode !fmt l ctx.print;
       append (new_eval tl) [hd]
     | LNil ->
-      printMode fmt (LNil) ctx.print;
+      printMode !fmt (LNil) ctx.print;
       append (new_eval tl) [(LNil, ctx)]
     | _ as err ->
-      printMode fmt err true;
+      printMode !fmt err true;
       raise (RuntimeException "No match in new_eval")
   end
 
@@ -547,7 +549,7 @@ match expInArr with
    Similar to [List.flatten(List.map (fun x -> new_eval x) arr)]
     *)
 let eval arr =
-  (*Format.printf "eval: %i\n" (List.length arr);*)
+  (*Format.fprintf !fmt "eval: %i\n" (List.length arr);*)
   List.flatten (List.map (fun x -> new_eval x ) arr)
   (* List.fold_left (fun acc x -> append (new_eval x) acc) [[]] arr *)
 
@@ -567,7 +569,7 @@ let rec top_lvl_extractor exp =
   | LPar(LPar(_, _) as a, LNil) -> top_lvl_extractor a
   | LList(a, _) -> [a]
   | LChi(a, _) -> a
-  | _ as err -> printMode fmt err true; raise (RuntimeException "No match in top_lvl_extractor \n")
+  | _ as err -> printMode !fmt err true; raise (RuntimeException "No match in top_lvl_extractor \n")
 
 let rec get_top_lvl arr =
   match arr with
@@ -653,16 +655,17 @@ let rec final_change exp dexps solved =
     let use_subst = use_lsubst deadl_exp hd1 in
       final_change use_subst tl tl1
 
-let main exp: lambda list * lambda list (*deadlocked processes * resolved process*)=
+let main fmt2 exp: lambda list * lambda list (*deadlocked processes * resolved process*)=
   try
     Printexc.record_backtrace true;
+    fmt := fmt2;
     let lamExp = toLambda exp in
     (* Process Completeness Verification *)
     let act_ver = main_act_verifier lamExp in
     if has_miss_acts act_ver then (
-      printMode fmt lamExp true;
-      printf "\n";
-      print_act_ver act_ver;
+      printMode !fmt lamExp true;
+      fprintf !fmt "\n";
+      print_act_ver !fmt act_ver;
       ([], [])
     ) else 
       (* Deadlock detection *)
@@ -672,38 +675,38 @@ let main exp: lambda list * lambda list (*deadlocked processes * resolved proces
           (eval [[(lamExp, {print=true; level="1"})]])
         else
           let comb_lst = topComb toList in 
-            printFinalArrComb fmt (flatten2 comb_lst);
+            printFinalArrComb !fmt (flatten2 comb_lst);
             eval (assign_ctx2 comb_lst true)
       in
       let init_findings = (proc_findings_comb res) in
       if List.length init_findings = 0 then(
-        printf "\nThe process is deadlock-free.\n";
+        fprintf !fmt "\nThe process is deadlock-free.\n";
         ([], [])
       ) else
         if List.length init_findings = List.length res then (
-          printf "\nThe process has a deadlock: every process combination is blocked.\n";
-          print_list_comb fmt (rev res);
+          fprintf !fmt "\nThe process has a deadlock: every process combination is blocked.\n";
+          print_list_comb !fmt (rev res);
           (*let all_solv = det_res_loop [(List.hd (List.filter (fun x -> x <> LNil) (fst (flatten2 res))))] in*)
           let all_solv = det_res_loop (List.filter (fun x -> x <> LNil) (fst res)) in
           let final_res = final_change lamExp (List.filter (fun x -> x <> LNil) (map lchi_to_lpar (fst res))) all_solv in
-          printf "\nDeadlock(s) solved with algorithm %d:\n" !ds;
-          printMode fmt final_res true;
+          fprintf !fmt "\nDeadlock(s) solved with algorithm %d:\n" !ds;
+          printMode !fmt final_res true;
           ((map lchi_to_lpar (fst res)), [final_res])
         ) else (
-          printf "\nThe process has a deadlock: some process combination is blocked.\n";
-          print_list_comb fmt (rev res);
+          fprintf !fmt "\nThe process has a deadlock: some process combination is blocked.\n";
+          print_list_comb !fmt (rev res);
           let all_solv = det_res_loop (List.filter (fun x -> x <> LNil) (fst res)) in
           let final_res = final_change lamExp (List.filter (fun x -> x <> LNil) (map lchi_to_lpar (fst res))) all_solv in
-          printf "\nDeadlock(s) solved with algorithm %d:\n" !ds;
+          fprintf !fmt "\nDeadlock(s) solved with algorithm %d:\n" !ds;
           if final_res = lamExp then (
             let filter_res = List.filter ( fun (a,_) -> a <> LNil ) res in
             let alter_res = main_deadlock_solver (fst filter_res) false in
             let rem_nils = map remLNils alter_res in
             let f_res = List.combine rem_nils (snd filter_res) in
-            print_list_comb fmt f_res;
+            print_list_comb !fmt f_res;
             ((map lchi_to_lpar (fst res)), (fst f_res))
           ) else ( 
-            printMode fmt final_res true;
+            printMode !fmt final_res true;
             ((map lchi_to_lpar (fst res)), [final_res])
           )
         )

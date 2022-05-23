@@ -4,6 +4,8 @@ open Dlock.Types
 open Dlock.CCS
 open Dlock.Printer
 
+let fmt = Format.std_formatter
+
 let test exp_string ((res0: (eta LambdaFlattened.lambda_flattened * eta list) list), has_miss_acts0)
                     ((res1: (eta LambdaFlattened.lambda_flattened * eta list) list), has_miss_acts1) = 
   (* Check if lambdas are equal, if the unbalanced actions are the same, even if reordered, and if

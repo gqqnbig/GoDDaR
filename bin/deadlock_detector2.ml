@@ -12,4 +12,4 @@ let () = cmdParse
 
 
 if (!process <> "") then
-  ignore (main (CCS.parse !process))
+  ignore (main Format.std_formatter (CCS.parse !process))

@@ -5,6 +5,9 @@ open Format
 
 module LambdaFlattenedSet = Set.Make(LambdaFlattened)
 
+let fmt = Format.std_formatter
+let null_fmt = Format.make_formatter ( fun _ _ _ -> () ) (fun _ -> ())
+
 let lambdaFlattenedToProc l: proc =
   toProc (LambdaFlattened.lambdaFlattenedToLambda l)
 
@@ -21,23 +24,24 @@ let print_res (deadlocked0, solved0) (deadlocked1, solved1): unit =
   let deadlocked1 = List.of_seq (LambdaFlattenedSet.to_seq deadlocked1) in
   let solved0 = List.of_seq (LambdaFlattenedSet.to_seq solved0) in
   let solved1 = List.of_seq (LambdaFlattenedSet.to_seq solved1) in
-  printf "Deadlocked: \n0\n";
-  List.iter (fun l -> print_proc_simple fmt (lambdaFlattenedToProc l); printf "\n") deadlocked0;
-  printf "1\n";
-  List.iter (fun l -> print_proc_simple fmt (lambdaFlattenedToProc l); printf "\n") deadlocked1;
-  printf "Solved: \n0\n";
-  List.iter (fun l -> print_proc_simple fmt (lambdaFlattenedToProc l); printf "\n") solved0;
-  printf "1\n";
-  List.iter (fun l -> print_proc_simple fmt (lambdaFlattenedToProc l); printf "\n") solved1
+  fprintf fmt "Deadlocked: \n0\n";
+  List.iter (fun l -> print_proc_simple fmt (lambdaFlattenedToProc l); fprintf fmt "\n") deadlocked0;
+  fprintf fmt "1\n";
+  List.iter (fun l -> print_proc_simple fmt (lambdaFlattenedToProc l); fprintf fmt "\n") deadlocked1;
+  fprintf fmt "Solved: \n0\n";
+  List.iter (fun l -> print_proc_simple fmt (lambdaFlattenedToProc l); fprintf fmt "\n") solved0;
+  fprintf fmt "1\n";
+  List.iter (fun l -> print_proc_simple fmt (lambdaFlattenedToProc l); fprintf fmt "\n") solved1
 
 let test (exp: string) = 
+  fprintf fmt "DEADLOCK_DETECTOR:\n";
   let proc = CCS.parse exp in
-  let result0 = conv_res (Deadlock_detector.main  proc) in
-  let result1 = conv_res (Deadlock_detector2.main proc) in
+  let result0 = conv_res (Deadlock_detector.main  null_fmt proc) in
+  let result1 = conv_res (Deadlock_detector2.main null_fmt proc) in
   if compare_res result0 result1 then
-    printf "PASSED: %s\n" exp
+    fprintf fmt "PASSED: %s\n" exp
   else (
-    printf "FAILED: %s\n" exp;
+    fprintf fmt "FAILED: %s\n" exp;
   );
     print_res result0 result1
 ;;

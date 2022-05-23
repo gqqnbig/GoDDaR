@@ -90,14 +90,14 @@ let eval_sync ((lambdas_sync, lambdas_no_sync, print_ctx) as execution: possible
     ) sync_index_pair_list
   )
 
-let eval (lambda: lambda_tagged) = 
+let eval fmt (lambda: lambda_tagged) = 
   let rec do_eval (executions: possible_execution list) (deadlocks: possible_execution list)=
     match executions with
     | [] -> List.rev ( deadlocks )
     | ((lambdas_sync, lambdas_no_sync, print_ctx) as execution)::tl -> 
       let (updated_possible_executions_list, updated_deadlocks) = 
         (* Reduce the process util only syncronization is possible *)
-        printCtxLevel_noln print_ctx;
+        printCtxLevel_noln fmt print_ctx;
         printMode fmt (assocLeftList (List.map lambdaTaggedToLambda (lambdas_no_sync@lambdas_sync))) print_ctx.print;
         flush stdout;
         if lambdas_no_sync <> [] then (
@@ -141,7 +141,7 @@ let rec deadlock_solver_2 (lambda: lambda_tagged) (deadlocked_top_environment: e
   | LNil -> LNil
   | LSubst | LChi(_, _) -> failwith "These shouldn't appear"
 
-let main exp: lambda list * lambda list (*deadlocked processes * resolved process*) =
+let main fmt exp: lambda list * lambda list (*deadlocked processes * resolved process*) =
   try
     Printexc.record_backtrace true;
     let lamExp = toLambda exp in
@@ -149,27 +149,27 @@ let main exp: lambda list * lambda list (*deadlocked processes * resolved proces
     let act_ver = main_act_verifier lamExp in
     if has_miss_acts act_ver then (
       printMode fmt lamExp true;
-      printf "\n";
-      print_act_ver act_ver;
+      fprintf fmt "\n";
+      print_act_ver fmt act_ver;
       ([], [])
     ) else (
       let lamTaggedExp = lambdaToLambdaTagged lamExp in
-      let deadlocked_executions = (eval lamTaggedExp) in
+      let deadlocked_executions = (eval fmt lamTaggedExp) in
       if deadlocked_executions = [] then (
-        printf "\nNo deadlocks!\n";
+        fprintf fmt "\nNo deadlocks!\n";
         ([], [])
       ) else (
-        printf "\nDeadlocks:\n";
+        fprintf fmt "\nDeadlocks:\n";
         List.iter (
           fun ((lambdas_sync, lambdas_no_sync, print_ctx): possible_execution) (* deadlock *) ->
             assert (List.length lambdas_no_sync = 0);
             if List.length lambdas_sync <> 0 then
-              printCtxLevel_noln print_ctx;
+              printCtxLevel_noln fmt print_ctx;
               printMode fmt (lambdaTaggedToLambda (assocLeftList lambdas_sync)) print_ctx.print;
         ) deadlocked_executions;
         let deadlocked_top_environments = List.flatten (List.map top_environment deadlocked_executions) in
-        (* List.iter (fun eta -> (print_eta_tagged fmt eta; printf "\n")) deadlocked_top_environments; *)
-        printf "Solved deadlocked:\n";
+        (* List.iter (fun eta -> (print_eta_tagged fmt eta; fprintf fmt "\n")) deadlocked_top_environments; *)
+        fprintf fmt "Solved deadlocked:\n";
         let deadlock_solver = if !ds < 2 then deadlock_solver_1 else deadlock_solver_2 in
         let solved_exp = (lambdaTaggedToLambda (deadlock_solver lamTaggedExp deadlocked_top_environments)) in
           printMode fmt solved_exp true;

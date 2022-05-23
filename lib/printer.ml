@@ -4,8 +4,6 @@ open Format
 open Types
 open Cmd
 
-let fmt = Format.std_formatter
-
 (* ----------- Action ----------- *)
 
 let print_action fmt a =
@@ -70,7 +68,7 @@ let rec print_etalist_alt fmt lst =
   match lst with
   | [] -> ()
   | hd::[] -> print_eta fmt hd
-  | hd::tl -> print_eta fmt hd; printf ", "; print_etalist_alt fmt tl
+  | hd::tl -> print_eta fmt hd; fprintf fmt ", "; print_etalist_alt fmt tl
 
 let rec print_etalist_alt_simple fmt lst =
   match lst with
@@ -78,7 +76,7 @@ let rec print_etalist_alt_simple fmt lst =
   | EEta(k)::[] ->
     print_action_simple fmt k
   | EEta(k)::tl ->
-    print_action_simple fmt k; printf ", "; print_etalist_alt_simple fmt tl
+    print_action_simple fmt k; fprintf fmt ", "; print_etalist_alt_simple fmt tl
 
 
 (* ----------- Proc ----------- *)
@@ -103,12 +101,12 @@ let printMode fmt exp p =
   if p then
     if !verbose then (
       print_lambdas fmt exp;
-      printf " ---> ";
+      fprintf fmt " ---> ";
       print_proc_simple fmt (toProc exp);
-      printf "\n"
+      fprintf fmt "\n"
     )else if !simplified then(
       print_proc_simple fmt (toProc exp);
-      printf "\n"
+      fprintf fmt "\n"
     )
 
 let rec print_list_comb fmt lst =
@@ -118,57 +116,84 @@ let rec print_list_comb fmt lst =
         | hd::[] -> 
           (match hd with 
           | (l, c) -> 
-            if !verbose 
-            then (printf "("; print_lambdas fmt l; printf ", %s)" c.level; printf "]";printf " ---> ";print_proc_simple fmt (toProc l))
-            else (printf "("; print_proc_simple fmt (toProc l); printf ", %s)" c.level; printf "]"))
+            if !verbose then (
+              fprintf fmt "("; print_lambdas fmt l; fprintf fmt ", %s)" c.level; fprintf fmt "]";
+              fprintf fmt " ---> "; print_proc_simple fmt (toProc l)
+            ) else (
+              fprintf fmt "("; print_proc_simple fmt (toProc l); fprintf fmt ", %s)" c.level; fprintf fmt "]"
+            )
+          )
         | hd::tl -> 
           (match hd with 
           | (l, c) -> 
-            if !verbose
-            then (printf "("; print_lambdas fmt l; printf ", %s)" c.level; printf "; ---> ";print_proc_simple fmt (toProc l);printf "\n"; find_list tl)
-            else (printf "("; print_proc_simple fmt (toProc l); printf ", %s)" c.level; printf "\n"; find_list tl))
+            if !verbose then (
+              fprintf fmt "("; print_lambdas fmt l; fprintf fmt ", %s)" c.level;
+              fprintf fmt "; ---> ";print_proc_simple fmt (toProc l); fprintf fmt "\n"; find_list tl
+            ) else (
+              fprintf fmt "("; print_proc_simple fmt (toProc l); fprintf fmt ", %s)" c.level; fprintf fmt "\n"; find_list tl
+            )
+          )
     in
-    printf "\n[";
+    fprintf fmt "\n[";
     find_list lst;
-    printf "\n"
+    fprintf fmt "\n"
 
 let printFinalArrComb fmt lst =
-    if !verbose then
-        (printf "Initial Combinations:\n";
-        let i = ref 0 in List.iter (fun x -> i:= !i+1; printf "---- %d ----\n" !i; printMode fmt x true; printf "\n") lst)
-    else ()
+    if !verbose then (
+      fprintf fmt "Initial Combinations:\n";
+      let i = ref 0 in
+        List.iter (
+          fun x -> i:= !i+1;
+          fprintf fmt "---- %d ----\n" !i;
+          printMode fmt x true;
+          fprintf fmt "\n"
+        ) lst
+    )
 
 let count_level print_ctx =
   let count = ref 0 in
     String.iter (fun c -> if c = '.' then count := !count + 1) print_ctx.level;
     !count
 
-let printCtxLevel_noln p_ctx =
+let printCtxLevel_noln fmt p_ctx =
   if p_ctx.print then
     let level = count_level p_ctx in
     let level_indent = String.make (level*2) ' ' in
-    if !verbose || !simplified then printf "---- %s ----\n" p_ctx.level else ()
+    if !verbose || !simplified then
+      fprintf fmt "---- %s ----\n" p_ctx.level
   else ()
 
-let printCtxLevel p_ctx =
+let printCtxLevel fmt p_ctx =
   if p_ctx.print then
-    if !verbose || !simplified then printf "\n---- %s ----\n" p_ctx.level else ()
+    if !verbose || !simplified then
+      fprintf fmt "\n---- %s ----\n" p_ctx.level
   else ()
 
-let printCtxLevel1 p_ctx eta et i =
-  if p_ctx.print then
-    if !verbose || !simplified then (printf "\n---- %s ---- -> between " p_ctx.level; print_eta fmt eta; printf " at i = %d and " i; print_eta fmt et; printf "\n") else ()
-  else ()
+let printCtxLevel1 fmt p_ctx eta et i =
+  if p_ctx.print && (!verbose || !simplified) then (
+    fprintf fmt "\n---- %s ---- -> between " p_ctx.level;
+    print_eta fmt eta;
+    fprintf fmt " at i = %d and " i;
+    print_eta fmt et;
+    fprintf fmt "\n"
+  )
 
-let printCtxLevel2 p_ctx el p =
+let printCtxLevel2 fmt p_ctx el p =
   if p_ctx.print then
     match p with
-    | (a,b) -> if !verbose || !simplified then (printf "\n---- %s ---- -> between " p_ctx.level; print_eta fmt (List.nth el a); printf " at i = %d and " a; print_eta fmt (List.nth el b);printf " at j = %d" b;printf "\n") else ()
-  else ()
+    | (a,b) ->
+      if !verbose || !simplified then (
+        fprintf fmt "\n---- %s ---- -> between " p_ctx.level;
+        print_eta fmt (List.nth el a);
+        fprintf fmt " at i = %d and " a;
+        print_eta fmt (List.nth el b);
+        fprintf fmt " at j = %d" b;
+        fprintf fmt "\n"
+      )
 
 (* ------------------- BEGIN CORRESPONDING ACTIONS VERIFICATION ------------------- *)
 
-let rec print_act_ver arr =
+let print_act_ver fmt arr =
   let rec print arr =
     match arr with
     | [] -> ()
@@ -176,11 +201,21 @@ let rec print_act_ver arr =
         match hd with
         | (a, []) -> print tl
         | (a, b) -> 
-          if !verbose then
-            (printf "- "; print_etalist_alt fmt b; printf " in "; printMode fmt a true; printf "\n"; print tl)
-          else (
-            if !simplified then
-              (printf "- "; print_etalist_alt_simple fmt b; printf " in "; printMode fmt a true; print tl)
+          if !verbose then (
+            fprintf fmt "- ";
+            print_etalist_alt fmt b;
+            fprintf fmt " in ";
+            printMode fmt a true;
+            fprintf fmt "\n";
+            print tl
+          ) else if !simplified then (
+            (fprintf fmt "- ";
+            print_etalist_alt_simple fmt b;
+            fprintf fmt " in ";
+            printMode fmt a true;
+            print tl)
           )
   in
-  if !verbose || !simplified then printf "Action(s) missing correspondence(s) in process(es):\n"; print arr
+  if !verbose || !simplified then
+    fprintf fmt "Action(s) missing correspondence(s) in process(es):\n";
+    print arr
