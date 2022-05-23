@@ -8,8 +8,6 @@ open Dlock.Deadlock_detector
 let () = cmdParse 
 ;;
 
-if (!process = "") then (
-
 (* -- Deadlock -- *)
 (* 1) (a!.a?.0 || b?.b!.c?.c!.0) + c!.c?.0    --->    Case with complete (global) resolution *)
 (* main (CCS.parse "(a!.a?.0 || b?.b!.c?.c!.0) + c!.c?.0"); *)
@@ -28,6 +26,5 @@ if (!process = "") then (
 (* 4) a!.(b!.c!.0 || b?.c?.d?.0) || a?.d!.0 *)
 (* main (parse "a!.(b!.c!.0 || b?.c?.d?.0) || a?.d!.0"); *)
 
-main (CCS.parse "a!.a?.0" )
-) else
-  main (CCS.parse !process)
+if (!process <> "") then
+  ignore (main (CCS.parse !process))
