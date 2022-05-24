@@ -56,7 +56,7 @@ let test fmt (exp: string) =
   let result0 = convert_res (Deadlock_detector.main  null_fmt proc) in
   let result1 = convert_res (Deadlock_detector2.main null_fmt proc) in
   if compare_res result0 result1 then (
-    fprintf fmt "PASSED:";
+    fprintf fmt "PASSED: ";
     print_res_summary fmt exp result0
   ) else (
     fprintf fmt "FAILED: %s\n" exp;
@@ -82,4 +82,82 @@ let fmt = Format.std_formatter in (
   test fmt "(a!.a?.0 || b?.b!.0) + c!.c?.0";
   test fmt "(a!.a?.0 || b?.b!.c?.c!.0) + c!.c?.0";
   test fmt "a!.0 || (b!.b?.a?.0 + a?.0)";
+
+  (* Taken from test_file.txt*)
+  test fmt "a?.0";
+  test fmt "a?.a!.0 ";
+  test fmt "0 || 0";
+  test fmt "a?.0 || a!.0";
+  test fmt "a?.0 || b!.0";
+  test fmt "a?.b!.0 || a!.b?.0";
+  test fmt "a?.b!.c?.0 || a!.b?.c!.0";
+  test fmt "a?.b!.c?.0 || a!.c!.b?.0";
+  test fmt "a?.b?.0 || a!.b!.c!.0";
+  test fmt "a?.0 || a!.b!.c!.0";
+  test fmt "0 || a!.b!.c!.0";
+  test fmt "a!.(0 || 0) || b!.0";
+  test fmt "(a!.b?.c?.0 || a?.b!.0) || c!.0";
+  test fmt "a!.b?.0 || a?.0 || a?.a!.b!.0";
+  test fmt "a!.0 || a?.0 || a?.a!.b!.0";
+  test fmt "b!.a!.0 || a?.0 || b?.0";
+  test fmt "0 || a?.0 || a!.0";
+  test fmt "a?.0 || 0 || b!.0";
+  test fmt "a?.0 || 0 || a?.0";
+  test fmt "a?.a?.0 || 0 || a?.b!.0";
+  test fmt "a?.a?.0 || b?.c?.0 || a?.b!.0";
+  test fmt "a?.(b!.0 || c?.d?.0) || b?.0 || a!.(c!.0 || d!.0)";
+  test fmt "0 || 0 || 0";
+  test fmt "b!.(0 || 0) || b?.0 || b?.b!.(a!.0 || a?.0)";
+  test fmt "a!.0 || b!.0 || a?.0 || b?.0";
+  test fmt "a!.(b!.(c!.0 || d?.0) || b?.0) || a?.c?.d!.0";
+  test fmt "a!.(b!.(c!.0 || d?.0) || b?.0) || a?.(c?.0 || e!.0)";
+  test fmt "a!.(a!.(a?.0 || a?.0 ) || a!.0) || a?.(a?.0 || a?.0 || a!.0)";
+  test fmt "a!.(a!.(b?.0 || c?.0 )) || a?.(a?.0 || b!.0 || c!.0)";
+  (* test fmt "a!.(a!.(b?.0 || c?.0 ) || d!.0) || a?.(a?.0 || b!.0 || c!.0 || d?.0)"; *)
+  test fmt "a!.b?.0 || c?.d?.a!.0 || c!.a?.0 || b!.d!.a?.0";
+  (* test fmt "a!.a?.0 || a?.a?.a!.0 || a!.a?.0 || a!.a!.a?.0 || a!.a?.0";*)
+  test fmt "(a!.0 || a?.0) + (b!.0 || b?.0)";
+  test fmt "a!.(b?.0 + 0) || a?.b!.0";
+  test fmt "a!.0 + b!.0 + c!.0";
+  (* test fmt "(a!.0 || a?.0) + (b!.0 || b?.0) + (c!.0 || c?.0)"; *)
+  test fmt "(a!.0 || a?.0) + (a!.0 || a?.b?.(c?.0 + d?.0) || b!.d!.0 )";
+  test fmt "(a!.0 || a?.0) + (a!.0 || a?.b?.(c?.0 + d?.0) || c!.b!.d!.0 )";
+  (* test fmt "a!.b?.d?.0 || a!.a?.0 || b!.c?.0 || c!.a?.0 || d!.(e!.0 || e?.0)"; *)
+  test fmt "b?.((d?.0 || d!.0) + (c!.0 || c?.0)) || a?.b!.a!.0";
+  (* test fmt "d!.a?.(b?.0 || e?.d!.0) || d?.e!.d?.0 || b!.a!.0"; *)
+  test fmt "a!.0 || a?.b!.0 || a?.b!.0 || b?.b?.0";
+  test fmt "a!.a!.0 || a?.b?.0 || a?.0 + b!.0";
+  test fmt "a!.0 || b!.0 || a?.c!.0 + b?.c!.0 || c?.0";
+  test fmt "a!.0 || b!.0 || a?.c!.(a?.c!.0 + b?.c!.0) + b?.c!.(a?.c!.0 + b?.c!.0) || c?.c?.0";
+  test fmt "a!.0 || b!.0 || a?.c!.b?.c!.0 + b?.c!.a?.c!.0 || c?.c?.0";
+  test fmt "a!.0 || b!.0 || (a?.c!.0 + b!.c!.0 + 0) || (c?.0 + 0)";
+  test fmt "a!.0 || b!.0 || a?.c!.(a?.c!.0 + b?.c!.0 + 0) + b?.c!.(a?.c!.0 + b?.c!.0 + 0) + 0 || c?.c?.0";
+  test fmt "b!.b!.0 + b!.0 || a?.0 + b?.b?.0";
+  test fmt "(b!.(b!.0 + a!.0) + a!.(b!.0 + a!.0)) || (a?.0 + b?.b?.0)";
+  test fmt "b?.a!.0 + c!.0 || c?.0 + b!.a!.0 || a?.a?.0";
+  test fmt "b?.a!.0 + c!.(b?.a!.0 + c!.0) || c?.(c?.0 + b!.a!.0) + b!.a!.0 || a?.a?.0";
+  (* test fmt "a!.a?.0 || b!.b?.0 || c!.c?.0 || a?.(b?.a!.b!.0 + a!.0) + b?.(a?.b!.a!.0 + b!.0) || b?.(c?.b!.c!.0 + b!.0) + c?.(b?.c!.b!.0 + c!.0) || c?.(a?.c!.a!.0 + c!.0) + a?.(c?.a!.c!.0 + a!.0)"; *)
+  test fmt "a?.0 + b?.0 || a?.0 + b?.0 || a!.(a!.0 + b!.0) + b!.0";
+  test fmt "a?.a!.0 + b!.a!.0 + c?.a!.0 + a!.0";
+  test fmt "b?.b!.b?.b!.0 || b?.b!.0";
+  test fmt "b!.b?.b!.b?.0 || b!.b?.0";
+  test fmt "(b!.a!.0 + b?.a!.0) + a?.0";
+  test fmt "(b!.0 + a!.0) || (b?.0 + a?.0)";
+  test fmt "a!.a!.a!.b!.0 || a?.a?.a?.b?.0";
+  test fmt "(a!.0 + (b?.a!.0 || b!.0)) || a?.0 ";
+  (* test fmt "a?.0 || b?.a!.0 || c?.b!.0 || d?.c!.0 || e?.d!.0 || e!.0"; *)
+  test fmt "a!.0 || b!.0 || (a?.c!.b?.c!.0 + b?.c!.a?.c!.0) || c?.c?.0";
+  test fmt "a!.0 || a?.b!.0 || a?.b!.0 || b?.b?.0";
+  test fmt "a!.0 || a?.b!.0 || b?.0";
+  test fmt "a?.0 || b?.c?.a!.0 || b!.0 || c!.0";
+  test fmt "a?.0 || a!.0";
+  test fmt "a!.0 || b!.0 || (a?.(a?.0 + b?.0) + b?.(a?.0 + b?.0))";
+  test fmt "a!.0 || b!.0 || (a?.b?.0 + b?.a?.0)";
+  test fmt "a?.b!.0 || a!.0 || a!.0 || b?.b?.0";
+  test fmt "a!.a!.a!.0 || a?.a?.a?.a?.0";
+  test fmt "a!.a!.a!.0 || a?.a?.a?.0";
+  test fmt "a!.0 || b!.0 || a?.c!.0 || b?.c!.0 || c?.d?.0 || a?.d!.0 || b?.d!.0";
+  test fmt "a!.0 || b!.0 ||(a?.0 + b?.0)";
+  test fmt "a!.a!.a!.a!.a!.a!.0 || a?.b?.c?.0 || a?.b!.a?.a?.b!.0 || b?.c!.0";
+  test fmt "a!.0 || a?.0";
 )

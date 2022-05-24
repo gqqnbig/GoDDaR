@@ -160,7 +160,6 @@ let count_level print_ctx =
 let printCtxLevel_noln fmt p_ctx =
   if p_ctx.print then
     let level = count_level p_ctx in
-    let level_indent = String.make (level*2) ' ' in
     if !verbose || !simplified then
       fprintf fmt "---- %s ----\n" p_ctx.level
   else ()
