@@ -22,16 +22,20 @@ let possible_executionToLambda (lambdas_sync, lambdas_no_sync, print_ctx: possib
   let lambdas_no_sync = List.map lambdaTaggedToLambda lambdas_no_sync in
   assocLeftList (lambdas_sync@lambdas_no_sync)
 
-let eval_without_sync ((lambdas_sync, lambdas_no_sync, print_ctx) as execution: possible_execution) =
+let print_possible_execution fmt (lambdas_sync, lambdas_no_sync, print_ctx: possible_execution) = 
+  printCtxLevel_noln fmt print_ctx;
+  printMode fmt (assocLeftList (List.map lambdaTaggedToLambda (lambdas_no_sync@lambdas_sync))) print_ctx.print;
+  flush stdout
+
+let eval_without_sync fmt ((lambdas_sync, lambdas_no_sync, print_ctx) as execution: possible_execution) =
   match lambdas_no_sync with
   | [] -> [execution]
   | lambda::tl -> 
     match lambda with
-    | LNil -> [(lambdas_sync, tl, { print_ctx with print = false})]
-    | LList(_, _) -> [(lambda::lambdas_sync, tl, { print_ctx with print = (tl = []) })]
-    | LOr(a, b) -> [(lambdas_sync, a::tl, conc_lvl { print_ctx with print = false } "1");
-                    (lambdas_sync, b::tl, conc_lvl { print_ctx with print = false } "2")]
-    | LPar(a, b) -> [(lambdas_sync, a::b::tl, { print_ctx with print = false })]
+    | LNil -> [(lambdas_sync, tl, print_ctx)]
+    | LList(_, _) -> [(lambda::lambdas_sync, tl, print_ctx)]
+    | LOr(a, b) -> print_possible_execution fmt execution; [(lambdas_sync, a::tl, conc_lvl print_ctx "1"); (lambdas_sync, b::tl, conc_lvl print_ctx "2")]
+    | LPar(a, b) -> [(lambdas_sync, a::b::tl, print_ctx)]
     | LSubst | LChi(_, _) -> failwith "These shouldn't appear"
 
 
@@ -40,8 +44,7 @@ let find_sync (top_environment: eta_tagged list) : (int * int list) list (* pair
     match top_environment_remaining with
     | [] -> result
     | EEtaTagged((AIn(c) as a), tag)::tl ->
-      let out_eta_indexes = findi (fun (EEtaTagged(b, _): eta_tagged) -> a = compl_action b) top_environment in
-      let output_indexes = List.map (fun output_index -> output_index) out_eta_indexes in
+      let output_indexes = findi (fun (EEtaTagged(b, _): eta_tagged) -> a = compl_action b) top_environment in
       (do_find_sync [@tailcall]) tl (input_index+1) top_environment ((input_index, output_indexes)::result)
     | EEtaTagged(AOut(_), tag)::tl -> 
       (do_find_sync [@tailcall]) tl (input_index+1) top_environment result
@@ -84,7 +87,7 @@ let eval_sync ((lambdas_sync, lambdas_no_sync, print_ctx) as execution: possible
             (* [lambdas_sync] without input and output action, effectivly simulating the syncronization *)
             let (updated_lambdas_sync, updated_lambdas_no_sync) = sync lambdas_sync input_index output_index in
             i := !i+1;
-            ((updated_lambdas_sync, updated_lambdas_no_sync, conc_lvl {print_ctx with print = true} (string_of_int !i)): possible_execution)
+            ((updated_lambdas_sync, updated_lambdas_no_sync, conc_lvl print_ctx (string_of_int !i)): possible_execution)
           )
         ) output_index_list
     ) sync_index_pair_list
@@ -93,20 +96,18 @@ let eval_sync ((lambdas_sync, lambdas_no_sync, print_ctx) as execution: possible
 let eval fmt (lambda: lambda_tagged) = 
   let rec do_eval (executions: possible_execution list) (deadlocks: possible_execution list)=
     match executions with
-    | [] -> List.rev ( deadlocks )
+    | [] -> List.rev deadlocks
     | ((lambdas_sync, lambdas_no_sync, print_ctx) as execution)::tl -> 
       let (updated_possible_executions_list, updated_deadlocks) = 
         (* Reduce the process util only syncronization is possible *)
-        printCtxLevel_noln fmt print_ctx;
-        printMode fmt (assocLeftList (List.map lambdaTaggedToLambda (lambdas_no_sync@lambdas_sync))) print_ctx.print;
-        flush stdout;
         if lambdas_no_sync <> [] then (
-          (((eval_without_sync execution)@tl), deadlocks)
+          (((eval_without_sync fmt execution)@tl), deadlocks)
         ) else (
+          print_possible_execution fmt execution;
           let sync_possible_executions = eval_sync execution in
           if sync_possible_executions = [] then
-            if lambdas_sync <> [] || lambdas_no_sync <> [] then
-              (tl, ((lambdas_sync, lambdas_no_sync, {print_ctx with print = true})::deadlocks))
+            if not (lambdas_sync = [] && lambdas_no_sync = []) then
+              (tl, (execution::deadlocks))
             else
               (tl, deadlocks)
           else
@@ -114,7 +115,7 @@ let eval fmt (lambda: lambda_tagged) =
       ) in
         (do_eval [@tailcall]) updated_possible_executions_list updated_deadlocks
   in
-    do_eval [([], [lambda], {level="1"; print=false})] []
+    do_eval [([], [lambda], {level="1"; print=true})] []
 
 let rec deadlock_solver_1 (lambda: lambda_tagged) (deadlocked_top_environment: eta_tagged list): (lambda_tagged) =
   match lambda with
