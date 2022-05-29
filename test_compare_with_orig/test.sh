@@ -1,12 +1,18 @@
 #!/bin/bash -e
 
 if [ "$#" -eq 0 ]; then
+	EXEC="dlock"
+else
+	EXEC="$1"
+	shift 1
+fi
+
+if [ "$#" -eq 0 ]; then
 	OUTPUT_DIR=output
 else
 	OUTPUT_DIR="$1"
 	shift 1
 fi
-
 
 rm "$OUTPUT_DIR"/*.txt || true
 mkdir -p "$OUTPUT_DIR"
@@ -31,7 +37,7 @@ while read line; do
 			OUTPUT_FILE="$OUTPUT_DIR"/out_"${name}_${verbosity[1]}_${deadlock_algo[1]}.txt"
 			# echo "$OUTPUT_FILE ${verbosity[0]} ${deadlock_algo[0]} ${verbosity[1]} ${deadlock_algo[1]} $name $process"
 			set -x 
-			dune exec $@ -- dlock ${verbosity[0]} ${deadlock_algo[0]} -p "$process" > "$OUTPUT_FILE" 2>/dev/null
+			dune exec $@ -- "$EXEC" ${verbosity[0]} ${deadlock_algo[0]} -p "$process" > "$OUTPUT_FILE" 2>/dev/null
 			{ set +x; } 2>/dev/null
 		done
 	done

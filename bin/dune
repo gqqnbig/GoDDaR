@@ -6,8 +6,8 @@
  (modes byte))
 
 (executable
- (public_name dlock2)
- (name deadlock_detector2)
- (modules Deadlock_detector2)
+ (public_name dlock-orig)
+ (name deadlock_detector_orig)
+ (modules Deadlock_detector_orig)
  (libraries dlock)
  (modes byte))

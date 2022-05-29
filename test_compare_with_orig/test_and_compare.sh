@@ -8,7 +8,7 @@ else
 	git -C "$CLONE_DIR" pull
 fi
 
-./test.sh output_orig/ --root "$CLONE_DIR"
-./test.sh
+./test.sh dlock output_orig/ --root "$CLONE_DIR"
+./test.sh dlock-orig
 ./compare.sh
 

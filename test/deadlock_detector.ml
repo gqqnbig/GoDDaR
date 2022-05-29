@@ -53,8 +53,8 @@ let print_res fmt (passed_act_ver0, deadlocked0, resolved0) (passed_act_ver1, de
 
 let test fmt (exp: string) = 
   let proc = CCS.parse exp in
-  let result0 = convert_res (Deadlock_detector.main  null_fmt proc) in
-  let result1 = convert_res (Deadlock_detector2.main null_fmt proc) in
+  let result0 = convert_res (Deadlock_detector_orig.main  null_fmt proc) in
+  let result1 = convert_res (Deadlock_detector.main null_fmt proc) in
   if compare_res result0 result1 then (
     fprintf fmt "PASSED: ";
     print_res_summary fmt exp result0
