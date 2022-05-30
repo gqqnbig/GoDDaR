@@ -175,14 +175,17 @@ let main fmt exp: bool * lambda list * lambda list (*passed act_ver * deadlocked
          resolved expression, so here we do the same. *)
       let (passed_act_ver, deadlocks, resolved) = detect_and_resolve fmt lambdaTaggedExp in
 
-      let rec detect_and_resolve_loop (passed_act_ver, deadlocked, resolved) = 
-        if deadlocked = [] then
+      let rec detect_and_resolve_loop (passed_act_ver, deadlocked, resolved) (last_resolved: lambda_tagged list option)= 
+        match last_resolved with
+        | Some(last_resolved) when List.equal (=) last_resolved resolved ->
           (passed_act_ver, deadlocked, List.map lambdaTaggedToLambda resolved)
-        else
+        | _ when deadlocked = [] -> 
+          (passed_act_ver, deadlocked, List.map lambdaTaggedToLambda resolved)
+        | _ -> 
           let res = detect_and_resolve null_fmt (List.hd resolved) in
-          detect_and_resolve_loop res
+          detect_and_resolve_loop res (Some(resolved))
       in
-      let (_, _, resolved) = detect_and_resolve_loop (passed_act_ver, deadlocks, resolved) in
+      let (_, _, resolved) = detect_and_resolve_loop (passed_act_ver, deadlocks, resolved) None in
 
       if deadlocks = [] then (
         fprintf fmt "\nNo deadlocks!\n";
