@@ -18,7 +18,7 @@ let () = cmdParse
 
 (* -- Actions missing correspondence    --->    No resolution *)
 (* 3) a?.(c?.0 + d?.0) || a!.e!.0 *)
-(* main ( PPar(PPref(AIn('a'), POr(PPref(AIn('c'), PNil), PPref(AIn('d'), PNil))), PPref(AOut('a'), PPref(AOut('e'), PNil))) )  *)
+(* main ( PPar(PPref(AIn('a'), POrI(PPref(AIn('c'), PNil), PPref(AIn('d'), PNil))), PPref(AOut('a'), PPref(AOut('e'), PNil))) )  *)
 (* main (parse "a! || (b!.b?.a? + a?)"); *)
 
 

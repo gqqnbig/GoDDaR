@@ -97,22 +97,22 @@ main ( PPar(PPar(PPar(PPref(AOut('a'), PPref(AIn('b'), PNil)), PPref(AIn('c'), P
 main ( PPar(PPar(PPar(PPar(PPref(AOut('a'), PPref(AIn('a'), PNil)), PPref(AIn('a'), PPref(AIn('a'), PPref(AOut('a'), PNil)))), PPref(AOut('a'), PPref(AIn('a'), PNil))) , PPref(AOut('a'), PPref(AOut('a'), PPref(AIn('a'), PNil)))), PPref(AOut('a'), PPref(AIn('a'), PNil))) )
 
 (* 32. (a!.0 || a?.0) + (b!.0 || b?.0) *)
-main ( POr(PPar(PPref(AOut('a'), PNil), PPref(AIn('a'), PNil)), PPar(PPref(AOut('b'), PNil), PPref(AIn('b'), PNil))) )
+main ( POrI(PPar(PPref(AOut('a'), PNil), PPref(AIn('a'), PNil)), PPar(PPref(AOut('b'), PNil), PPref(AIn('b'), PNil))) )
 
 (* 33. a!.(b?.0 + 0) || a?.b!.0 *)
-main ( PPar(PPref(AOut('a'), POr(PPref(AIn('b'), PNil), PNil)), PPref(AIn('a'), PPref(AOut('b'), PNil))) )
+main ( PPar(PPref(AOut('a'), POrI(PPref(AIn('b'), PNil), PNil)), PPref(AIn('a'), PPref(AOut('b'), PNil))) )
 
 (* 34. a!.0 + b!.0 + c!.0 *)
-main ( POr(POr(PPref(AOut('a'), PNil), PPref(AOut('b'), PNil)), PPref(AOut('c'), PNil) ) )
+main ( POrI(POrI(PPref(AOut('a'), PNil), PPref(AOut('b'), PNil)), PPref(AOut('c'), PNil) ) )
 
 (* 35. (a!.0 || a?.0) + (b!.0 || b?.0) + (c!.0 || c?.0) *)
-main ( POr(POr(PPar(PPref(AOut('a'), PNil), PPref(AIn('a'), PNil)), PPar(PPref(AOut('b'), PNil), PPref(AIn('b'), PNil))), PPar(PPref(AOut('c'), PNil), PPref(AIn('c'), PNil))  ))
+main ( POrI(POrI(PPar(PPref(AOut('a'), PNil), PPref(AIn('a'), PNil)), PPar(PPref(AOut('b'), PNil), PPref(AIn('b'), PNil))), PPar(PPref(AOut('c'), PNil), PPref(AIn('c'), PNil))  ))
 
 (* 36. (a!.0 || a?.0) + (a!.0 || a?.b?.(c?.0 + d?.0) || b!.d!.0 ) *)
-main ( POr(PPar(PPref(AOut('a'), PNil), PPref(AIn('a'), PNil)), PPar(PPar(PPref(AOut('a'), PNil), PPref(AIn('a'), PPref(AIn('b'), POr(PPref(AIn('c'), PNil), PPref(AIn('d'), PNil))))), PPref(AOut('b'), PPref(AOut('d'), PNil))) ) )
+main ( POrI(PPar(PPref(AOut('a'), PNil), PPref(AIn('a'), PNil)), PPar(PPar(PPref(AOut('a'), PNil), PPref(AIn('a'), PPref(AIn('b'), POrI(PPref(AIn('c'), PNil), PPref(AIn('d'), PNil))))), PPref(AOut('b'), PPref(AOut('d'), PNil))) ) )
 
 (* 37. (a!.0 || a?.0) + (a!.0 || a?.b?.(c?.0 + d?.0) || c!.b!.d!.0 ) -> stack overflow por causa de bug *)
-main (POr(PPar(PPref(AOut('a'), PNil), PPref(AIn('a'), PNil)), PPar(PPar(PPref(AOut('a'), PNil), PPref(AIn('a'), PPref(AIn('b'), POr(PPref(AIn('c'), PNil), PPref(AIn('d'), PNil))))), PPref(AOut('c'), PPref(AOut('b'), PPref(AOut('d'), PNil))))))
+main (POrI(PPar(PPref(AOut('a'), PNil), PPref(AIn('a'), PNil)), PPar(PPar(PPref(AOut('a'), PNil), PPref(AIn('a'), PPref(AIn('b'), POrI(PPref(AIn('c'), PNil), PPref(AIn('d'), PNil))))), PPref(AOut('c'), PPref(AOut('b'), PPref(AOut('d'), PNil))))))
 
 (* 38. a!.b?.d?.0 || a!.a?.0 || b!.c?.0 || c!.a?.0 || d!.(e!.0 || e?.0) *)
 main (PPar(PPar(PPar(PPar(PPref(AOut('a'), PPref(AIn('b'), PPref(AIn('d'), PNil))), PPref(AOut('a'), PPref(AIn('a'), PNil))), PPref(AOut('b'), PPref(AIn('c'), PNil))), PPref(AOut('c'), PPref(AIn('a'), PNil))), PPref(AOut('d'), PPar(PPref(AOut('e'), PNil), PPref(AIn('e'), PNil)))))
@@ -129,61 +129,61 @@ main ( PPar(PPar(PPar(PPref(AOut('a'), PNil), PPref(AIn('a'), PPref(AOut('b'), P
 
 (* Listing 7 -> Prime sieve *)
 (* a!.a!.0 || a?.b?.0 || a?.0 + b!.0  -> DEADLOCK -- Depende do nº de gerações *)
-main ( PPar(PPar(PPref(AOut('a'), PPref(AOut('a'), PNil)), PPref(AIn('a'), PPref(AIn('b'), PNil))), POr(PPref(AIn('a'), PNil), PPref(AOut('b'), PNil))) )
+main ( PPar(PPar(PPref(AOut('a'), PPref(AOut('a'), PNil)), PPref(AIn('a'), PPref(AIn('b'), PNil))), POrI(PPref(AIn('a'), PNil), PPref(AOut('b'), PNil))) )
 
 (* Listing 8 -> Fan-in pattern *)
 (* a!.0 || b!.0 || a?.c!.0 + b?.c!.0 || c?.0 -> DEADLOCK -- porque há 2 Works e apenas uma receção *)
-main ( PPar(PPar(PPar(PPref(AOut('a'), PNil), PPref(AOut('b'), PNil)), POr(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil)))), PPref(AIn('c'), PNil)) )
+main ( PPar(PPar(PPar(PPref(AOut('a'), PNil), PPref(AOut('b'), PNil)), POrI(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil)))), PPref(AIn('c'), PNil)) )
 
 (* a!.0 || b!.0 || a?.c!.(a?.c!.0 + b?.c!.0) + b?.c!.(a?.c!.0 + b?.c!.0) || c?.c?.0 -> DEADLOCK POSSÍVEL -- por causa da escolha *)
-main ( PPar(PPar(PPar(PPref(AOut('a'), PNil), PPref(AOut('b'), PNil)), POr(PPref(AIn('a'), PPref(AOut('c'), POr(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil)) ))), PPref(AIn('b'), PPref(AOut('c'), POr(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil)) ))))), PPref(AIn('c'), PPref(AIn('c'), PNil))) )
+main ( PPar(PPar(PPar(PPref(AOut('a'), PNil), PPref(AOut('b'), PNil)), POrI(PPref(AIn('a'), PPref(AOut('c'), POrI(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil)) ))), PPref(AIn('b'), PPref(AOut('c'), POrI(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil)) ))))), PPref(AIn('c'), PPref(AIn('c'), PNil))) )
 
 (* a!.0 || b!.0 || a?.c!.b?.c!.0 + b?.c!.a?.c!.0 || c?.c?.0  *)
 
 
 (* Listing 9 -> Alternative fan-in pattern *)
 (* a!.0 || b!.0 || (a?.c!.0 + b!.c!.0 + 0) || (c?.0 + 0) -> DEADLOCK -- porque há 2 works e apenas uma receção *)
-main ( PPar(PPar(PPar(PPref(AOut('a'), PNil), PPref(AOut('b'), PNil)), POr(POr(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil))), PNil)), POr(PPref(AIn('c'), PNil), PNil)) )
+main ( PPar(PPar(PPar(PPref(AOut('a'), PNil), PPref(AOut('b'), PNil)), POrI(POrI(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil))), PNil)), POrI(PPref(AIn('c'), PNil), PNil)) )
 
 (* a!.0 || b!.0 || a?.c!.(a?.c!.0 + b?.c!.0 + 0) + b?.c!.(a?.c!.0 + b?.c!.0 + 0) + 0 || c?.c?.0 -> DEADLOCK POSSÍVEL -- por causa da escolha *)
-main ( PPar(PPar(PPar(PPref(AOut('a'), PNil), PPref(AOut('b'), PNil)), POr(POr(PPref(AIn('a'), PPref(AOut('c'), POr(POr(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil))), PNil))), PPref(AIn('b'), PPref(AOut('c'), POr(POr(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil))), PNil))) ), PNil) ), PPref(AIn('c'), PPref(AIn('c'), PNil))) )
+main ( PPar(PPar(PPar(PPref(AOut('a'), PNil), PPref(AOut('b'), PNil)), POrI(POrI(PPref(AIn('a'), PPref(AOut('c'), POrI(POrI(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil))), PNil))), PPref(AIn('b'), PPref(AOut('c'), POrI(POrI(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil))), PNil))) ), PNil) ), PPref(AIn('c'), PPref(AIn('c'), PNil))) )
 
 (* ----------- cond-recur ----------- -> o programa MiGo parece estar mal feito *) (* t0 = a, t1=b *)
 (* b!.b!.0 + b!.0 || a?.0 + b?.b?.0 *) (* -> maneira errada *)
-main ( PPar(POr(PPref(AOut('b'), PPref(AOut('b'), PNil)), PPref(AOut('b'), PNil)), POr(PPref(AIn('a'), PNil), PPref(AIn('b'), PPref(AIn('b'), PNil)))) )
+main ( PPar(POrI(PPref(AOut('b'), PPref(AOut('b'), PNil)), PPref(AOut('b'), PNil)), POrI(PPref(AIn('a'), PNil), PPref(AIn('b'), PPref(AIn('b'), PNil)))) )
 
 (* (b!.(b!.0 + a!.0) + a!.(b!.0 + a!.0)) || (a?.0 + b?.b?.0) -> maneira que eu acho correta *)
-main ( PPar( POr(PPref(AOut('b'), POr(PPref(AOut('b'), PNil), PPref(AOut('a'), PNil))), PPref(AOut('a'), POr(PPref(AOut('b'), PNil), PPref(AOut('a'), PNil)))), POr(PPref(AIn('a'), PNil), PPref(AIn('b'), PPref(AIn('b'), PNil)))) )
+main ( PPar( POrI(PPref(AOut('b'), POrI(PPref(AOut('b'), PNil), PPref(AOut('a'), PNil))), PPref(AOut('a'), POrI(PPref(AOut('b'), PNil), PPref(AOut('a'), PNil)))), POrI(PPref(AIn('a'), PNil), PPref(AIn('b'), PPref(AIn('b'), PNil)))) )
 
 (* ----------- Forselect ----------- *)
 (* b?.a!.0 + c!.0 || c?.0 + b!.a!.0 || a?.a?.0 -> DEADLOCK POSSÍVEL -- por causa da escolha *)
-main ( PPar(PPar(POr(PPref(AIn('b'), PPref(AOut('a'), PNil)), PPref(AOut('c'), PNil)), POr(PPref(AIn('c'), PNil), PPref(AOut('b'), PPref(AOut('a'), PNil)))), PPref(AIn('a'), PPref(AIn('a'), PNil))) )
+main ( PPar(PPar(POrI(PPref(AIn('b'), PPref(AOut('a'), PNil)), PPref(AOut('c'), PNil)), POrI(PPref(AIn('c'), PNil), PPref(AOut('b'), PPref(AOut('a'), PNil)))), PPref(AIn('a'), PPref(AIn('a'), PNil))) )
 
 (* b?.a!.0 + c!.(b?.a!.0 + c!.0) || c?.(c? + b!.a!.0) + b!.a!.0 || a?.a?.0 -> DEADLOCK POSSÍVEL -- por causa da escolha *)
-main ( PPar(PPar(POr(PPref(AIn('b'), PPref(AOut('a'), PNil)), PPref(AOut('c'), POr(PPref(AIn('b'), PPref(AOut('a'), PNil)), PPref(AOut('c'), PNil)))) , POr(PPref(AIn('c'), POr(PPref(AIn('c'), PNil), PPref(AOut('b'), PPref(AOut('a'), PNil)))), PPref(AOut('b'), PPref(AOut('a'), PNil))) ), PPref(AIn('a'), PPref(AIn('a'), PNil))) )
+main ( PPar(PPar(POrI(PPref(AIn('b'), PPref(AOut('a'), PNil)), PPref(AOut('c'), POrI(PPref(AIn('b'), PPref(AOut('a'), PNil)), PPref(AOut('c'), PNil)))) , POrI(PPref(AIn('c'), POrI(PPref(AIn('c'), PNil), PPref(AOut('b'), PPref(AOut('a'), PNil)))), PPref(AOut('b'), PPref(AOut('a'), PNil))) ), PPref(AIn('a'), PPref(AIn('a'), PNil))) )
 
 (* ----------- Giachino dining philosopher ----------- *)
 (* Stack overflow em 1.7.1.1.1.1.1.1.1.60.2.2.12.3.1.2.1 *)
 (* a!.a?.0 || b!.b?.0 || c!.c?.0 || a?.(b?.a!.b!.0 + a!.0) + b?.(a?.b!.a!.0 + b!.0) || b?.(c?.b!.c!.0 + b!.0) + c?.(b?.c!.b!.0 + c!.0) || 
 c?.(a?.c!.a!.0 + c!.0) + a?.(c?.a!.c!.0 + a!.0) *)
 main ( PPar(PPar(PPar(PPar(PPar(PPref(AOut('a'), PPref(AIn('a'), PNil)), PPref(AOut('b'), PPref(AIn('b'), PNil))), PPref(AOut('c'), PPref(AIn('c'), PNil))), 
-POr( PPref(AIn('a'), POr(PPref(AIn('b'), PPref(AOut('a'), PPref(AOut('b'), PNil))), PPref(AOut('a'), PNil))), 
-PPref(AIn('b'), POr(PPref(AIn('a'), PPref(AOut('b'), PPref(AOut('a'), PNil))), PPref(AOut('b'), PNil))))),
-POr( PPref(AIn('b'), POr(PPref(AIn('c'), PPref(AOut('b'), PPref(AOut('c'), PNil))), PPref(AOut('b'), PNil))),
-PPref(AIn('c'), POr(PPref(AIn('b'), PPref(AOut('c'), PPref(AOut('b'), PNil))), PPref(AOut('c'), PNil))))), 
-POr(PPref(AIn('c'), POr(PPref(AIn('a'), PPref(AOut('c'), PPref(AOut('a'), PNil))), PPref(AOut('c'), PNil))),
-PPref(AIn('a'), POr(PPref(AIn('c'), PPref(AOut('a'), PPref(AOut('c'), PNil))), PPref(AOut('a'), PNil))))) )
+POrI( PPref(AIn('a'), POrI(PPref(AIn('b'), PPref(AOut('a'), PPref(AOut('b'), PNil))), PPref(AOut('a'), PNil))), 
+PPref(AIn('b'), POrI(PPref(AIn('a'), PPref(AOut('b'), PPref(AOut('a'), PNil))), PPref(AOut('b'), PNil))))),
+POrI( PPref(AIn('b'), POrI(PPref(AIn('c'), PPref(AOut('b'), PPref(AOut('c'), PNil))), PPref(AOut('b'), PNil))),
+PPref(AIn('c'), POrI(PPref(AIn('b'), PPref(AOut('c'), PPref(AOut('b'), PNil))), PPref(AOut('c'), PNil))))), 
+POrI(PPref(AIn('c'), POrI(PPref(AIn('a'), PPref(AOut('c'), PPref(AOut('a'), PNil))), PPref(AOut('c'), PNil))),
+PPref(AIn('a'), POrI(PPref(AIn('c'), PPref(AOut('a'), PPref(AOut('c'), PNil))), PPref(AOut('a'), PNil))))) )
 
 (* ----------- Jobsched ----------- *)
 (* Um canal fechado consegue sempre receber valores, e neste caso o canal done, quando fechado, é usado para terminar o programa, 
 pelo que se tem de considerar que close(done) envia uma mensagem, caso contrário dá sempre deadlock *)
 (* No entanto há uma discrepância entre o nº de closes e leituras do respetivo canal, uma vez que basta fechar 1 vez e pode ser lido infinitamente *)
 (* a?.0 + b?.0 || a?.0 + b?.0 || a!.(a!.0 + b!.0) + b!.0 *)
-main ( PPar(PPar(POr(PPref(AIn('a'), PNil), PPref(AIn('b'), PNil)), POr(PPref(AIn('a'), PNil), PPref(AIn('b'), PNil))),  POr(PPref(AOut('a'), POr( PPref(AOut('a'), PNil), PPref(AOut('b'), PNil))), PPref(AOut('b'), PNil))) )
+main ( PPar(PPar(POrI(PPref(AIn('a'), PNil), PPref(AIn('b'), PNil)), POrI(PPref(AIn('a'), PNil), PPref(AIn('b'), PNil))),  POrI(PPref(AOut('a'), POrI( PPref(AOut('a'), PNil), PPref(AOut('b'), PNil))), PPref(AOut('b'), PNil))) )
 
 (* ----------- select-with-continuation ----------- -> DEADLOCK sempre *)
 (* a?.a!.0 + b!.a!.0 + c?.a!.0 + a!.0 *)
-main ( POr(POr(POr(PPref(AIn('a'), PPref(AOut('a'), PNil)), PPref(AOut('b'), PPref(AOut('a'), PNil))), PPref(AIn('c'), PPref(AOut('a'), PNil))), PPref(AOut('a'), PNil)) )
+main ( POrI(POrI(POrI(PPref(AIn('a'), PPref(AOut('a'), PNil)), PPref(AOut('b'), PPref(AOut('a'), PNil))), PPref(AIn('c'), PPref(AOut('a'), PNil))), PPref(AOut('a'), PNil)) )
 
 
 ------------------ godel2-benchmarks ------------------
@@ -219,20 +219,20 @@ main ( PPar(PPref(AOut('b'), PPref(AIn('b'), PPref(AOut('b'), PPref(AIn('b'), PN
 
 - dingo-cond-recur -> Apenas 1 iteração; Ações em falta por causa da escolha (falso positivo) (se calhar vale a pena desdobrar cada possibilidade e testar)
 1) (Antes) (b!.0 + a!.0) || (b?.0 + a?.0)
-  PPar(POr(PPref(AOut('b'), PNil), PPref(AOut('a'), PNil)), POr(PPref(AIn('b'), PNil), PPref(AIn('a'), PNil)))
+  PPar(POrI(PPref(AOut('b'), PNil), PPref(AOut('a'), PNil)), POrI(PPref(AIn('b'), PNil), PPref(AIn('a'), PNil)))
 2) (Depois) a!.a!.a!.b!.0 || a?.a?.a?.b?.0
   PPar(PPref(AOut('a'), PPref(AOut('a'), PPref(AOut('a'), PPref(AOut('b'), PNil)))), PPref(AIn('a'), PPref(AIn('a'), PPref(AIn('a'), PPref(AIn('b'), PNil)))))
 
 - dingo-factorial -> O programa .cgo ficou mal feito, pode ser por causa da criação dinâmica de canais
 1) (Antes) (a!.0 + (b?.a!.0 || b!.0)) || a?.0 
-  PPar(POr(PPref(AOut('a'), PNil), PPar(PPref(AIn('b'), PPref(AOut('a'), PNil)), PPref(AOut('b'), PNil))), PPref(AIn('a'), PNil))
+  PPar(POrI(PPref(AOut('a'), PNil), PPar(PPref(AIn('b'), PPref(AOut('a'), PNil)), PPref(AOut('b'), PNil))), PPref(AIn('a'), PNil))
 2) (Depois) a?.0 || b?.a!.0 || c?.b!.0 || d?.c!.0 || e?.d!.0 || e!.0 (Stack overflow)
 PPar(PPar(PPar(PPar(PPar(PPref(AIn('a'), PNil), PPref(AIn('b'), PPref(AOut('a'), PNil))), PPref(AIn('c'), PPref(AOut('b'), PNil))), PPref(AIn('d'), PPref(AOut('c'), PNil))), PPref(AIn('e'), PPref(AOut('d'), PNil))), PPref(AOut('e'), PNil))
 
 - dingo-fanin-pattern -> Por causa do select, há sempre um a ou um b sem ação correspondente; Apenas 1 iteração
 a!.0 || b!.0 || (a?.c!.b?.c!.0 + b?.c!.a?.c!.0) || c?.c?.0
-1) (Antes) PPar(PPar(PPar(PPref(AOut('a'), PNil), PPref(AOut('b'), PNil)), POr(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil)))), PPref(AIn('c'), PNil))
-2) (Depois) PPar(PPar(PPar(PPref(AOut('a'), PNil), PPref(AOut('b'), PNil)), POr(PPref(AIn('a'), PPref(AOut('c'), PPref(AIn('b'), PPref(AOut('c'), PNil)))), PPref(AIn('b'), PPref(AOut('c'), PPref(AIn('a'), PPref(AOut('c'), PNil)))))), PPref(AIn('c'), PPref(AIn('c'), PNil)))
+1) (Antes) PPar(PPar(PPar(PPref(AOut('a'), PNil), PPref(AOut('b'), PNil)), POrI(PPref(AIn('a'), PPref(AOut('c'), PNil)), PPref(AIn('b'), PPref(AOut('c'), PNil)))), PPref(AIn('c'), PNil))
+2) (Depois) PPar(PPar(PPar(PPref(AOut('a'), PNil), PPref(AOut('b'), PNil)), POrI(PPref(AIn('a'), PPref(AOut('c'), PPref(AIn('b'), PPref(AOut('c'), PNil)))), PPref(AIn('b'), PPref(AOut('c'), PPref(AIn('a'), PPref(AOut('c'), PNil)))))), PPref(AIn('c'), PPref(AIn('c'), PNil)))
 
 - dingo-local-deadlock
 a!.0 || a?.b!.0 || a?.b!.0 || b?.b?.0
@@ -252,9 +252,9 @@ PPar(PPref(AIn('a'), PNil), PPref(AOut('a'), PNil))
 
 - go-by-example-select 
 1) a!.0 || b!.0 || (a?.(a?.0 + b?.0) + b?.(a?.0 + b?.0)) -> Dava stack overflow (já não)
-  PPar(PPar(PPref(AOut('a'), PNil), PPref(AOut('b'), PNil)), POr(PPref(AIn('a'), POr(PPref(AIn('a'), PNil), PPref(AIn('b'), PNil))), PPref(AIn('b'), POr(PPref(AIn('a'), PNil), PPref(AIn('b'), PNil)))))
+  PPar(PPar(PPref(AOut('a'), PNil), PPref(AOut('b'), PNil)), POrI(PPref(AIn('a'), POrI(PPref(AIn('a'), PNil), PPref(AIn('b'), PNil))), PPref(AIn('b'), POrI(PPref(AIn('a'), PNil), PPref(AIn('b'), PNil)))))
 2) a!.0 || b!.0 || (a?.b?.0 + b?.a?.0) (... fazer os outros traces ...)
-  PPar(PPar(PPref(AOut('a'), PNil), PPref(AOut('b'), PNil)), POr(PPref(AIn('a'), PPref(AIn('b'), PNil)), PPref(AIn('b'), PPref(AIn('a'), PNil))))
+  PPar(PPar(PPref(AOut('a'), PNil), PPref(AOut('b'), PNil)), POrI(PPref(AIn('a'), PPref(AIn('b'), PNil)), PPref(AIn('b'), PPref(AIn('a'), PNil))))
 
 - partial-deadlock -> Pode ser adaptado para continuar a ter deadlock parcial, mas com o nº ações correto
 a?.b!.0 || a!.0 || a!.0 || b?.b?.0
@@ -272,7 +272,7 @@ PPar(PPar(PPar(PPar(PPar(PPar(PPref(AOut('a'), PNil), PPref(AOut('b'), PNil)), P
 
 - gopher-sel-fixed
 a!.0 || b!.0 ||(a?.0 + b?.0)
-PPar(PPar(PPref(AOut('a'), PNil), PPref(AOut('b'), PNil)), POr(PPref(AIn('a'), PNil), PPref(AIn('b'), PNil)))
+PPar(PPar(PPref(AOut('a'), PNil), PPref(AOut('b'), PNil)), POrI(PPref(AIn('a'), PNil), PPref(AIn('b'), PNil)))
 
 - gopher-primesieve
 a!.a!.a!.a!.a!.a!.0 || a?.b?.c?.0 || a?.b!.a?.a?.b!.0 || b?.c!.0

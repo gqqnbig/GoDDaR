@@ -6,7 +6,7 @@ let rec has_lor exp =
   match exp with
   | LList(a, b) -> has_lor b
   | LPar(a, b) -> (has_lor a)||(has_lor b)
-  | LOr(_,_) -> true
+  | LOrI(_,_) -> true
   | _ -> false
 
 let starts_w_lpar exp =
@@ -16,7 +16,7 @@ let starts_w_lpar exp =
 
 let starts_w_lor exp =
   match exp with
-  | LOr(_, _) -> true
+  | LOrI(_, _) -> true
   | _ -> false
 
 let starts_w_llist exp =
@@ -26,49 +26,49 @@ let starts_w_llist exp =
 
 let has_inner_lor exp =
   match exp with
-  | LList(a, LOr(_,_)) -> true
+  | LList(a, LOrI(_,_)) -> true
   | LList(a, b) -> false
 
 let rec has_lor exp =
   match exp with
   | LPar(a, b) -> (has_lor a)||(has_lor b)
   | LList(a, b) -> has_lor b
-  | LOr(_,_) -> true
+  | LOrI(_,_) -> true
   | LNil -> false
 
 let rec lor_disentangler exp =
   match exp with
-  | LOr(a, b) -> (lor_disentangler a)@(lor_disentangler b)
+  | LOrI(a, b) -> (lor_disentangler a)@(lor_disentangler b)
   | _ -> [exp]
 
 (** [exp] must start with LList
 
-    Returns list of all possible executions wrt. LOr *)
+    Returns list of all possible executions wrt. LOrI *)
 let rec inner_lor_dis exp =
 
-  (** Returns [exp] with only the LLists until an LOr *)
+  (** Returns [exp] with only the LLists until an LOrI *)
   let rec calc_prev_exp exp = 
     match exp with
-    | LList(a, LOr(_,_)) -> LList(a, LNil)
+    | LList(a, LOrI(_,_)) -> LList(a, LNil)
     | LList(a, b) -> LList(a, calc_prev_exp b)
   in
   let prev_exp = calc_prev_exp exp in
-  (** Returns the first LOr after a sequence of LList *)
+  (** Returns the first LOrI after a sequence of LList *)
   let rec calc_lor_exp exp =
     match exp with
-    | LList(a, (LOr(_,_) as x)) -> x
+    | LList(a, (LOrI(_,_) as x)) -> x
     | LList(a, b) -> calc_lor_exp b 
   in 
   let lor_exp = calc_lor_exp exp in
-  (** Receives the first LOr of the [exp],
-      Returns a list of lambda, of the left side of succesive LOr
+  (** Receives the first LOrI of the [exp],
+      Returns a list of lambda, of the left side of succesive LOrI
       *)
   let rec lors exp =
     match exp with
     | LList(a, LNil) as e -> [e]
     | LList(a, b) as e -> [e]
     | LPar(a, b) as e -> [e]
-    | LOr(x, y) -> y::(lors x)
+    | LOrI(x, y) -> y::(lors x)
   in 
   let lors_arr = lors lor_exp in
   let rec join exp subst =
@@ -95,13 +95,13 @@ let rec inner_lor_dis exp =
 let rec lpar_lor_case exp =
   let rec calc_lor_exp exp =
     match exp with
-    | LPar(LOr(a, b), LOr(c, d)) -> LPar(a, c)::LPar(a, d)::LPar(b, c)::LPar(b, d)::[]
-    | LPar(LOr(a, b), x        ) -> LPar(a, x)::LPar(b, x)::[]
-    | LPar(x        , LOr(a, b)) -> LPar(x, a)::LPar(x, b)::[]
+    | LPar(LOrI(a, b), LOrI(c, d)) -> LPar(a, c)::LPar(a, d)::LPar(b, c)::LPar(b, d)::[]
+    | LPar(LOrI(a, b), x        ) -> LPar(a, x)::LPar(b, x)::[]
+    | LPar(x        , LOrI(a, b)) -> LPar(x, a)::LPar(x, b)::[]
 
-    | LPar(LPar(LOr(a, b), LOr(c, d)), x) -> LPar(LPar(a, c), x)::LPar(LPar(a, d), x)::LPar(LPar(b, c), x)::LPar(LPar(b, d), x)::[]
-    | LPar(LPar(LOr(a, b), c        ), x) -> LPar(LPar(a, c), x)::LPar(LPar(b,c), x)::[]
-    | LPar(LPar(a        , LOr(b, c)), x) -> LPar(LPar(a, b), x)::LPar(LPar(a, c), x)::[]
+    | LPar(LPar(LOrI(a, b), LOrI(c, d)), x) -> LPar(LPar(a, c), x)::LPar(LPar(a, d), x)::LPar(LPar(b, c), x)::LPar(LPar(b, d), x)::[]
+    | LPar(LPar(LOrI(a, b), c        ), x) -> LPar(LPar(a, c), x)::LPar(LPar(b,c), x)::[]
+    | LPar(LPar(a        , LOrI(b, c)), x) -> LPar(LPar(a, b), x)::LPar(LPar(a, c), x)::[]
 
     | LPar((LList(_,_) as y), (LList(_,_) as z)) when has_inner_lor y && has_inner_lor z ->
       let inner_res_y = inner_lor_dis y in

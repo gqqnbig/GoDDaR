@@ -34,7 +34,7 @@ let eval_without_sync fmt ((lambdas_sync, lambdas_no_sync, print_ctx) as executi
     match lambda with
     | LNil -> [(lambdas_sync, tl, print_ctx)]
     | LList(_, _) -> [(lambda::lambdas_sync, tl, print_ctx)]
-    | LOr(a, b) -> print_possible_execution fmt execution; [(lambdas_sync, a::tl, conc_lvl print_ctx "1"); (lambdas_sync, b::tl, conc_lvl print_ctx "2")]
+    | LOrI(a, b) -> print_possible_execution fmt execution; [(lambdas_sync, a::tl, conc_lvl print_ctx "1"); (lambdas_sync, b::tl, conc_lvl print_ctx "2")]
     | LPar(a, b) -> [(lambdas_sync, a::b::tl, print_ctx)]
     | LSubst | LChi(_, _) -> failwith "These shouldn't appear"
 
@@ -124,7 +124,7 @@ let rec deadlock_solver_1 (lambda: lambda_tagged) (deadlocked_top_environment: e
   | LList(eta, l) when List.mem eta deadlocked_top_environment -> LPar(LList(eta, LNil), deadlock_solver_1 l deadlocked_top_environment)
   | LList(eta, l) -> LList(eta, deadlock_solver_1 l deadlocked_top_environment)
   | LPar(a, b) -> LPar(deadlock_solver_1 a deadlocked_top_environment, deadlock_solver_1 b deadlocked_top_environment)
-  | LOr(a, b) -> LOr(deadlock_solver_1 a deadlocked_top_environment, deadlock_solver_1 b deadlocked_top_environment)
+  | LOrI(a, b) -> LOrI(deadlock_solver_1 a deadlocked_top_environment, deadlock_solver_1 b deadlocked_top_environment)
   | LNil -> LNil
   | LSubst | LChi(_, _) -> failwith "These shouldn't appear"
 
@@ -138,7 +138,7 @@ let rec deadlock_solver_2 (lambda: lambda_tagged) (deadlocked_top_environment: e
       LPar(LList(EEtaTagged(AOut(c), tag), LNil), LList(eta, deadlock_solver_2 l deadlocked_top_environment))
   | LList(eta, l) -> LList(eta, deadlock_solver_2 l deadlocked_top_environment)
   | LPar(a, b) -> LPar(deadlock_solver_2 a deadlocked_top_environment, deadlock_solver_2 b deadlocked_top_environment)
-  | LOr(a, b) -> LOr(deadlock_solver_2 a deadlocked_top_environment, deadlock_solver_2 b deadlocked_top_environment)
+  | LOrI(a, b) -> LOrI(deadlock_solver_2 a deadlocked_top_environment, deadlock_solver_2 b deadlocked_top_environment)
   | LNil -> LNil
   | LSubst | LChi(_, _) -> failwith "These shouldn't appear"
 

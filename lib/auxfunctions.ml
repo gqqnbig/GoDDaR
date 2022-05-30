@@ -120,7 +120,7 @@ let rec getNestedLeft exp =
   | LPar(LNil, _)
   | LPar(LList(_, _), _)
   | LPar(LChi(_,_), _)
-  | LPar(LOr(_,_), _) -> exp
+  | LPar(LOrI(_,_), _) -> exp
   | LPar(l1, _) -> getNestedLeft l1
 
 let rec getParNum exp =
@@ -128,7 +128,7 @@ let rec getParNum exp =
   | LPar(LNil, _)
   | LPar(LList(_, _), _)
   | LPar(LChi(_,_), _)
-  | LPar(LOr(_,_), _) -> 2
+  | LPar(LOrI(_,_), _) -> 2
   | LPar(l1, _) -> 1 + getParNum l1
   | _ -> 0
 
@@ -203,15 +203,15 @@ let rec can_chi_nested_progress exp =
   | _ -> false
 
 (**
-  Checks if the given expression has a nested [LOr], or is an [LOr].
+  Checks if the given expression has a nested [LOrI], or is an [LOrI].
     The given expression must be [assocLeft] first.
     *)
 let rec has_nested_or exp =
   match exp with
-  | LOr(_,_)
-  | LPar(LOr(_,_), LNil) | LPar(LNil, LOr(_,_))
-  | LPar(LOr(_,_), LList(_,_)) | LPar(LList(_,_), LOr(_,_))
-  | LPar(LOr(_,_), LChi(_,_)) | LPar(LChi(_,_), LOr(_,_)) -> true
+  | LOrI(_,_)
+  | LPar(LOrI(_,_), LNil) | LPar(LNil, LOrI(_,_))
+  | LPar(LOrI(_,_), LList(_,_)) | LPar(LList(_,_), LOrI(_,_))
+  | LPar(LOrI(_,_), LChi(_,_)) | LPar(LChi(_,_), LOrI(_,_)) -> true
   | LPar(l1, _) -> has_nested_or l1
   | _ -> false
 
@@ -219,7 +219,7 @@ let rec has_lor_at ll (a, b) =
   let a_ll = List.nth ll a in
   let b_ll = List.nth ll b in
   match a_ll, b_ll with
-  | LOr(_,_), LOr(_,_) | LOr(_,_), _ | _, LOr(_,_) -> true
+  | LOrI(_,_), LOrI(_,_) | LOrI(_,_), _ | _, LOrI(_,_) -> true
   | _, _ -> false
 
 let rec rem_print_ctx arr =
@@ -246,7 +246,7 @@ let rec use_lsubst exp sub =
   match exp with
   | LSubst -> sub
   | LPar(a, b) -> LPar(use_lsubst a sub, use_lsubst b sub)
-  | LOr(a, b) -> LOr(use_lsubst a sub, use_lsubst b sub)
+  | LOrI(a, b) -> LOrI(use_lsubst a sub, use_lsubst b sub)
   | LList(a, b) -> LList(a, use_lsubst b sub)
   | LNil -> LNil
 

@@ -44,7 +44,7 @@ let rec correct_chi_lambda ll curr_i i_at =
       | LList(EEta(_), LList(EEta(a), l)) -> LList(EEta(a), l)::tl
       | LList(EEta(_), LNil) -> LNil::tl
       | LList(EEta(_), LPar(m1, m2)) -> LPar(m1,m2)::tl
-      | LList(EEta(_), LOr(m1,m2)) -> LOr(m1,m2)::tl
+      | LList(EEta(_), LOrI(m1,m2)) -> LOrI(m1,m2)::tl
       | LNil -> tl
       | _ -> print_lambdas !fmt hd ;raise (RuntimeException "correct_chi_lambda failed: No match "))
     else
@@ -57,7 +57,7 @@ let rec find_chi_lambda (LChi(et, hd::tl)) curr_i i_at =
     | LList(a, LList(b, l)) -> a
     | LList(a, LNil) -> a
     | LList(a, LPar(_, _)) -> a
-    | LList(a, LOr(_,_)) -> a
+    | LList(a, LOrI(_,_)) -> a
     | _ -> print_lambdas !fmt hd ;raise (RuntimeException "find_chi_lambda failed: Unexpected match")) (* Pode ser preciso para o 3º caso*)
   else
     find_chi_lambda (LChi(et, tl)) (curr_i+1) i_at
@@ -205,12 +205,12 @@ let rec case_i chi i_at =
       let l_or = List.nth ll i_at in
       let rec treat_or (LChi(el, ll) as chi) i_at n_or =
         match n_or with
-        | LOr(LOr(_, _) as x, LList(a, b)) -> (treat_or chi i_at x)@[LChi(subst_at el a 0 i_at, subst_at ll b 0 i_at)]
-        | LOr(LOr(_, _) as x, LNil) -> (treat_or chi i_at x)@[LChi(el, subst_at ll (LNil) 0 i_at)]
-        | LOr(LList(a, b), LList(c, d)) -> [LChi(subst_at el a 0 i_at, subst_at ll b 0 i_at); LChi(subst_at el c 0 i_at, subst_at ll d 0 i_at)]
-        | LOr(LList(a, b), LNil) -> [LChi(subst_at el a 0 i_at, subst_at ll b 0 i_at); LChi(el, subst_at ll (LNil) 0 i_at)]
-        | LOr(LNil, LList(a, b)) -> [LChi(el, subst_at ll (LNil) 0 i_at); LChi(subst_at el a 0 i_at, subst_at ll b 0 i_at)]
-        | LOr(LNil, LNil) -> [LChi(el, subst_at ll (LNil) 0 i_at)]
+        | LOrI(LOrI(_, _) as x, LList(a, b)) -> (treat_or chi i_at x)@[LChi(subst_at el a 0 i_at, subst_at ll b 0 i_at)]
+        | LOrI(LOrI(_, _) as x, LNil) -> (treat_or chi i_at x)@[LChi(el, subst_at ll (LNil) 0 i_at)]
+        | LOrI(LList(a, b), LList(c, d)) -> [LChi(subst_at el a 0 i_at, subst_at ll b 0 i_at); LChi(subst_at el c 0 i_at, subst_at ll d 0 i_at)]
+        | LOrI(LList(a, b), LNil) -> [LChi(subst_at el a 0 i_at, subst_at ll b 0 i_at); LChi(el, subst_at ll (LNil) 0 i_at)]
+        | LOrI(LNil, LList(a, b)) -> [LChi(el, subst_at ll (LNil) 0 i_at); LChi(subst_at el a 0 i_at, subst_at ll b 0 i_at)]
+        | LOrI(LNil, LNil) -> [LChi(el, subst_at ll (LNil) 0 i_at)]
         | _ -> print_lambdas !fmt n_or; raise (RuntimeException "No match in treat_or inside case_i\n")
       in treat_or chi i_at l_or
   | _ -> print_lambdas !fmt chi; raise (RuntimeException "No match in case_i\n")
@@ -221,11 +221,11 @@ let case_f_or (LChi(el, ll) as chi) ((a, b) as i_pair) =
   let elemA_ll = List.nth ll a in
   let elemB_ll = List.nth ll b in
   match elemA_ll, elemB_ll with
-  | LOr(_, _), LNil -> let r_chi = reduceChi chi b 0 in case_i r_chi a
-  | LNil, LOr(_, _) -> let r_chi = reduceChi chi a 0 in case_i r_chi (b-1)
-  | LOr(_, _), LList(_, _) -> let i_chi = case_i chi a in map (fun x -> case_e (List.nth el b) x b) i_chi
-  | LList(_, _), LOr(_, _) -> let i_chi = case_i chi b in map (fun x -> case_e (List.nth el a) x a) i_chi
-  | LOr(_, _), LOr(_, _) -> let n_chi = case_i chi b in flatten2( map (fun x -> case_i x a) n_chi )
+  | LOrI(_, _), LNil -> let r_chi = reduceChi chi b 0 in case_i r_chi a
+  | LNil, LOrI(_, _) -> let r_chi = reduceChi chi a 0 in case_i r_chi (b-1)
+  | LOrI(_, _), LList(_, _) -> let i_chi = case_i chi a in map (fun x -> case_e (List.nth el b) x b) i_chi
+  | LList(_, _), LOrI(_, _) -> let i_chi = case_i chi b in map (fun x -> case_e (List.nth el a) x a) i_chi
+  | LOrI(_, _), LOrI(_, _) -> let n_chi = case_i chi b in flatten2( map (fun x -> case_i x a) n_chi )
   | _ -> printMode !fmt elemA_ll true; printMode !fmt elemB_ll true; raise (RuntimeException "No match in case_f_or\n")
 
 
@@ -280,11 +280,11 @@ let rec sStepEval exp =
   | LNil -> LNil
   | LList(e, l) -> exp
   | LChi(el, ll) -> exp
-  | LOr(_, _) -> exp
+  | LOrI(_, _) -> exp
   | LPar((LPar(_,_) as l1), (LNil as l2))
   | LPar((LPar(_,_) as l1), (LList(_,_) as l2))
   | LPar((LPar(_,_) as l1), (LChi(_,_) as l2)) 
-  | LPar((LPar(_,_) as l1), (LOr(_,_) as l2)) -> LPar(sStepEval l1, sStepEval l2)
+  | LPar((LPar(_,_) as l1), (LOrI(_,_) as l2)) -> LPar(sStepEval l1, sStepEval l2)
   | LPar(l1, l2) ->
     let res = eval_par l1 l2 in
     remLNils res
@@ -305,7 +305,7 @@ let rec eval_chi_list ((LPar(l1, l2), ctx) as exp) =
               if has_lpar_in_chi l1 && (isLPar (List.nth ll hd)) then
                 (([[(remLNils (LPar(case_h e l1 hd, l)), n_ctx)]])@(iter tl e (i+1)))
               else
-                  if isLOr (List.nth ll hd) then 
+                  if isLOrI (List.nth ll hd) then 
                     let case_i = case_i l1 hd in
                       [List.mapi ( fun j x -> (remLNils (LPar(x, l)), conc_lvl n_ctx (string_of_int (j+1)))) case_i] 
                   else
@@ -314,7 +314,7 @@ let rec eval_chi_list ((LPar(l1, l2), ctx) as exp) =
               if has_lpar_in_chi l2 && (isLPar (List.nth ll hd)) then
                 (([[(remLNils (LPar(l, case_h e l2 hd)), n_ctx)]])@(iter tl e (i+1)))
               else
-                  if isLOr (List.nth ll hd) then 
+                  if isLOrI (List.nth ll hd) then 
                     let case_i = case_i l2 hd in
                         [List.mapi ( fun j x -> (remLNils (LPar(l, x)), conc_lvl n_ctx (string_of_int (j+1))) ) case_i]
                   else
@@ -392,7 +392,7 @@ match expInArr with
   begin
     printCtxLevel !fmt ctx;
     match l with
-    | LOr(l1, l2) ->
+    | LOrI(l1, l2) ->
       let ass_lo = assocLeft l in
       printMode !fmt ass_lo ctx.print;
       let ctx_l = conc_lvl ctx "1" in
@@ -401,20 +401,20 @@ match expInArr with
         append (new_eval tl) (new_eval [(getL1 ass_lo, ctx_l); (getL2 ass_lo, ctx_r)])
     | LPar(l1, l2) ->
       let ass_lp = assocLeft l in
-      (* If [LPar] has a nested [LOr] *)
+      (* If [LPar] has a nested [LOrI] *)
       if has_nested_or ass_lp then (
         printMode !fmt ass_lp ctx.print;
         let ctx_l = conc_lvl ctx "1" in
         let ctx_r = conc_lvl ctx "2" in
         match getNestedLeft ass_lp with
-        | LPar(LOr(a,b), c) -> 
+        | LPar(LOrI(a,b), c) -> 
           if getParNum ass_lp <=2 then
             append (new_eval tl) (new_eval [(LPar(a, c), ctx_l); (LPar(b, c), ctx_r)])
           else 
             let add_after_l = addAfterChiEval2 (LPar(a,c), ctx_l) (assocLeftList (getRestPars (lparToList ass_lp))) in
             let add_after_r = addAfterChiEval2 (LPar(b,c), ctx_r) (assocLeftList (getRestPars (lparToList ass_lp))) in
               append (new_eval tl) (new_eval [add_after_l; add_after_r])
-        | LPar(a, LOr(b, c)) -> 
+        | LPar(a, LOrI(b, c)) -> 
           if getParNum ass_lp <=2 then
             append (new_eval tl) (new_eval [(LPar(a, b), ctx_l); (LPar(a, c), ctx_r)])
           else
@@ -423,7 +423,7 @@ match expInArr with
               append (new_eval tl) (new_eval [add_after_l; add_after_r])
         | _ -> printMode !fmt (getNestedLeft ass_lp) true; raise (RuntimeException "No match in new_eval OR")
       ) else
-        (* If [LPar] doesn't have a nested [LOr] *)
+        (* If [LPar] doesn't have a nested [LOrI] *)
         if has_nested_chi ass_lp = false then (
           (* If [LPar] doesn't have a nested [LChi] *)
           printMode !fmt ass_lp ctx.print;
@@ -579,7 +579,7 @@ let rec get_top_lvl arr =
 let rec deadlock_solver_1 exp top_lvl =
   match exp with
   | LPar(a , b) -> LPar(deadlock_solver_1 a top_lvl, deadlock_solver_1 b top_lvl)
-  | LOr(a, b) -> LOr(deadlock_solver_1 a top_lvl, deadlock_solver_1 b top_lvl)
+  | LOrI(a, b) -> LOrI(deadlock_solver_1 a top_lvl, deadlock_solver_1 b top_lvl)
   | LNil -> LNil
   | LList(EEta(_) as a, b) -> if List.mem a top_lvl then LPar(LList(a, LNil), b) else LList(a, deadlock_solver_1 b top_lvl)
   | LChi(a, b) -> 
@@ -592,7 +592,7 @@ let rec deadlock_solver_1 exp top_lvl =
 let rec deadlock_solver_2 exp top_lvl =
   match exp with
   | LPar(a, b) -> LPar(deadlock_solver_2 a top_lvl, deadlock_solver_2 b top_lvl)
-  | LOr(a, b) -> LOr(deadlock_solver_2 a top_lvl, deadlock_solver_2 b top_lvl)
+  | LOrI(a, b) -> LOrI(deadlock_solver_2 a top_lvl, deadlock_solver_2 b top_lvl)
   | LNil -> LNil
   | LList(EEta(AOut(_)) as a, b) when List.mem a top_lvl -> LPar(LList(a, LNil), deadlock_solver_2 b top_lvl)
   | LList(EEta(AOut(k)), b) when List.mem (EEta(AIn(k))) top_lvl -> deadlock_solver_2 b top_lvl
@@ -625,7 +625,7 @@ let rec find_deadl_exp exp dexp =
   else
     match exp with
     | LPar(a, b) -> if a = dexp then LPar(LSubst, b) else if b = dexp then LPar(a, LSubst) else LPar(find_deadl_exp a dexp, find_deadl_exp b dexp)
-    | LOr(a, b) -> if a = dexp then LOr(LSubst, b) else if b = dexp then LOr(a, LSubst) else LOr(find_deadl_exp a dexp, find_deadl_exp b dexp)
+    | LOrI(a, b) -> if a = dexp then LOrI(LSubst, b) else if b = dexp then LOrI(a, LSubst) else LOrI(find_deadl_exp a dexp, find_deadl_exp b dexp)
     | LList(a, b) -> if b = dexp then LList(a, LSubst) else LList(a, find_deadl_exp b dexp)
     | LNil -> LNil
     | _ -> raise ( RuntimeException "No match")

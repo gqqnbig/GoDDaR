@@ -9,11 +9,13 @@ open Types
 %token OUTPUT
 %token INPUT
 %token PREFIX
-%token CHOICE
+%token EXTERNAL_CHOICE
+%token INTERNAL_CHOICE
 %token PAR
 %token EOF
 
-%left CHOICE
+%left INTERNAL_CHOICE
+%left EXTERNAL_CHOICE
 %left PAR
 %left PREFIX
 
@@ -30,5 +32,6 @@ expr:
     | s = LABEL; OUTPUT; PREFIX; e = expr { PPref(AOut(s), e) }
     | s = LABEL; INPUT; PREFIX; e = expr { PPref(AIn(s), e) }
     | LPAREN; e = expr; RPAREN { e }
-    | e1 = expr; CHOICE; e2 = expr { POr(e1, e2) }
+    | e1 = expr; INTERNAL_CHOICE; e2 = expr { POrI(e1, e2) }
+    | e1 = expr; EXTERNAL_CHOICE; e2 = expr { POrE(e1, e2) }
     | e1 = expr; PAR; e2 = expr { PPar(e1, e2) }
