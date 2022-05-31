@@ -24,7 +24,7 @@ let possible_executionToLambda (lambdas_sync, lambdas_no_sync, print_ctx: possib
 
 let print_possible_execution fmt (lambdas_sync, lambdas_no_sync, print_ctx: possible_execution) = 
   printCtxLevel_noln fmt print_ctx;
-  printMode fmt (assocLeftList (List.map lambdaTaggedToLambda (lambdas_no_sync@lambdas_sync))) print_ctx.print;
+  printMode_no_nl fmt (assocLeftList (List.map lambdaTaggedToLambda (lambdas_no_sync@lambdas_sync))) print_ctx.print;
   flush stdout
 
 let eval_without_sync fmt ((lambdas_sync, lambdas_no_sync, print_ctx) as execution: possible_execution) =
@@ -99,7 +99,7 @@ let eval fmt (lambda: lambda_tagged) =
     | [] -> List.rev deadlocks
     | ((lambdas_sync, lambdas_no_sync, print_ctx) as execution)::tl -> 
       let (updated_possible_executions_list, updated_deadlocks) = 
-        (* Reduce the process util only syncronization is possible *)
+        (* Reduce the process until only syncronization is possible *)
         if lambdas_no_sync <> [] then (
           (((eval_without_sync fmt execution)@tl), deadlocks)
         ) else (
@@ -113,7 +113,7 @@ let eval fmt (lambda: lambda_tagged) =
           else
             ((sync_possible_executions@tl), deadlocks)
       ) in
-        (do_eval [@tailcall]) updated_possible_executions_list updated_deadlocks
+        do_eval updated_possible_executions_list updated_deadlocks
   in
     do_eval [([], [lambda], {level="1"; print=true})] []
 
@@ -125,6 +125,7 @@ let rec deadlock_solver_1 (lambda: lambda_tagged) (deadlocked_top_environment: e
   | LList(eta, l) -> LList(eta, deadlock_solver_1 l deadlocked_top_environment)
   | LPar(a, b) -> LPar(deadlock_solver_1 a deadlocked_top_environment, deadlock_solver_1 b deadlocked_top_environment)
   | LOrI(a, b) -> LOrI(deadlock_solver_1 a deadlocked_top_environment, deadlock_solver_1 b deadlocked_top_environment)
+  | LOrE(a, b) -> LOrE(deadlock_solver_1 a deadlocked_top_environment, deadlock_solver_1 b deadlocked_top_environment)
   | LNil -> LNil
   | LSubst | LChi(_, _) -> failwith "These shouldn't appear"
 
@@ -139,6 +140,7 @@ let rec deadlock_solver_2 (lambda: lambda_tagged) (deadlocked_top_environment: e
   | LList(eta, l) -> LList(eta, deadlock_solver_2 l deadlocked_top_environment)
   | LPar(a, b) -> LPar(deadlock_solver_2 a deadlocked_top_environment, deadlock_solver_2 b deadlocked_top_environment)
   | LOrI(a, b) -> LOrI(deadlock_solver_2 a deadlocked_top_environment, deadlock_solver_2 b deadlocked_top_environment)
+  | LOrE(a, b) -> LOrE(deadlock_solver_2 a deadlocked_top_environment, deadlock_solver_2 b deadlocked_top_environment)
   | LNil -> LNil
   | LSubst | LChi(_, _) -> failwith "These shouldn't appear"
 
@@ -153,8 +155,7 @@ let rec detect_and_resolve fmt lambdaTaggedExp =
     (* List.iter (fun eta -> (print_eta_tagged fmt eta; fprintf fmt "\n")) deadlocked_top_environments; *)
     let deadlock_solver = if !ds < 2 then deadlock_solver_1 else deadlock_solver_2 in
     let solved_exp = (deadlock_solver lambdaTaggedExp deadlocked_top_environments) in
-    let deadlocked_executions_lambda = List.map possible_executionToLambda deadlocked_executions in
-    (true, deadlocked_executions_lambda, [solved_exp])
+    (true, deadlocked_executions, [solved_exp])
   )
 
 let main fmt exp: bool * lambda list * lambda list (*passed act_ver * deadlocked processes * resolved process*)=
@@ -191,11 +192,11 @@ let main fmt exp: bool * lambda list * lambda list (*passed act_ver * deadlocked
         fprintf fmt "\nNo deadlocks!\n";
       ) else (
         fprintf fmt "\nDeadlocks:\n";
-        List.iter ( fun lambda -> printMode fmt lambda true;) deadlocks;
+        List.iter (print_possible_execution fmt) deadlocks;
         fprintf fmt "Resolved:\n";
         printMode fmt (List.hd resolved) true
       );
-      (passed_act_ver, deadlocks, resolved)
+      (passed_act_ver, List.map possible_executionToLambda deadlocks, resolved)
     )
   with
   | _ -> Printexc.print_backtrace stdout; exit 1

@@ -103,17 +103,19 @@ let rec print_proc_simple fmt p =
 
 (* ----------- Misc ----------- *)
 
-let printMode fmt exp p =
-  if p then
+let printMode_base nl fmt exp p =
+  if p then (
     if !verbose then (
       print_lambdas fmt exp;
       fprintf fmt " ---> ";
       print_proc_simple fmt (toProc exp);
-      fprintf fmt "\n"
-    )else if !simplified then(
+    ) else if !simplified then(
       print_proc_simple fmt (toProc exp);
-      fprintf fmt "\n"
     )
+  ); if nl then fprintf fmt "\n"
+
+let printMode = printMode_base true
+let printMode_no_nl = printMode_base false
 
 let rec print_list_comb fmt lst =
     let rec find_list lst =
