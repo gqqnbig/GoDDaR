@@ -36,7 +36,8 @@ let possible_executions exp =
             (* Add eta to eta sequence*)
             | LList(eta, l) -> [(eta_sequences, (l, eta::eta_sequence)::tl_parallel_processes)]
             (* Append the two possible exectutions *)
-            | LOrI(a, b) -> (eta_sequences, (a, eta_sequence)::tl_parallel_processes)::
+            | LOrI(a, b)
+            | LOrE(a, b) -> (eta_sequences, (a, eta_sequence)::tl_parallel_processes)::
                             (eta_sequences, (b, eta_sequence)::tl_parallel_processes)::[]
             (* Add the extra parallel process  *)
             | LPar(a, b) -> [(eta_sequences, (a, eta_sequence)::(b, [])::tl_parallel_processes)]

@@ -12,110 +12,119 @@ open Cmd
 exception RuntimeException of string
 
 type possible_execution =
-  (lambda_tagged  list) * (* List of the parallel compositions that can't reduce without syncronization*)
-  (lambda_tagged  list) * (* List of the parallel compositions that might reduce wihtout syncronization,
-                      and as such need to be processed before the previous list*)
+  (lambda_tagged  list) * (* List of the parallel compositions that can't reduce without syncronization *)
   print_ctx
 
-let possible_executionToLambda (lambdas_sync, lambdas_no_sync, print_ctx: possible_execution): lambda =
-  let lambdas_sync = List.map lambdaTaggedToLambda lambdas_sync in
-  let lambdas_no_sync = List.map lambdaTaggedToLambda lambdas_no_sync in
-  assocLeftList (lambdas_sync@lambdas_no_sync)
+let possible_executionToLambda (lambdas, print_ctx: possible_execution): lambda =
+  assocLeftList (List.map lambdaTaggedToLambda lambdas)
 
-let print_possible_execution fmt (lambdas_sync, lambdas_no_sync, print_ctx: possible_execution) = 
+let print_possible_execution fmt (lambdas, print_ctx: possible_execution) = 
   printCtxLevel_noln fmt print_ctx;
-  printMode_no_nl fmt (assocLeftList (List.map lambdaTaggedToLambda (lambdas_no_sync@lambdas_sync))) print_ctx.print;
+  printMode fmt (assocLeftList (List.map lambdaTaggedToLambda (lambdas))) print_ctx.print;
   flush stdout
 
-let eval_without_sync fmt ((lambdas_sync, lambdas_no_sync, print_ctx) as execution: possible_execution) =
-  match lambdas_no_sync with
-  | [] -> [execution]
-  | lambda::tl -> 
-    match lambda with
-    | LNil -> [(lambdas_sync, tl, print_ctx)]
-    | LList(_, _) -> [(lambda::lambdas_sync, tl, print_ctx)]
-    | LOrI(a, b) -> print_possible_execution fmt execution; [(lambdas_sync, a::tl, conc_lvl print_ctx "1"); (lambdas_sync, b::tl, conc_lvl print_ctx "2")]
-    | LPar(a, b) -> [(lambdas_sync, a::b::tl, print_ctx)]
-    | LSubst | LChi(_, _) -> failwith "These shouldn't appear"
 
+let get_chan_from_action action =
+  match action with
+  | AIn(c) -> c
+  | AOut(c) -> c
 
-let find_sync (top_environment: eta_tagged list) : (int * int list) list (* pairs (input index, output index list) list *) =
-  let rec do_find_sync (top_environment_remaining: eta_tagged list) input_index (top_environment: eta_tagged list) result =
-    match top_environment_remaining with
-    | [] -> result
-    | EEtaTagged((AIn(c) as a), tag)::tl ->
-      let output_indexes = findi (fun (EEtaTagged(b, _): eta_tagged) -> a = compl_action b) top_environment in
-      (do_find_sync [@tailcall]) tl (input_index+1) top_environment ((input_index, output_indexes)::result)
-    | EEtaTagged(AOut(_), tag)::tl -> 
-      (do_find_sync [@tailcall]) tl (input_index+1) top_environment result
+let eval_sync fmt ((lambdas, print_ctx) as execution: possible_execution): possible_execution list =
+  let fmt = null_fmt in
+  let rec do_eval_sync depth (action: action option) ((lambdas, print_ctx): possible_execution): possible_execution list =
+    fprintf fmt "%s" (String.make depth ' ');
+    fprintf fmt "Action: %s " (Option.value (Option.map (fun a -> sprintf "Some(%c)" (get_chan_from_action a)) action) ~default:"None");
+    printMode fmt (lambdaTaggedToLambda (assocLeftList (List.rev lambdas))) true;
+    fprintf fmt "%s" (String.make depth ' ');
+    match action, lambdas with
+    | None, [] -> fprintf fmt "None, []\n" ; []
+    | _, [] -> fprintf fmt "_, []\n"; []
+    | None, (LList(EEtaTagged(a, _), b) as l)::tl ->
+      fprintf fmt "None, LList\n";
+      (
+        let res = (do_eval_sync (depth+1) None (tl, print_ctx)) in
+        List.map (fun (lambdas, print_ctx) -> (l::lambdas, print_ctx)) res
+      ) @ (
+        let res = (do_eval_sync (depth+1) (Some(a)) (tl, print_ctx)) in
+        List.map (fun (lambdas, print_ctx) -> (b::lambdas, print_ctx)) res
+      )
+    | Some(action), (LList(EEtaTagged(a, _), b) as l)::tl ->
+      fprintf fmt "Some, LList\n";
+      if a = compl_action action then (
+        (* found match *)
+        fprintf fmt "%s" (String.make depth ' '); fprintf fmt "-Match\n";
+        [(b::tl, next_ctx print_ctx)]
+      ) else (
+        (* Keep seaching*)
+        fprintf fmt "%s" (String.make depth ' '); fprintf fmt "-No Match\n";
+        List.map (fun (lambdas, print_ctx) -> (l::lambdas, print_ctx)) (do_eval_sync (depth+1) (Some(action)) (tl, print_ctx))
+      )
+    | None, LOrI(a, b)::tl ->
+      fprintf fmt "_, LOrI\n";
+      (*
+      let res1 = (do_eval_sync (depth+1) action (a::tl, conc_lvl print_ctx "1")) in
+      let res2 = (do_eval_sync (depth+1) action (b::tl, conc_lvl print_ctx "2")) in
+      res1 @ res2
+      *)
+      [(a::tl, conc_lvl print_ctx "1"); (b::tl, conc_lvl print_ctx "2")]
+    | Some(_), LOrI(a, b)::tl ->
+      fprintf fmt "_, LOrI\n";
+      let res1 = (do_eval_sync (depth+1) action (a::tl, conc_lvl print_ctx "1")) in
+      let res2 = (do_eval_sync (depth+1) action (b::tl, conc_lvl print_ctx "2")) in
+      res1 @ res2
+    | None, LOrE(a, b)::tl ->
+      (
+        List.map (fun (lambdas, print_ctx) -> (LOrE((assocLeftList lambdas), b)::tl, print_ctx))
+          (do_eval_sync (depth+1) action ([a], conc_lvl print_ctx "1"))
+      ) @ (
+        List.map (fun (lambdas, print_ctx) -> (LOrE(a, (assocLeftList lambdas))::tl, print_ctx))
+          (do_eval_sync (depth+1) action ([b], conc_lvl print_ctx "1"))
+      )
+    | Some(_), LOrE(a, b)::tl ->
+      fprintf fmt "_, LOrE\n";
+      (
+        do_eval_sync (depth+1) action (a::tl, conc_lvl print_ctx "1")
+      ) @ (
+        do_eval_sync (depth+1) action (b::tl, conc_lvl print_ctx "2")
+      )
+    | _, LPar(a, b)::tl ->
+      fprintf fmt "_, LPar\n";
+      do_eval_sync (depth+1) action (a::b::tl, print_ctx)
+    | _, LNil::tl ->
+      fprintf fmt "_, LNil\n";
+      do_eval_sync (depth+1) action (tl, print_ctx)
+    | _, LChi(_, _)::_ | _, LSubst::_ -> failwith "These shouldn't appear"
   in
-    do_find_sync top_environment 0 top_environment []
-
-let sync lambdas_sync input_index output_index =
-  let rec do_sync current_index lambdas_sync input_index output_index (updated_lambdas_sync, updated_lambdas_no_sync) =
-    match lambdas_sync with
-    | [] -> (updated_lambdas_sync, updated_lambdas_no_sync)
-    | (LList(eta, l) as lambda)::tl ->
-      if current_index = input_index || current_index = output_index then
-        let updated_lambda = if l = LNil then [] else [l] in
-        do_sync (current_index+1) tl input_index output_index (updated_lambdas_sync, updated_lambda@updated_lambdas_no_sync)
-      else
-        do_sync (current_index+1) tl input_index output_index (lambda::updated_lambdas_sync, updated_lambdas_no_sync)
-    | _ -> failwith "All lambda in Lambda_sync must start with LList"
-  in
-  do_sync 0 lambdas_sync input_index output_index ([], [])
-
-let top_environment ((lambdas_sync, lambdas_no_sync, print_ctx): possible_execution) =
+  let res = (do_eval_sync 0 None (execution)) in
   List.map (
-    function
-    | LList(eta, _) -> eta
-    | _ -> failwith "All lambda in Lambda_sync must start with LList"
-  ) lambdas_sync
-
-let eval_sync ((lambdas_sync, lambdas_no_sync, print_ctx) as execution: possible_execution) =
-  assert (List.length lambdas_no_sync = 0);
-  let top_environment = top_environment execution in
-  let sync_index_pair_list = find_sync top_environment in
-  let i = ref 0 in
-  List.flatten (
-    (* For each input action *)
-    List.map (
-      fun (input_index, output_index_list) ->
-        (* For each output synced with the input *)
-        List.map (
-          fun output_index -> (
-            (* [lambdas_sync] without input and output action, effectivly simulating the syncronization *)
-            let (updated_lambdas_sync, updated_lambdas_no_sync) = sync lambdas_sync input_index output_index in
-            i := !i+1;
-            ((updated_lambdas_sync, updated_lambdas_no_sync, conc_lvl print_ctx (string_of_int !i)): possible_execution)
-          )
-        ) output_index_list
-    ) sync_index_pair_list
-  )
+    fun ((lambdas, print_ctx): possible_execution) ->
+      (List.filter ((<>) LNil) lambdas, print_ctx)
+  ) res
 
 let eval fmt (lambda: lambda_tagged) = 
-  let rec do_eval (executions: possible_execution list) (deadlocks: possible_execution list)=
+  let rec do_eval (executions: possible_execution list) (deadlocks: possible_execution list) =
     match executions with
     | [] -> List.rev deadlocks
-    | ((lambdas_sync, lambdas_no_sync, print_ctx) as execution)::tl -> 
-      let (updated_possible_executions_list, updated_deadlocks) = 
-        (* Reduce the process until only syncronization is possible *)
-        if lambdas_no_sync <> [] then (
-          (((eval_without_sync fmt execution)@tl), deadlocks)
-        ) else (
-          print_possible_execution fmt execution;
-          let sync_possible_executions = eval_sync execution in
-          if sync_possible_executions = [] then
-            if not (lambdas_sync = [] && lambdas_no_sync = []) then
-              (tl, (execution::deadlocks))
-            else
-              (tl, deadlocks)
-          else
-            ((sync_possible_executions@tl), deadlocks)
-      ) in
-        do_eval updated_possible_executions_list updated_deadlocks
+    | ((lambdas, print_ctx) as execution)::tl -> 
+      print_possible_execution fmt execution;
+      (* Strip LNil processes *)
+      let lambdas = List.map (remLNils) lambdas in
+      if (List.for_all ((=) LNil) lambdas) then
+        do_eval tl deadlocks
+      else (
+        let reductions = eval_sync fmt execution in
+        (*
+        fprintf fmt "REDUCTIONS:\n";
+        List.iter (print_possible_execution fmt) reductions;
+        fprintf fmt "--REDUCTIONS:\n";
+        *)
+        if reductions = [] then
+          do_eval tl (execution::deadlocks)
+        else
+          do_eval (reductions@tl) deadlocks
+      )
   in
-    do_eval [([], [lambda], {level="1"; print=true})] []
+    do_eval [([lambda], {level="1"; print=true})] []
 
 let rec deadlock_solver_1 (lambda: lambda_tagged) (deadlocked_top_environment: eta_tagged list): (lambda_tagged) =
   match lambda with
@@ -144,6 +153,19 @@ let rec deadlock_solver_2 (lambda: lambda_tagged) (deadlocked_top_environment: e
   | LNil -> LNil
   | LSubst | LChi(_, _) -> failwith "These shouldn't appear"
 
+let rec top_environment ((lambdas, print_ctx): possible_execution): eta_tagged list =
+  match lambdas with
+  | [] -> []
+  | LList(eta, _)::tl ->
+    eta::(top_environment (tl, print_ctx))
+  | LOrE(a, b)::tl
+  | LOrI(a, b)::tl ->
+    (top_environment ([a], print_ctx))@(top_environment ([b], print_ctx))@top_environment (tl, print_ctx)
+  | LPar(a, b)::tl ->
+    top_environment (a::b::tl, print_ctx)
+  | LNil::tl ->
+    top_environment (tl, print_ctx)
+  | LSubst::_ | LChi(_, _)::_ -> failwith "These shouldn't appear"
 
 (* A single iteration of a deadlock detection and resolution *)
 let rec detect_and_resolve fmt lambdaTaggedExp =
@@ -157,6 +179,7 @@ let rec detect_and_resolve fmt lambdaTaggedExp =
     let solved_exp = (deadlock_solver lambdaTaggedExp deadlocked_top_environments) in
     (true, deadlocked_executions, [solved_exp])
   )
+
 
 let main fmt exp: bool * lambda list * lambda list (*passed act_ver * deadlocked processes * resolved process*)=
   try
