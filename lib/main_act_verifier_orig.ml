@@ -34,6 +34,7 @@ let rec has_lor exp =
   | LPar(a, b) -> (has_lor a)||(has_lor b)
   | LList(a, b) -> has_lor b
   | LOrI(_,_) -> true
+  | LOrE(_,_) -> true
   | LNil -> false
 
 let rec lor_disentangler exp =

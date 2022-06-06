@@ -23,11 +23,6 @@ let print_possible_execution fmt (lambdas, print_ctx: possible_execution) =
   printMode fmt (assocLeftList (List.map lambdaTaggedToLambda (lambdas))) print_ctx.print;
   flush stdout
 
-let get_chan_from_action action =
-  match action with
-  | AIn(c) -> c
-  | AOut(c) -> c
-
 let eval_sync ((lambdas, print_ctx) as execution: possible_execution): possible_execution list =
   let rec do_eval_sync (action: action option) ((lambdas, print_ctx): possible_execution): possible_execution list =
     match action, lambdas with

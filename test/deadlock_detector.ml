@@ -19,6 +19,11 @@ let convert_res (passed_act_ver, deadlocked0, resolved0) =
    LambdaFlattenedSet.of_list (List.map LambdaFlattened.lambdaToLambdaFlattened deadlocked0_no_LNil),
    LambdaFlattenedSet.of_list (List.map LambdaFlattened.lambdaToLambdaFlattened resolved0  ))
 
+let convert_res_manual (passed_act_ver, deadlocked0, resolved0) =
+  convert_res (passed_act_ver,
+   List.map (fun exp -> toLambda (CCS.parse exp)) deadlocked0,
+   List.map (fun exp -> toLambda (CCS.parse exp)) resolved0)
+
 let compare_res (passed_act_ver0, deadlocked0, resolved0) (passed_act_ver1, deadlocked1, resolved1): bool =
   passed_act_ver0 = passed_act_ver1 &&
   LambdaFlattenedSet.compare deadlocked0 deadlocked1 == 0 &&
@@ -34,35 +39,45 @@ let print_res_summary fmt exp (passed_act_ver0, deadlocked0, resolved0) : unit =
   );
   fprintf fmt "\n"
 
-let print_res fmt (passed_act_ver0, deadlocked0, resolved0) (passed_act_ver1, deadlocked1, resolved1): unit =
+let print_res fmt (name0, (passed_act_ver0, deadlocked0, resolved0)) (name1, (passed_act_ver1, deadlocked1, resolved1)): unit =
   let deadlocked0 = LambdaFlattenedSet.elements deadlocked0 in
   let deadlocked1 = LambdaFlattenedSet.elements deadlocked1 in
   let resolved0   = LambdaFlattenedSet.elements resolved0 in
   let resolved1   = LambdaFlattenedSet.elements resolved1 in
   fprintf fmt " passed_act_ver: 0: %b, 1: %b\n" passed_act_ver0 passed_act_ver1;
   fprintf fmt " Deadlocked: \n";
-  fprintf fmt "  0\n";
+  fprintf fmt "  %s:\n" name0;
   List.iter (fun l -> fprintf fmt "   "; print_proc_simple fmt (lambdaFlattenedToProc l); fprintf fmt "\n") deadlocked0;
-  fprintf fmt "  1\n";
+  fprintf fmt "  %s:\n" name1;
   List.iter (fun l -> fprintf fmt "   "; print_proc_simple fmt (lambdaFlattenedToProc l); fprintf fmt "\n") deadlocked1;
   fprintf fmt " Solved: \n";
-  fprintf fmt "  0\n";
+  fprintf fmt "  %s:\n" name0;
   List.iter (fun l -> fprintf fmt "   "; print_proc_simple fmt (lambdaFlattenedToProc l); fprintf fmt "\n") resolved0;
-  fprintf fmt "  1\n";
+  fprintf fmt "  %s:\n" name1;
   List.iter (fun l -> fprintf fmt "   "; print_proc_simple fmt (lambdaFlattenedToProc l); fprintf fmt "\n") resolved1
 
-let test fmt (exp: string) = 
-  let proc = CCS.parse exp in
-  let result0 = convert_res (Deadlock_detector_orig.main  null_fmt proc) in
-  let result1 = convert_res (Deadlock_detector.main null_fmt proc) in
+let test_manual fmt exp (name0, result0) (name1, result1) =
   if compare_res result0 result1 then (
     fprintf fmt "PASSED: ";
     print_res_summary fmt exp result0
   ) else (
     fprintf fmt "FAILED: %s\n" exp;
-    print_res fmt result0 result1
-  );
+    print_res fmt (name0, result0) (name1, result1)
+  )
+
+let test fmt (exp: string) = 
+  let proc = CCS.parse exp in
+  let result0 = convert_res (Deadlock_detector_orig.main  null_fmt proc) in
+  let result1 = convert_res (Deadlock_detector.main null_fmt proc) in
+  test_manual fmt exp ("orig", result0) ("mine", result1)
+
+let test_one fmt (exp: string) result1 = 
+  let proc = CCS.parse exp in
+  let result0 = convert_res (Deadlock_detector.main  null_fmt proc) in
+  let result1 = convert_res_manual result1 in
+  test_manual fmt exp ("mine", result0) ("expected", result1)
 ;;
+
 
 let fmt = Format.std_formatter in (
   fprintf fmt "DEADLOCK_DETECTOR:\n";
@@ -160,4 +175,22 @@ let fmt = Format.std_formatter in (
   test fmt "a!.0 || b!.0 ||(a?.0 + b?.0)";
   test fmt "a!.a!.a!.a!.a!.a!.0 || a?.b?.c?.0 || a?.b!.a?.a?.b!.0 || b?.c!.0";
   test fmt "a!.0 || a?.0";
+
+  test_one fmt "a!.0 & a?.0" (false, [], []) ;
+  test_one fmt "a!.a?.0 & a?.a!.0" (true, ["a!.a?.0 & a?.a!.0"], ["(a!.0 || a?.0) & (a?.0 || a!.0)"]) ;
+  test_one fmt "a!.0 || ( a?.0 & a?.0)" (true, [], ["a!.0 || ( a?.0 & a?.0)"]) ;
+  test_one fmt "a!.0 || ( (a?.a?.0 || a!.0) & a?.0)" (true, [], ["a!.0 || ( (a?.a?.0 || a!.0) & a?.0)"]) ;
+  test_one fmt "a!.0 || ( (a?.a?.0 || a!.b?.b!.0) & a?.0)" (true, ["b?.b!.0"], ["a!.0 || ((a?.a?.0 || a!.(b?.0 || b!.0)) & a?.0)"]) ;
+  (* Can only syncronize with one path of the LOrE, but no deadlock *)
+  test_one fmt "a?.0 || (c?.c!.a!.0 & a!.0)" (true, [], ["a?.0 || (c?.c!.a!.0 & a!.0)"]) ;
+  (* Can't syncronize with any path of the LOrE, deadlock *)
+  test_one fmt "a?.0 || (c?.c!.a!.0 & c?.c!.a!.0)" (true, ["a?.0 || (c?.c!.a!.0 & c?.c!.a!.0)"], ["(a?.0 || ((c?.0 || c!.a!.0) & (c?.0 || c!.a!.0)))"]) ;
+  (* Reduce inside LOrE once before syncronizing *)
+  test_one fmt "a?.0 || ((c?.a!.0 || c!.0) & b!.b?.a!.0)" (true, [], ["a?.0 || ((c?.a!.0 || c!.0) & b!.b?.a!.0)"]) ;
+  (* LOrI inside LOrE, but no deadlock *)
+  test_one fmt "a!.0 || (a?.0 & (a?.0 + b!.b?.a?.0))" (true, [], ["a!.0 || (a?.0 & (a?.0 + b!.b?.a?.0))"]) ;
+  (* LOrI inside LOrE, but deadlock *)
+  test_one fmt "a!.0 || (a?.0 & (a?.0 + a?.b!.b?.0))" (true, ["b!.b?.0"], ["(a!.0 || (a?.0 & (a?.0 + a?.(b!.0 || b?.0))))"]) ;
+  (* Two deadlocks *)
+  test_one fmt "a!.0 || (a?.0 & (a?.b!.b?.0 + a?.c!.c?.0))" (true, ["b!.b?.0"; "c!.c?.0"], ["a!.0 || (a?.0 & (a?.(b!.0 || b?.0) + a?.(c!.0 || c?.0)))"]) ;
 )
