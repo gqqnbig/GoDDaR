@@ -23,79 +23,58 @@ let print_possible_execution fmt (lambdas, print_ctx: possible_execution) =
   printMode fmt (assocLeftList (List.map lambdaTaggedToLambda (lambdas))) print_ctx.print;
   flush stdout
 
-
 let get_chan_from_action action =
   match action with
   | AIn(c) -> c
   | AOut(c) -> c
 
-let eval_sync fmt ((lambdas, print_ctx) as execution: possible_execution): possible_execution list =
-  let fmt = null_fmt in
-  let rec do_eval_sync depth (action: action option) ((lambdas, print_ctx): possible_execution): possible_execution list =
-    fprintf fmt "%s" (String.make depth ' ');
-    fprintf fmt "Action: %s " (Option.value (Option.map (fun a -> sprintf "Some(%c)" (get_chan_from_action a)) action) ~default:"None");
-    printMode fmt (lambdaTaggedToLambda (assocLeftList (List.rev lambdas))) true;
-    fprintf fmt "%s" (String.make depth ' ');
+let eval_sync ((lambdas, print_ctx) as execution: possible_execution): possible_execution list =
+  let rec do_eval_sync (action: action option) ((lambdas, print_ctx): possible_execution): possible_execution list =
     match action, lambdas with
-    | None, [] -> fprintf fmt "None, []\n" ; []
-    | _, [] -> fprintf fmt "_, []\n"; []
+    | _, [] -> []
     | None, (LList(EEtaTagged(a, _), b) as l)::tl ->
-      fprintf fmt "None, LList\n";
       (
-        let res = (do_eval_sync (depth+1) None (tl, print_ctx)) in
+        let res = (do_eval_sync None (tl, print_ctx)) in
         List.map (fun (lambdas, print_ctx) -> (l::lambdas, print_ctx)) res
       ) @ (
-        let res = (do_eval_sync (depth+1) (Some(a)) (tl, print_ctx)) in
+        let res = (do_eval_sync (Some(a)) (tl, print_ctx)) in
         List.map (fun (lambdas, print_ctx) -> (b::lambdas, print_ctx)) res
       )
     | Some(action), (LList(EEtaTagged(a, _), b) as l)::tl ->
-      fprintf fmt "Some, LList\n";
       if a = compl_action action then (
         (* found match *)
-        fprintf fmt "%s" (String.make depth ' '); fprintf fmt "-Match\n";
         [(b::tl, next_ctx print_ctx)]
       ) else (
         (* Keep seaching*)
-        fprintf fmt "%s" (String.make depth ' '); fprintf fmt "-No Match\n";
-        List.map (fun (lambdas, print_ctx) -> (l::lambdas, print_ctx)) (do_eval_sync (depth+1) (Some(action)) (tl, print_ctx))
+        List.map (fun (lambdas, print_ctx) -> (l::lambdas, print_ctx)) (do_eval_sync (Some(action)) (tl, print_ctx))
       )
     | None, LOrI(a, b)::tl ->
-      fprintf fmt "_, LOrI\n";
-      (*
-      let res1 = (do_eval_sync (depth+1) action (a::tl, conc_lvl print_ctx "1")) in
-      let res2 = (do_eval_sync (depth+1) action (b::tl, conc_lvl print_ctx "2")) in
-      res1 @ res2
-      *)
       [(a::tl, conc_lvl print_ctx "1"); (b::tl, conc_lvl print_ctx "2")]
     | Some(_), LOrI(a, b)::tl ->
-      fprintf fmt "_, LOrI\n";
-      let res1 = (do_eval_sync (depth+1) action (a::tl, conc_lvl print_ctx "1")) in
-      let res2 = (do_eval_sync (depth+1) action (b::tl, conc_lvl print_ctx "2")) in
+      let res1 = (do_eval_sync action (a::tl, conc_lvl print_ctx "1")) in
+      let res2 = (do_eval_sync action (b::tl, conc_lvl print_ctx "2")) in
       res1 @ res2
     | None, LOrE(a, b)::tl ->
       (
         List.map (fun (lambdas, print_ctx) -> (LOrE((assocLeftList lambdas), b)::tl, print_ctx))
-          (do_eval_sync (depth+1) action ([a], conc_lvl print_ctx "1"))
+          (do_eval_sync action ([a], conc_lvl print_ctx "1"))
       ) @ (
         List.map (fun (lambdas, print_ctx) -> (LOrE(a, (assocLeftList lambdas))::tl, print_ctx))
-          (do_eval_sync (depth+1) action ([b], conc_lvl print_ctx "1"))
+          (do_eval_sync action ([b], conc_lvl print_ctx "1"))
       )
     | Some(_), LOrE(a, b)::tl ->
-      fprintf fmt "_, LOrE\n";
       (
-        do_eval_sync (depth+1) action (a::tl, conc_lvl print_ctx "1")
+        do_eval_sync action (a::tl, conc_lvl print_ctx "1")
       ) @ (
-        do_eval_sync (depth+1) action (b::tl, conc_lvl print_ctx "2")
+        do_eval_sync action (b::tl, conc_lvl print_ctx "2")
       )
     | _, LPar(a, b)::tl ->
-      fprintf fmt "_, LPar\n";
-      do_eval_sync (depth+1) action (a::b::tl, print_ctx)
+      do_eval_sync action (a::b::tl, print_ctx)
     | _, LNil::tl ->
-      fprintf fmt "_, LNil\n";
-      do_eval_sync (depth+1) action (tl, print_ctx)
+      do_eval_sync action (tl, print_ctx)
     | _, LChi(_, _)::_ | _, LSubst::_ -> failwith "These shouldn't appear"
   in
-  let res = (do_eval_sync 0 None (execution)) in
+  let res = (do_eval_sync None (execution)) in
   List.map (
     fun ((lambdas, print_ctx): possible_execution) ->
       (List.filter ((<>) LNil) lambdas, print_ctx)
@@ -112,7 +91,7 @@ let eval fmt (lambda: lambda_tagged) =
       if (List.for_all ((=) LNil) lambdas) then
         do_eval tl deadlocks
       else (
-        let reductions = eval_sync fmt execution in
+        let reductions = eval_sync execution in
         (*
         fprintf fmt "REDUCTIONS:\n";
         List.iter (print_possible_execution fmt) reductions;
