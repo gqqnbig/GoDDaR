@@ -24,10 +24,20 @@ let convert_res_manual (passed_act_ver, deadlocked0, resolved0) =
    List.map (fun exp -> toLambda (CCS.parse exp)) deadlocked0,
    List.map (fun exp -> toLambda (CCS.parse exp)) resolved0)
 
-let compare_res (passed_act_ver0, deadlocked0, resolved0) (passed_act_ver1, deadlocked1, resolved1): bool =
-  passed_act_ver0 = passed_act_ver1 &&
-  LambdaFlattenedSet.compare deadlocked0 deadlocked1 == 0 &&
-  LambdaFlattenedSet.compare resolved0 resolved1 == 0 
+type compare_failure =
+  | ACT_VER
+  | DEADLOCK_LIST
+  | RESOLVED
+let string_compare_failure (failure: compare_failure) = 
+  match failure with
+  | ACT_VER -> "ACT_VER"
+  | DEADLOCK_LIST -> "DEADLOCK_LIST"
+  | RESOLVED -> "RESOLVED"
+
+let compare_res (passed_act_ver0, deadlocked0, resolved0) (passed_act_ver1, deadlocked1, resolved1): compare_failure list =
+  (if passed_act_ver0 = passed_act_ver1 then [] else [ACT_VER]) @
+  (if LambdaFlattenedSet.compare deadlocked0 deadlocked1 == 0 then [] else [DEADLOCK_LIST]) @
+  (if LambdaFlattenedSet.compare resolved0 resolved1 == 0 then [] else [RESOLVED])
 
 let print_res_summary fmt exp (passed_act_ver0, deadlocked0, resolved0) : unit =
   let len_deadlocked = (LambdaFlattenedSet.cardinal deadlocked0) in
@@ -57,11 +67,15 @@ let print_res fmt (name0, (passed_act_ver0, deadlocked0, resolved0)) (name1, (pa
   List.iter (fun l -> fprintf fmt "   "; print_proc_simple fmt (lambdaFlattenedToProc l); fprintf fmt "\n") resolved1
 
 let test_manual fmt exp (name0, result0) (name1, result1) =
-  if compare_res result0 result1 then (
+  let compare_failures = compare_res result0 result1 in
+  if compare_failures = [] then (
     fprintf fmt "PASSED: ";
     print_res_summary fmt exp result0
   ) else (
-    fprintf fmt "FAILED: %s\n" exp;
+    fprintf fmt "FAILED: %s: " exp;
+    List.map string_compare_failure compare_failures
+      |> List.iter (fun s -> fprintf fmt "%s " s);
+    fprintf fmt "\n";
     print_res fmt (name0, result0) (name1, result1)
   )
 
