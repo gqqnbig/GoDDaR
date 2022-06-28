@@ -1,0 +1,3 @@
+(menhir (modules MiGo_Parser))
+
+(ocamllex (modules MiGo_Lexer))

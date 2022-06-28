@@ -1,6 +1,8 @@
 (library
  (name dlock))
 
+(include_subdirs unqualified)
+
 (menhir (modules CCS_Parser))
 
-(ocamllex CCS_Lexer)
+(ocamllex (modules CCS_Lexer))
