@@ -87,11 +87,6 @@ let eval fmt (lambda: lambda_tagged) =
         do_eval tl deadlocks
       else (
         let reductions = eval_sync execution in
-        (*
-        fprintf fmt "REDUCTIONS:\n";
-        List.iter (print_possible_execution fmt) reductions;
-        fprintf fmt "--REDUCTIONS:\n";
-        *)
         if reductions = [] then
           do_eval tl (execution::deadlocks)
         else
@@ -175,8 +170,10 @@ let main fmt exp: bool * lambda list * lambda list (*passed act_ver * deadlocked
 
       let rec detect_and_resolve_loop (passed_act_ver, deadlocked, resolved) (last_resolved: lambda_tagged list option)= 
         match last_resolved with
+        (* When resolved program remains the same then exit loop*)
         | Some(last_resolved) when List.equal (=) last_resolved resolved ->
           (passed_act_ver, deadlocked, List.map lambdaTaggedToLambda resolved)
+        (* When no deadlocks are found then exit loop*)
         | _ when deadlocked = [] -> 
           (passed_act_ver, deadlocked, List.map lambdaTaggedToLambda resolved)
         | _ -> 
