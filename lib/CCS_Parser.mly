@@ -2,7 +2,7 @@
 open Types
 %}
 
-%token <char> LABEL
+%token <string> LABEL
 %token LPAREN
 %token RPAREN
 %token INACTIVE

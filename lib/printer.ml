@@ -10,18 +10,18 @@ let null_fmt = Format.make_formatter ( fun _ _ _ -> () ) (fun _ -> ())
 
 let print_action fmt a =
     match a with
-    | AIn(a) -> fprintf fmt "AIn(%c)" a 
-    | AOut(a) -> fprintf fmt "AOut(%c)" a 
+    | AIn(a) -> fprintf fmt "AIn(%s)" a
+    | AOut(a) -> fprintf fmt "AOut(%s)" a
 
 let print_action_simple fmt a =
     match a with
-    | AIn(a) -> fprintf fmt "%c?" a 
-    | AOut(a) -> fprintf fmt "%c!" a
+    | AIn(a) -> fprintf fmt "%s?" a
+    | AOut(a) -> fprintf fmt "%s!" a
 
 (* ----------- Lambda ----------- *)
 let print_eta_tagged fmt (e: eta_tagged) = 
     match e with
-    | EEtaTagged(a, i) -> fprintf fmt "EEta(%a, %i)" print_action a i
+    | EEtaTagged(a, i) -> fprintf fmt "EEtaTagged(%a, %i)" print_action a i
 
 let print_eta fmt e = 
     match e with

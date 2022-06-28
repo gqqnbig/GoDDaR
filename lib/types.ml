@@ -2,7 +2,7 @@
 
 (* ---------- Types ----------  *)
 
-type chan = char
+type chan = string
 
 type action =
     | AIn of chan
