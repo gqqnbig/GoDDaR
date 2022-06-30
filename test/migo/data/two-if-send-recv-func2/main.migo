@@ -1,0 +1,11 @@
+def main.main():
+    let t0 = newchan main.main0.t0_chan0, 0;
+    let t1 = newchan main.main0.t1_chan0, 0;
+    call main.send(t0, t1);
+    call main.send(t1, t0);
+def main.send(a, b):
+    if call main.send#1(a, b); else call main.send#3(a, b); endif;
+def main.send#1(a, b):
+    send a;
+def main.send#3(a, b):
+    recv b;

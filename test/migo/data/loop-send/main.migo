@@ -1,0 +1,6 @@
+def main.main():
+    let t0 = newchan main.main0.t0_chan0, 0;
+    call main.main#1(t0);
+def main.main#1(t0):
+    send t0;
+    call main.main#1(t0);

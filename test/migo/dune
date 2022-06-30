@@ -1,0 +1,8 @@
+(test
+ (name migo)
+ (modules migo)
+ (libraries dlock))
+
+(rule
+ (alias runtest)
+ (action (diff migo.expected migo.output)))

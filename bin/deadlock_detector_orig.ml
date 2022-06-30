@@ -26,5 +26,13 @@ let () = cmdParse
 (* 4) a!.(b!.c!.0 || b?.c?.d?.0) || a?.d!.0 *)
 (* main (parse "a!.(b!.c!.0 || b?.c?.d?.0) || a?.d!.0"); *)
 
-if (!process <> "") then
-  ignore (main Format.std_formatter (CCS.parse !process))
+let ccs = CCS.parse (
+  if (!process <> "") then
+    !process
+  else if (!migo <> "") then (
+    (MiGo_to_CCS.migo_to_ccs (MiGo.parse_file !migo))
+  ) else 
+    failwith "Give a CCS process or a MiGo file plz"
+)
+  in
+ignore (main Format.std_formatter ccs)

@@ -1,0 +1,94 @@
+if-send-or-receive/main.migo
+def main.main():
+    let t0 = newchan main.main0.t0_chan0, 0;
+    if
+        call main.main#1(t0);
+    else
+        call main.main#3(t0);
+    endif;
+def main.main#1(t0):
+    send t0;
+def main.main#3(t0):
+    recv t0;
+==========
+(t0!.0 + t0?.0)
+==================================================
+loop-send/main.migo
+def main.main():
+    let t0 = newchan main.main0.t0_chan0, 0;
+    call main.main#1(t0);
+def main.main#1(t0):
+    send t0;
+    call main.main#1(t0);
+==========
+FAILED TO CONVERT: Recursive call
+==================================================
+recv/main.migo
+def main.main():
+    let t0 = newchan main.main0.t0_chan0, 0;
+    recv t0;
+==========
+t0?.0
+==================================================
+send/main.migo
+def main.main():
+    let t0 = newchan main.main0.t0_chan0, 0;
+    send t0;
+==========
+t0!.0
+==================================================
+send-recv/main.migo
+def main.main():
+    let t0 = newchan main.main0.t0_chan0, 0;
+    recv t0;
+    send t0;
+==========
+t0?.t0!.0
+==================================================
+two-if-send-recv-func/main.migo
+def main.main():
+    let t0 = newchan main.main0.t0_chan0, 0;
+    call main.send(t0);
+    call main.send(t0);
+def main.send(a):
+    if
+        call main.send#1(a);
+    else
+        call main.send#3(a);
+    endif;
+def main.send#1(a):
+    send a;
+def main.send#3(a):
+    recv a;
+==========
+(a!.(a!.0 + a?.0) + a?.(a!.0 + a?.0))
+==================================================
+two-if-send-recv-func2/main.migo
+def main.main():
+    let t0 = newchan main.main0.t0_chan0, 0;
+    let t1 = newchan main.main0.t1_chan0, 0;
+    call main.send(t0, t1);
+    call main.send(t1, t0);
+def main.send(a, b):
+    if
+        call main.send#1(a, b);
+    else
+        call main.send#3(a, b);
+    endif;
+def main.send#1(a, b):
+    send a;
+def main.send#3(a, b):
+    recv b;
+==========
+(a!.(a!.0 + b?.0) + b?.(a!.0 + b?.0))
+==================================================
+two-send-func/main.migo
+def main.main():
+    let t0 = newchan main.main0.t0_chan0, 0;
+    call main.send(t0);
+    call main.send(t0);
+def main.send(a):
+    send a;
+==========
+a!.a!.0
+==================================================
