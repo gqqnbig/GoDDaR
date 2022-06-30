@@ -63,8 +63,8 @@ def_stmt:
     | p = prefix; SEMICOLON { Prefix(p) }
     | LET; chanid = IDENTIFIER; EQUALS; NEWCHAN; typeid = IDENTIFIER; COMMA; capacity = DIGIT; SEMICOLON {Newchan(chanid, typeid, capacity)}
     | CLOSE; id = IDENTIFIER; SEMICOLON {Close(id)}
-    | CALL; id = IDENTIFIER; LPAREN; p = param; RPAREN; SEMICOLON {Call(id, p)}
-    | SPAWN; id = IDENTIFIER LPAREN; p = param; RPAREN; SEMICOLON {Spawn(id, p)}
+    | CALL; id = IDENTIFIER; LPAREN; p = param; RPAREN; SEMICOLON {Call(id, List.rev p)}
+    | SPAWN; id = IDENTIFIER LPAREN; p = param; RPAREN; SEMICOLON {Spawn(id, List.rev p)}
     | IF; t = def_body2; ELSE; f = def_body2; ENDIF; SEMICOLON {If(t, f)}
     | SELECT; c = cases; ENDSELECT; SEMICOLON {Select(c)}
 

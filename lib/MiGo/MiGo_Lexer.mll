@@ -5,7 +5,7 @@
 
 let whitespace = [' ' '\t' '\n']+
 let identifier = ['a'-'z' 'A'-'Z' '0'-'9' '.' '$' '#' '_']+
-let digit      = ['0'-'9']
+let digit      = ['0'-'9']+
 
 rule read = parse
     | whitespace { (* Format.fprintf fmt "Whitespace ";         *) read lexbuf }
