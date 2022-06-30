@@ -3,12 +3,14 @@
     let fmt = Format.std_formatter
 }
 
-let whitespace = [' ' '\t' '\n']+
+let whitespace = [' ' '\t']+
+let newline = ['\n']+
 let identifier = ['a'-'z' 'A'-'Z' '0'-'9' '.' '$' '#' '_']+
 let digit      = ['0'-'9']+
 
 rule read = parse
     | whitespace { (* Format.fprintf fmt "Whitespace ";         *) read lexbuf }
+    | newline    { (* Format.fprintf fmt "Newline ";            *) Lexing.new_line lexbuf; read lexbuf }
     | "def"      { (* Format.fprintf fmt "DEF ";                *) DEFINITION }
     | "("        { (* Format.fprintf fmt "LPAREN ";             *) LPAREN }
     | ")"        { (* Format.fprintf fmt "RPAREN ";             *) RPAREN }
