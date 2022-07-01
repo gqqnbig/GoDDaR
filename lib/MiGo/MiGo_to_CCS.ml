@@ -6,7 +6,7 @@ let debug_fmt = Printer.null_fmt
 
 let check_has_been_called call_name stack =
   if (Option.is_some (List.find_opt (fun (name, _, _) -> call_name = name) stack)) then
-    raise (Fail "Recursive call")
+    raise (Fail (Format.sprintf "Recursive call (%s)" call_name))
 
 let rec rename_param c stack = 
   match stack with

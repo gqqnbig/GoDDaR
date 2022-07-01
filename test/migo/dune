@@ -6,4 +6,5 @@
 
 (rule
  (alias runtest)
+ (deps (glob_files_rec ./data/**))
  (action (diff migo.expected migo.output)))
