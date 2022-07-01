@@ -23,45 +23,65 @@ let print_possible_execution fmt (lambdas, print_ctx: possible_execution) =
   printMode fmt (assocLeftList (List.map lambdaTaggedToLambda (lambdas))) print_ctx.print;
   flush stdout
 
+type sync_mode =
+  | NoSync
+  | MustSync
+  | Sync of action
+
 let eval_sync ((lambdas, print_ctx) as execution: possible_execution): possible_execution list =
-  let rec do_eval_sync (action: action option) ((lambdas, print_ctx): possible_execution): possible_execution list =
+  let rec do_eval_sync (action: sync_mode) ((lambdas, print_ctx): possible_execution): possible_execution list =
     match action, lambdas with
     | _, [] -> []
-    | None, (LList(EEtaTagged(a, _), b) as l)::tl ->
+    | NoSync  , (LList(EEtaTagged(a, _), b) as l)::tl
+    | MustSync, (LList(EEtaTagged(a, _), b) as l)::tl ->
       (
-        let res = (do_eval_sync None (tl, print_ctx)) in
-        List.map (fun (lambdas, print_ctx) -> (l::lambdas, print_ctx)) res
+        if action = NoSync then 
+          (do_eval_sync NoSync (tl, print_ctx))
+          |> List.map (fun (lambdas, print_ctx) -> (l::lambdas, print_ctx))
+        else []
       ) @ (
-        let res = (do_eval_sync (Some(a)) (tl, print_ctx)) in
-        List.map (fun (lambdas, print_ctx) -> (b::lambdas, print_ctx)) res
+        (do_eval_sync (Sync(a)) (tl, print_ctx))
+        |> List.map (fun (lambdas, print_ctx) -> (b::lambdas, print_ctx))
       )
-    | Some(action), (LList(EEtaTagged(a, _), b) as l)::tl ->
+    | Sync(action), (LList(EEtaTagged(a, _), b) as l)::tl ->
       if a = compl_action action then (
         (* found match *)
-        [(b::tl, next_ctx print_ctx)]
+        [(b::tl, {print_ctx with level = print_ctx.level ^ "." ^ (actionToString a)})]
       ) else (
         (* Keep seaching*)
-        List.map (fun (lambdas, print_ctx) -> (l::lambdas, print_ctx)) (do_eval_sync (Some(action)) (tl, print_ctx))
+        (do_eval_sync (Sync(action)) (tl, print_ctx))
+        |> List.map (fun (lambdas, print_ctx) -> (l::lambdas, print_ctx))
       )
-    | None, LOrI(a, b)::tl ->
-      [(a::tl, conc_lvl print_ctx "1"); (b::tl, conc_lvl print_ctx "2")]
-    | Some(_), LOrI(a, b)::tl ->
-      let res1 = (do_eval_sync action (a::tl, conc_lvl print_ctx "1")) in
-      let res2 = (do_eval_sync action (b::tl, conc_lvl print_ctx "2")) in
+    | NoSync, LOrI(a, b)::tl ->
+      [(a::tl, conc_lvl print_ctx "+1"); (b::tl, conc_lvl print_ctx "+2")]
+    | MustSync, LOrI(a, b)::tl ->
+      let res1 = (do_eval_sync MustSync (a::tl, conc_lvl print_ctx "+1")) in
+      let res2 = (do_eval_sync MustSync (b::tl, conc_lvl print_ctx "+2")) in
       res1 @ res2
-    | None, LOrE(a, b)::tl ->
+    | Sync(_), LOrI(a, b)::tl ->
+      let res1 = (do_eval_sync action (a::tl, conc_lvl print_ctx "+1")) in
+      let res2 = (do_eval_sync action (b::tl, conc_lvl print_ctx "+2")) in
+      res1 @ res2
+    | NoSync  , LOrE(a, b)::tl
+    | MustSync, LOrE(a, b)::tl ->
       (
-        List.map (fun (lambdas, print_ctx) -> (LOrE((assocLeftList lambdas), b)::tl, print_ctx))
-          (do_eval_sync action ([a], conc_lvl print_ctx "1"))
+        if action = NoSync then (
+          (do_eval_sync action ([a], conc_lvl print_ctx "&1"))
+          |> List.map (fun (lambdas, print_ctx) -> (LOrE((assocLeftList lambdas), b)::tl, print_ctx))
+        ) @ (
+          (do_eval_sync action ([b], conc_lvl print_ctx "&2")) 
+          |> List.map (fun (lambdas, print_ctx) -> (LOrE(a, (assocLeftList lambdas))::tl, print_ctx))
+        ) else []
       ) @ (
-        List.map (fun (lambdas, print_ctx) -> (LOrE(a, (assocLeftList lambdas))::tl, print_ctx))
-          (do_eval_sync action ([b], conc_lvl print_ctx "1"))
+        do_eval_sync MustSync (a::tl, print_ctx)
+      ) @ (
+        do_eval_sync MustSync (b::tl, print_ctx)
       )
-    | Some(_), LOrE(a, b)::tl ->
+    | Sync(c), LOrE(a, b)::tl ->
       (
-        do_eval_sync action (a::tl, conc_lvl print_ctx "1")
+        do_eval_sync (Sync(c)) (a::tl, conc_lvl print_ctx "&1")
       ) @ (
-        do_eval_sync action (b::tl, conc_lvl print_ctx "2")
+        do_eval_sync (Sync(c)) (b::tl, conc_lvl print_ctx "&2")
       )
     | _, LPar(a, b)::tl ->
       do_eval_sync action (a::b::tl, print_ctx)
@@ -69,11 +89,11 @@ let eval_sync ((lambdas, print_ctx) as execution: possible_execution): possible_
       do_eval_sync action (tl, print_ctx)
     | _, LChi(_, _)::_ | _, LSubst::_ -> failwith "These shouldn't appear"
   in
-  let res = (do_eval_sync None (execution)) in
-  List.map (
-    fun ((lambdas, print_ctx): possible_execution) ->
+  (do_eval_sync NoSync (execution))
+  |> List.map (
+    fun ((lambdas, print_ctx)) ->
       (List.filter ((<>) LNil) lambdas, print_ctx)
-  ) res
+  )
 
 let eval fmt (lambda: lambda_tagged) = 
   let rec do_eval (executions: possible_execution list) (deadlocks: possible_execution list) =

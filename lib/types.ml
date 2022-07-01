@@ -84,6 +84,11 @@ let toAction eta =
     match eta with
     | EEta(a) -> a
 
+let actionToString action: string = 
+  match action with
+  | AIn(c) -> c
+  | AOut(c) -> c
+
 let rec toProc lambda =
     match lambda with
     | LNil -> PNil

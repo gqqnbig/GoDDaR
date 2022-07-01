@@ -207,4 +207,6 @@ let fmt = Format.std_formatter in (
   test_one fmt "a!.0 || (a?.0 & (a?.0 + a?.b!.b?.0))" (true, ["b!.b?.0"], ["(a!.0 || (a?.0 & (a?.0 + a?.(b!.0 || b?.0))))"]) ;
   (* Two deadlocks *)
   test_one fmt "a!.0 || (a?.0 & (a?.b!.b?.0 + a?.c!.c?.0))" (true, ["b!.b?.0"; "c!.c?.0"], ["a!.0 || (a?.0 & (a?.(b!.0 || b?.0) + a?.(c!.0 || c?.0)))"]) ;
+  test_one fmt "(a!.0 + b!.0) || (b?.0 & a?.0)" (true, [""], ["(a!.0 + b!.0) || (b?.0 & a?.0)"]) ;
+  test_one fmt "(b?.0 & a?.0) || (a!.0 + b!.0)" (true, [""], ["(b?.0 & a?.0) || (a!.0 + b!.0)"]) ;
 )
