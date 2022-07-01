@@ -56,6 +56,8 @@ let rec do_migo_to_ccs migo_defs (stack: stack_entry list): string =
             Format.sprintf "(%s)" (do_migo_to_ccs migo_defs ((fun_name, Prefix(prefix)::stmts, var_map)::tl))
         ) cases in
         Format.sprintf "(%s)" (String.concat " & " case_strings)
+      | MiGo_Types.Lock(_)
+      | MiGo_Types.Unlock(_)
       | MiGo_Types.Prefix(Tau)
       | MiGo_Types.Close(_)
       | MiGo_Types.Newchan(_) (* TODO: Check if channel names are unique *) -> 

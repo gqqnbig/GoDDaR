@@ -32,6 +32,8 @@ rule read = parse
     | "select"   { (* Format.fprintf fmt "SELECT ";             *) SELECT }
     | "case"     { (* Format.fprintf fmt "CASE ";               *) CASE }
     | "endselect"{ (* Format.fprintf fmt "ENDSELECT ";          *) ENDSELECT }
+    | "lock"     { (* Format.fprintf fmt "LOCK ";               *) LOCK }
+    | "unlock"   { (* Format.fprintf fmt "UNLOCK ";             *) UNLOCK }
     | digit      { (* Format.fprintf fmt "DIGIT ";              *) DIGIT (int_of_string (Lexing.lexeme lexbuf)) }
     | identifier { (* Format.fprintf fmt "IDENTIFIER %s " (Lexing.lexeme lexbuf); *) IDENTIFIER (Lexing.lexeme lexbuf) }
     | eof        { (* Format.fprintf fmt "EOF ";                *) EOF }

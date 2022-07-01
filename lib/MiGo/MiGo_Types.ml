@@ -8,6 +8,8 @@ and  migo_stmt =
   | Spawn of string * string list
   | If of migo_stmt list * migo_stmt list
   | Select of (migo_prefix * migo_stmt list) list
+  | Lock of string
+  | Unlock of string
 and migo_prefix = 
   | Send of string
   | Receive of string
@@ -50,6 +52,10 @@ and print_migo_stmt indent fmt stmt: unit =
         print_migo_stmts (indent+1) fmt stmts
     ) list;
     Format.fprintf fmt "%sendselect;\n" line_prefix
+  | Lock(c) ->
+    Format.fprintf fmt "lock %s;\n" c
+  | Unlock(c) ->
+    Format.fprintf fmt "unlock %s;\n" c
 
 let print_migo fmt indent (migo: migo_def) =
   Format.fprintf fmt "%s" (String.make (indent*indentation_space_multiplier) ' ');

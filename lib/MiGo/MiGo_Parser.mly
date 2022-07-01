@@ -25,6 +25,8 @@ open MiGo_Types
 %token SELECT
 %token CASE
 %token ENDSELECT
+%token LOCK
+%token UNLOCK
 %token EOF
 
 %start <migo_def list> prog
@@ -67,6 +69,8 @@ def_stmt:
     | SPAWN; id = IDENTIFIER LPAREN; p = param; RPAREN; SEMICOLON {Spawn(id, List.rev p)}
     | IF; t = def_body2; ELSE; f = def_body2; ENDIF; SEMICOLON {If(t, f)}
     | SELECT; c = cases; ENDSELECT; SEMICOLON {Select(c)}
+    | LOCK; id = IDENTIFIER; SEMICOLON { Lock(id) }
+    | UNLOCK; id = IDENTIFIER; SEMICOLON { Unlock(id) }
 
 cases: 
     | e = case {[e]}
