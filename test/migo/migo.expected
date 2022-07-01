@@ -60,7 +60,7 @@ def main.main#2(t0, t1):
 def main.main#4(t0, t1):
     call main.main#1(t0, t1);
 ==========
-FAILED TO CONVERT: Recursive call
+FAILED TO CONVERT: Recursive call (main.x#1)
 ==================================================
 benchmark/dingo-fanin-pattern/main.migo
 def main.main():
@@ -98,7 +98,7 @@ def main.main#1(t0, t1, t6):
     recv t6;
     call main.main#1(t0, t1, t6);
 ==========
-FAILED TO CONVERT: Recursive call
+FAILED TO CONVERT: Recursive call (main.work#1)
 ==================================================
 benchmark/dingo-local-deadlock/main.migo
 def main.main():
@@ -245,6 +245,22 @@ def main.main$2(a):
 ==========
 ((0 || t1?.0) || t1!.0)
 ==================================================
+simple/if-continue/main.migo
+def main.main():
+    let t0 = newchan main.main0.t0_chan0, 0;
+    if
+        call main.main#1(t0);
+    else
+        call main.main#2(t0);
+    endif;
+def main.main#1(t0):
+    send t0;
+    call main.main#2(t0);
+def main.main#2(t0):
+    recv t0;
+==========
+(t0!.t0?.0 + t0?.0)
+==================================================
 simple/if-send-or-receive/main.migo
 def main.main():
     let t0 = newchan main.main0.t0_chan0, 0;
@@ -268,7 +284,7 @@ def main.main#1(t0):
     send t0;
     call main.main#1(t0);
 ==========
-FAILED TO CONVERT: Recursive call
+FAILED TO CONVERT: Recursive call (main.main#1)
 ==================================================
 simple/recv/main.migo
 def main.main():
