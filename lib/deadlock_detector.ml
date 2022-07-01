@@ -108,10 +108,17 @@ let rec deadlock_solver_1 (lambda: lambda_tagged) (deadlocked_top_environment: e
   | LSubst | LChi(_, _) -> failwith "These shouldn't appear"
 
 let rec deadlock_solver_2 (lambda: lambda_tagged) (deadlocked_top_environment: eta_tagged list): (lambda_tagged) =
+  let has_input_on_channel c1 deadlocked_top_environment = 
+    List.exists (
+      function 
+      | EEtaTagged(AIn(c2), _) -> c1 = c2
+      | EEtaTagged(AOut(c2), _) -> false
+    ) deadlocked_top_environment
+  in
   match lambda with
   | LList((EEtaTagged(AOut(c), tag) as eta), l) when List.mem (EEtaTagged(AOut(c), tag)) deadlocked_top_environment ->
       LPar(LList(eta, LNil), deadlock_solver_2 l deadlocked_top_environment)
-  | LList( EEtaTagged(AOut(c), tag)        , l) when List.mem (EEtaTagged(AIn(c) , tag)) deadlocked_top_environment ->
+  | LList( EEtaTagged(AOut(c1), tag)       , l) when has_input_on_channel c1 deadlocked_top_environment ->
       deadlock_solver_2 l deadlocked_top_environment
   | LList((EEtaTagged(AIn(c), tag) as eta), l) when List.mem (EEtaTagged(AIn(c), tag)) deadlocked_top_environment ->
       LPar(LList(EEtaTagged(AOut(c), tag), LNil), LList(eta, deadlock_solver_2 l deadlocked_top_environment))

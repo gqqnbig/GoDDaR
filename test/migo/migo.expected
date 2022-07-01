@@ -1,4 +1,251 @@
-if-send-or-receive/main.migo
+benchmark/bad-order-circular/main.migo
+def main.main():
+    let t0 = newchan main.main0.t0_chan0, 0;
+    let t1 = newchan main.main0.t1_chan0, 0;
+    spawn main.main$1(t0, t1);
+    send t0;
+    recv t1;
+def main.main$1(ch, ch1):
+    send ch1;
+    recv ch;
+==========
+(t0!.t1?.0 || t1!.t0?.0)
+==================================================
+benchmark/bad-order-sequential/main.migo
+def main.main():
+    let t0 = newchan main.main0.t0_chan0, 0;
+    let t1 = newchan main.main0.t1_chan0, 0;
+    let t2 = newchan main.main0.t2_chan0, 0;
+    spawn main.main$1(t1, t2);
+    spawn main.main$2(t1, t2);
+    send t0;
+    recv t0;
+def main.main$1(b, c):
+    send b;
+    recv c;
+def main.main$2(b, c):
+    recv b;
+    send c;
+==========
+((t0!.t0?.0 || t1?.t2!.0) || t1!.t2?.0)
+==================================================
+benchmark/dingo-cond-recur/main.migo
+def main.main():
+    let t0 = newchan main.main0.t0_chan0, 0;
+    let t1 = newchan main.main0.t1_chan0, 0;
+    spawn main.x(t1, t0);
+    call main.main#1(t0, t1);
+def main.x(ch, done):
+    call main.x#1(ch, done);
+def main.x#1(ch, done):
+    if
+        call main.x#2(ch, done);
+    else
+        call main.x#3(ch, done);
+    endif;
+def main.x#2(ch, done):
+    send ch;
+    call main.x#1(ch, done);
+def main.x#3(ch, done):
+    send done;
+def main.main#1(t0, t1):
+    select
+      case recv t1;
+        call main.main#2(t0, t1);
+      case recv t0;
+        call main.main#4(t0, t1);
+    endselect;
+def main.main#2(t0, t1):
+    call main.main#1(t0, t1);
+def main.main#4(t0, t1):
+    call main.main#1(t0, t1);
+==========
+FAILED TO CONVERT: Recursive call
+==================================================
+benchmark/dingo-fanin-pattern/main.migo
+def main.main():
+    let t0 = newchan main.main0.t0_chan0, 0;
+    let t1 = newchan main.main0.t1_chan0, 0;
+    spawn main.work(t0);
+    spawn main.work(t1);
+    let t6 = newchan main.fanin0.t3_chan0, 0;
+    call main.fanin(t0, t1, t6);
+    call main.main#1(t0, t1, t6);
+def main.work(out):
+    call main.work#1(out);
+def main.work#1(out):
+    send out;
+    call main.work#1(out);
+def main.fanin$1(ch1, ch2, c):
+    call main.fanin$1#1(ch1, ch2, c);
+def main.fanin$1#1(ch1, ch2, c):
+    select
+      case recv ch1;
+        call main.fanin$1#2(ch1, ch2, c);
+      case recv ch2;
+        call main.fanin$1#4(ch1, ch2, c);
+    endselect;
+def main.fanin$1#2(ch1, ch2, c):
+    send c;
+    call main.fanin$1#1(ch1, ch2, c);
+def main.fanin$1#4(ch1, ch2, c):
+    send c;
+    call main.fanin$1#1(ch1, ch2, c);
+def main.fanin(ch1, ch2, t3):
+    let t3 = newchan main.fanin0.t3_chan0, 0;
+    spawn main.fanin$1(ch1, ch2, t3);
+def main.main#1(t0, t1, t6):
+    recv t6;
+    call main.main#1(t0, t1, t6);
+==========
+FAILED TO CONVERT: Recursive call
+==================================================
+benchmark/dingo-local-deadlock/main.migo
+def main.main():
+    let t0 = newchan main.main0.t0_chan0, 0;
+    let t1 = newchan main.main0.t1_chan0, 0;
+    spawn main.Send(t0);
+    spawn main.Recv(t0, t1);
+    spawn main.Recv(t0, t1);
+    recv t1;
+    recv t1;
+def main.Send(ch):
+    send ch;
+def main.Recv(ch, done):
+    recv ch;
+    send done;
+==========
+(((t1?.t1?.0 || t0?.t1!.0) || t0?.t1!.0) || t0!.0)
+==================================================
+benchmark/dingo-local-deadlock-fixed/main.migo
+def main.main():
+    let t0 = newchan main.main0.t0_chan0, 0;
+    let t1 = newchan main.main0.t1_chan0, 0;
+    spawn main.Send(t0);
+    spawn main.Recv(t0, t1);
+    recv t1;
+def main.Send(ch):
+    send ch;
+def main.Recv(ch, done):
+    recv ch;
+    send done;
+==========
+((t1?.0 || t0?.t1!.0) || t0!.0)
+==================================================
+benchmark/go_by_example_channels/main.migo
+def main.main():
+    let t1 = newchan main.main0.t1_chan0, 0;
+    spawn main.main$1(t1);
+    recv t1;
+def main.main$1(messages):
+    send messages;
+==========
+(t1?.0 || t1!.0)
+==================================================
+benchmark/go_by_example_select/main.migo
+benchmark/go_by_example_select/main.migo: lineNum:Char 17:4
+FAILED TO PARSE MIGO
+==================================================
+benchmark/gomela-x-sender-x-receiver+1/main.migo
+benchmark/gomela-x-sender-x-receiver+1/main.migo: lineNum:Char 11:4
+FAILED TO PARSE MIGO
+==================================================
+benchmark/gong-not-safe/main.migo
+def main.main():
+    let t0 = newchan main.main0.t0_chan0, 0;
+    spawn main.recv(t0);
+    send t0;
+    close t0;
+def main.recv(ch):
+    recv ch;
+    close ch;
+==========
+(t0!.0 || t0?.0)
+==================================================
+benchmark/gopher-sel/main.migo
+def main.main():
+    let t0 = newchan main.main0.t0_chan0, 0;
+    let t1 = newchan main.main0.t1_chan0, 0;
+    spawn main.provide1(t0);
+    spawn main.provide2(t1);
+    let t2 = newchan main.main0.t2_chan0, 0;
+    spawn main.collect1(t0, t2);
+    spawn main.collect2(t1, t2);
+    recv t2;
+    let t4 = newchan main.main0.t4_chan0, 0;
+    spawn main.collect1(t0, t4);
+    spawn main.collect2(t1, t4);
+    recv t4;
+def main.provide1(x):
+    send x;
+def main.provide2(y):
+    send y;
+def main.collect1(in, out):
+    recv in;
+    send out;
+def main.collect2(in, out):
+    recv in;
+    send out;
+==========
+((((t2?.((t4?.0 || t1?.t4!.0) || t0?.t4!.0) || t1?.t2!.0) || t0?.t2!.0) || t1!.0) || t0!.0)
+==================================================
+benchmark/gopher-sel-fixed/main.migo
+def main.main():
+    let t0 = newchan main.main0.t0_chan0, 0;
+    let t1 = newchan main.main0.t1_chan0, 0;
+    spawn main.provide1(t0);
+    spawn main.provide2(t1);
+    select
+      case recv t0;
+      case recv t1;
+    endselect;
+def main.provide1(x):
+    send x;
+def main.provide2(y):
+    send y;
+==========
+((((t0?.0) & (t1?.0)) || t1!.0) || t0!.0)
+==================================================
+benchmark/partial_deadlock/main.migo
+def main.main():
+    let t0 = newchan main.main0.t0_chan0, 0;
+    let t1 = newchan main.main0.t1_chan0, 0;
+    spawn main.recvr(t0, t1);
+    spawn main.sender(t0);
+    spawn main.sender(t0);
+    recv t1;
+    recv t1;
+def main.recvr(ch, done):
+    recv ch;
+    send done;
+def main.sender(ch):
+    send ch;
+==========
+(((t1?.t1?.0 || t0!.0) || t0!.0) || t0?.t1!.0)
+==================================================
+simple/go/main.migo
+def main.main():
+    let t1 = newchan main.main0.t1_chan0, 0;
+    spawn main.main$1(t1);
+    recv t1;
+def main.main$1(a):
+    send a;
+==========
+(t1?.0 || t1!.0)
+==================================================
+simple/go-2/main.migo
+def main.main():
+    let t1 = newchan main.main0.t1_chan0, 0;
+    spawn main.main$1(t1);
+    spawn main.main$2(t1);
+def main.main$1(a):
+    send a;
+def main.main$2(a):
+    recv a;
+==========
+((0 || t1?.0) || t1!.0)
+==================================================
+simple/if-send-or-receive/main.migo
 def main.main():
     let t0 = newchan main.main0.t0_chan0, 0;
     if
@@ -13,7 +260,7 @@ def main.main#3(t0):
 ==========
 (t0!.0 + t0?.0)
 ==================================================
-loop-send/main.migo
+simple/loop-send/main.migo
 def main.main():
     let t0 = newchan main.main0.t0_chan0, 0;
     call main.main#1(t0);
@@ -23,21 +270,47 @@ def main.main#1(t0):
 ==========
 FAILED TO CONVERT: Recursive call
 ==================================================
-recv/main.migo
+simple/recv/main.migo
 def main.main():
     let t0 = newchan main.main0.t0_chan0, 0;
     recv t0;
 ==========
 t0?.0
 ==================================================
-send/main.migo
+simple/select/main.migo
+def main.main():
+    let t0 = newchan main.main0.t0_chan0, 0;
+    select
+      case recv t0;
+      case send t0;
+    endselect;
+==========
+((t0?.0) & (t0!.0))
+==================================================
+simple/select-nested/main.migo
+def main.main():
+    let t0 = newchan main.main0.t0_chan0, 0;
+    select
+      case recv t0;
+        call main.main#2(t0);
+      case send t0;
+    endselect;
+def main.main#2(t0):
+    select
+      case recv t0;
+      case send t0;
+    endselect;
+==========
+((t0?.((t0?.0) & (t0!.0))) & (t0!.0))
+==================================================
+simple/send/main.migo
 def main.main():
     let t0 = newchan main.main0.t0_chan0, 0;
     send t0;
 ==========
 t0!.0
 ==================================================
-send-recv/main.migo
+simple/send-recv/main.migo
 def main.main():
     let t0 = newchan main.main0.t0_chan0, 0;
     recv t0;
@@ -45,7 +318,19 @@ def main.main():
 ==========
 t0?.t0!.0
 ==================================================
-two-if-send-recv-func/main.migo
+simple/send-recv-func/main.migo
+def main.main():
+    let t0 = newchan main.main0.t0_chan0, 0;
+    call main.send(t0);
+    call main.recv(t0);
+def main.send(a):
+    send a;
+def main.recv(b):
+    recv b;
+==========
+t0!.t0?.0
+==================================================
+simple/two-if-send-recv-func/main.migo
 def main.main():
     let t0 = newchan main.main0.t0_chan0, 0;
     call main.send(t0);
@@ -61,9 +346,9 @@ def main.send#1(a):
 def main.send#3(a):
     recv a;
 ==========
-(a!.(a!.0 + a?.0) + a?.(a!.0 + a?.0))
+(t0!.(t0!.0 + t0?.0) + t0?.(t0!.0 + t0?.0))
 ==================================================
-two-if-send-recv-func2/main.migo
+simple/two-if-send-recv-func2/main.migo
 def main.main():
     let t0 = newchan main.main0.t0_chan0, 0;
     let t1 = newchan main.main0.t1_chan0, 0;
@@ -80,9 +365,9 @@ def main.send#1(a, b):
 def main.send#3(a, b):
     recv b;
 ==========
-(a!.(a!.0 + b?.0) + b?.(a!.0 + b?.0))
+(t0!.(t1!.0 + t0?.0) + t1?.(t1!.0 + t0?.0))
 ==================================================
-two-send-func/main.migo
+simple/two-send-func/main.migo
 def main.main():
     let t0 = newchan main.main0.t0_chan0, 0;
     call main.send(t0);
@@ -90,5 +375,5 @@ def main.main():
 def main.send(a):
     send a;
 ==========
-a!.a!.0
+t0!.t0!.0
 ==================================================

@@ -28,7 +28,7 @@ type compare_failure =
   | ACT_VER
   | DEADLOCK_LIST
   | RESOLVED
-let string_compare_failure (failure: compare_failure) = 
+let compare_failure_to_string (failure: compare_failure) = 
   match failure with
   | ACT_VER -> "ACT_VER"
   | DEADLOCK_LIST -> "DEADLOCK_LIST"
@@ -68,12 +68,12 @@ let print_res fmt (name0, (passed_act_ver0, deadlocked0, resolved0)) (name1, (pa
 
 let test_manual fmt exp (name0, result0) (name1, result1) =
   let compare_failures = compare_res result0 result1 in
-  if compare_failures = [] then (
+  if compare_failures = []  then (
     fprintf fmt "PASSED: ";
     print_res_summary fmt exp result0
   ) else (
     fprintf fmt "FAILED: %s: " exp;
-    List.map string_compare_failure compare_failures
+    List.map compare_failure_to_string compare_failures
       |> List.iter (fun s -> fprintf fmt "%s " s);
     fprintf fmt "\n";
     print_res fmt (name0, result0) (name1, result1)
@@ -81,7 +81,7 @@ let test_manual fmt exp (name0, result0) (name1, result1) =
 
 let test fmt (exp: string) = 
   let proc = CCS.parse exp in
-  let result0 = convert_res (Deadlock_detector_orig.main  null_fmt proc) in
+  let result0 = convert_res (Deadlock_detector_orig.main null_fmt proc) in
   let result1 = convert_res (Deadlock_detector.main null_fmt proc) in
   test_manual fmt exp ("orig", result0) ("mine", result1)
 

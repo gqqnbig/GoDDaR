@@ -1,0 +1,8 @@
+def main.main():
+    let t0 = newchan main.main0.t0_chan0, 0;
+    call main.send(t0);
+    call main.recv(t0);
+def main.send(a):
+    send a;
+def main.recv(b):
+    recv b;

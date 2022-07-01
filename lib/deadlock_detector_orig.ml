@@ -595,10 +595,9 @@ let rec deadlock_solver_2 exp top_lvl =
   | LOrI(a, b) -> LOrI(deadlock_solver_2 a top_lvl, deadlock_solver_2 b top_lvl)
   | LNil -> LNil
   | LList(EEta(AOut(_)) as a, b) when List.mem a top_lvl -> LPar(LList(a, LNil), deadlock_solver_2 b top_lvl)
-  | LList(EEta(AOut(k)), b) when List.mem (EEta(AIn(k))) top_lvl -> deadlock_solver_2 b top_lvl
-  | LList(EEta(AOut(_)) as a, b) -> LList(a, deadlock_solver_2 b top_lvl)
-  | LList(EEta(AIn(k)) as a, b) when List.mem a top_lvl -> LPar(LList(a, deadlock_solver_2 b top_lvl), LList(EEta(AOut(k)), LNil))
-  | LList(EEta(AIn(_)) as a, b) -> LList(a, deadlock_solver_2 b top_lvl)
+  | LList(EEta(AOut(k))     , b) when List.mem (EEta(AIn(k))) top_lvl -> deadlock_solver_2 b top_lvl
+  | LList(EEta(AIn(k))  as a, b) when List.mem a top_lvl -> LPar(LList(a, deadlock_solver_2 b top_lvl), LList(EEta(AOut(k)), LNil))
+  | LList(a, b) -> LList(a, deadlock_solver_2 b top_lvl)
   | LChi(a, b) ->
     let rec for_all e_arr l_arr =
       match e_arr, l_arr with

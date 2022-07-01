@@ -1,0 +1,13 @@
+def main.main():
+    let t0 = newchan main.main0.t0_chan0, 0;
+    let t1 = newchan main.main0.t1_chan0, 0;
+    spawn main.provide1(t0);
+    spawn main.provide2(t1);
+    select
+      case recv t0;
+      case recv t1;
+    endselect;
+def main.provide1(x):
+    send x;
+def main.provide2(y):
+    send y;

@@ -1,0 +1,1 @@
+Taken from "Concurrent Programming Languages" - "Channel-based Concurrency Module" - "Lecture 2: Coordinating Goroutines", 5th November 2020, MIEI - Integrated Masters in Comp. Science and Informatics Specialization Block, Bernardo Toninho (with António Ravara and Carla Ferreira)

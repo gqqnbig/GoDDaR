@@ -1,7 +1,8 @@
 (test
  (name migo)
  (modules migo)
- (libraries dlock))
+ (libraries dlock)
+)
 
 (rule
  (alias runtest)
