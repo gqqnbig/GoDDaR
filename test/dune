@@ -1,14 +1,17 @@
 (test
  (name ccs_parser)
  (modules ccs_parser)
- (libraries dlock))
+ (libraries dlock)
+ (modes byte))
 
 (test
  (name main_act_verifier)
  (modules main_act_verifier)
- (libraries dlock))
+ (libraries dlock)
+ (modes byte))
 
 (test
  (name deadlock_detector)
  (modules deadlock_detector)
- (libraries dlock))
+ (libraries dlock)
+ (modes byte))

@@ -201,20 +201,20 @@ module LambdaFlattened =
         | _ -> [lambdaToLambdaFlattened exp]
       in
       LOrI(List.sort compare (do_lambdaLOrIToLambdaFlattenedLOrI exp))
-    and lambdaLOrEToLambdaFlattenedLOrI (exp: 'a lambda_base): 'a lambda_flattened = 
-      let rec do_lambdaLOrEToLambdaFlattenedLOrI (exp: lambda): 'a lambda_flattened list = 
+    and lambdaLOrEToLambdaFlattenedLOrE (exp: 'a lambda_base): 'a lambda_flattened = 
+      let rec do_lambdaLOrEToLambdaFlattenedLOrE (exp: lambda): 'a lambda_flattened list = 
         match exp with
-        | LOrE(l, r) -> (do_lambdaLOrEToLambdaFlattenedLOrI l) @ (do_lambdaLOrEToLambdaFlattenedLOrI r)
+        | LOrE(l, r) -> (do_lambdaLOrEToLambdaFlattenedLOrE l) @ (do_lambdaLOrEToLambdaFlattenedLOrE r)
         | LNil -> []
         | _ -> [lambdaToLambdaFlattened exp]
       in
-      LOrI(List.sort compare (do_lambdaLOrEToLambdaFlattenedLOrI exp))
+      LOrE(List.sort compare (do_lambdaLOrEToLambdaFlattenedLOrE exp))
     and lambdaToLambdaFlattened (lambda: 'a lambda_base): 'a lambda_flattened = 
       match lambda with
       | LList(eta, l) -> LList(eta, lambdaToLambdaFlattened l)
       | LPar(_, _) -> lambdaLParToLambdaFlattenedLPar lambda
       | LOrI(_, _) -> lambdaLOrIToLambdaFlattenedLOrI lambda
-      | LOrE(_, _) -> lambdaLOrEToLambdaFlattenedLOrI lambda
+      | LOrE(_, _) -> lambdaLOrEToLambdaFlattenedLOrE lambda
       | LNil -> LNil
       | LChi(_,_) | LSubst -> failwith "not supported"
     
@@ -238,7 +238,7 @@ module LambdaFlattened =
         | [] -> LNil
         | [hd] -> hd
         | hd::tl::[] -> LOrE(tl, hd)
-        | hd::md::tl -> LOrE(LOrE(fold_LOrI tl, md), hd)
+        | hd::md::tl -> LOrE(LOrE(fold_LOrE tl, md), hd)
       in
       match lambda_flattened with
       | LList(eta, l) -> LList(eta, lambdaFlattenedToLambda l)

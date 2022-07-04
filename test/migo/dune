@@ -2,6 +2,7 @@
  (name migo)
  (modules migo)
  (libraries dlock)
+ (modes byte)
 )
 
 (rule
