@@ -1,0 +1,17 @@
+def main.main():
+    let t2 = newchan main.main0.t2_chan0, 0;
+    let t3 = newchan main.main0.t3_chan0, 0;
+    spawn main.main$1(t2);
+    spawn main.main$2(t3);
+    select
+      case recv t2; call main.main#2(t2, t3);
+      case recv t3; call main.main#4(t2, t3);
+    endselect;
+def main.main$1(a):
+    send a;
+def main.main$2(b):
+    recv b;
+def main.main#2(t2, t3):
+    send t3;
+def main.main#4(t2, t3):
+    send t2;

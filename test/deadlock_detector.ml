@@ -55,12 +55,12 @@ let print_res fmt (name0, (passed_act_ver0, deadlocked0, resolved0)) (name1, (pa
   let resolved0   = LambdaFlattenedSet.elements resolved0 in
   let resolved1   = LambdaFlattenedSet.elements resolved1 in
   fprintf fmt " passed_act_ver: 0: %b, 1: %b\n" passed_act_ver0 passed_act_ver1;
-  fprintf fmt " Deadlocked: \n";
+  fprintf fmt " Deadlocked:\n";
   fprintf fmt "  %s:\n" name0;
   List.iter (fun l -> fprintf fmt "   "; print_proc_simple fmt (lambdaFlattenedToProc l); fprintf fmt "\n") deadlocked0;
   fprintf fmt "  %s:\n" name1;
   List.iter (fun l -> fprintf fmt "   "; print_proc_simple fmt (lambdaFlattenedToProc l); fprintf fmt "\n") deadlocked1;
-  fprintf fmt " Solved: \n";
+  fprintf fmt " Solved:\n";
   fprintf fmt "  %s:\n" name0;
   List.iter (fun l -> fprintf fmt "   "; print_proc_simple fmt (lambdaFlattenedToProc l); fprintf fmt "\n") resolved0;
   fprintf fmt "  %s:\n" name1;
@@ -69,12 +69,13 @@ let print_res fmt (name0, (passed_act_ver0, deadlocked0, resolved0)) (name1, (pa
 let test_manual fmt exp (name0, result0) (name1, result1) =
   let compare_failures = compare_res result0 result1 in
   if compare_failures = []  then (
-    fprintf fmt "PASSED: ";
+    fprintf fmt "PASSED:";
     print_res_summary fmt exp result0
   ) else (
-    fprintf fmt "FAILED: %s: " exp;
+    fprintf fmt "FAILED: %s :" exp;
     List.map compare_failure_to_string compare_failures
-      |> List.iter (fun s -> fprintf fmt "%s " s);
+    |> String.concat " "
+    |> fprintf fmt "%s";
     fprintf fmt "\n";
     print_res fmt (name0, result0) (name1, result1)
   )
@@ -114,7 +115,7 @@ let fmt = Format.std_formatter in (
 
   (* Taken from test_file.txt*)
   test fmt "a?.0";
-  test fmt "a?.a!.0 ";
+  test fmt "a?.a!.0";
   test fmt "0 || 0";
   test fmt "a?.0 || a!.0";
   test fmt "a?.0 || b!.0";
@@ -173,7 +174,7 @@ let fmt = Format.std_formatter in (
   test fmt "(b!.a!.0 + b?.a!.0) + a?.0";
   test fmt "(b!.0 + a!.0) || (b?.0 + a?.0)";
   test fmt "a!.a!.a!.b!.0 || a?.a?.a?.b?.0";
-  test fmt "(a!.0 + (b?.a!.0 || b!.0)) || a?.0 ";
+  test fmt "(a!.0 + (b?.a!.0 || b!.0)) || a?.0";
   (* test fmt "a?.0 || b?.a!.0 || c?.b!.0 || d?.c!.0 || e?.d!.0 || e!.0"; *)
   test fmt "a!.0 || b!.0 || (a?.c!.b?.c!.0 + b?.c!.a?.c!.0) || c?.c?.0";
   test fmt "a!.0 || a?.b!.0 || a?.b!.0 || b?.b?.0";

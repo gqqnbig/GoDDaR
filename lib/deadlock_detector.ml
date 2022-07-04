@@ -54,10 +54,7 @@ let eval_sync ((lambdas, print_ctx) as execution: possible_execution): possible_
       )
     | NoSync, LOrI(a, b)::tl ->
       [(a::tl, conc_lvl print_ctx "+1"); (b::tl, conc_lvl print_ctx "+2")]
-    | MustSync, LOrI(a, b)::tl ->
-      let res1 = (do_eval_sync MustSync (a::tl, conc_lvl print_ctx "+1")) in
-      let res2 = (do_eval_sync MustSync (b::tl, conc_lvl print_ctx "+2")) in
-      res1 @ res2
+    | MustSync, LOrI(a, b)::tl
     | Sync(_), LOrI(a, b)::tl ->
       let res1 = (do_eval_sync action (a::tl, conc_lvl print_ctx "+1")) in
       let res2 = (do_eval_sync action (b::tl, conc_lvl print_ctx "+2")) in
