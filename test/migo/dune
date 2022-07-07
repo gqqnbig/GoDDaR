@@ -7,5 +7,5 @@
 
 (rule
  (alias runtest)
- (deps (glob_files_rec ./data/**))
+ (deps (source_tree ./data))
  (action (diff migo.expected migo.output)))
