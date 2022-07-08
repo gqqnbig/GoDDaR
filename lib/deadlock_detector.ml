@@ -124,27 +124,38 @@ let rec deadlock_solver_1 (lambda: lambda_tagged) (deadlocked_top_environment: e
   | LNil -> LNil
   | LSubst | LChi(_, _) -> failwith "These shouldn't appear"
 
-let rec deadlock_solver_2 (lambda: lambda_tagged) (deadlocked_top_environment: eta_tagged list): (lambda_tagged) =
-  let has_input_on_channel c1 deadlocked_top_environment = 
-    List.exists (
-      function 
-      | EEtaTagged(AIn(c2), _) -> c1 = c2
-      | EEtaTagged(AOut(c2), _) -> false
-    ) deadlocked_top_environment
+let deadlock_solver_2_dfs (lambda: lambda_tagged) (deadlocked_top_environment: eta_tagged list): (lambda_tagged) =
+  let dte = ref (List.map (fun eta -> (eta, false)) deadlocked_top_environment) in
+  let rec do_deadlock_solver_2 (lambda: lambda_tagged): (lambda_tagged) =
+    let is_co_input c1 (eta, found_co_output) =
+      match (eta, found_co_output) with
+      | (EEtaTagged(AOut(_),_), _) -> false
+      | (EEtaTagged(AIn(c2),_), _) -> c1 = c2 && (not found_co_output)
+    in
+    match lambda with
+    | LList((EEtaTagged(AOut(_), _) as eta), l) when List.mem_assoc eta !dte ->
+      dte := List.filter ((<>) (eta, false)) !dte;
+      LPar(LList(eta, LNil), do_deadlock_solver_2 l)
+
+    | LList( EEtaTagged(AOut(c1), _)       , l) when List.exists (is_co_input c1) !dte ->
+      let (eta_input, _) = List.find (is_co_input c1) !dte in
+      dte := (List.remove_assoc eta_input !dte);
+      dte := (eta_input, true)::!dte;
+      do_deadlock_solver_2 l
+
+    | LList((EEtaTagged(AIn(c), tag) as eta), l) when List.mem_assoc eta !dte ->
+      LPar(LList(EEtaTagged(AOut(c), tag), LNil), LList(eta, do_deadlock_solver_2 l))
+
+    | LList(eta, l) -> LList(eta, do_deadlock_solver_2 l)
+    | LPar(a, b) -> LPar(do_deadlock_solver_2 a, do_deadlock_solver_2 b)
+    | LOrI(a, b) -> LOrI(do_deadlock_solver_2 a, do_deadlock_solver_2 b)
+    | LOrE(a, b) -> LOrE(do_deadlock_solver_2 a, do_deadlock_solver_2 b)
+    | LNil -> LNil
+    | LSubst | LChi(_, _) -> failwith "These shouldn't appear"
   in
-  match lambda with
-  | LList((EEtaTagged(AOut(c), tag) as eta), l) when List.mem (EEtaTagged(AOut(c), tag)) deadlocked_top_environment ->
-      LPar(LList(eta, LNil), deadlock_solver_2 l deadlocked_top_environment)
-  | LList( EEtaTagged(AOut(c1), tag)       , l) when has_input_on_channel c1 deadlocked_top_environment ->
-      deadlock_solver_2 l deadlocked_top_environment
-  | LList((EEtaTagged(AIn(c), tag) as eta), l) when List.mem (EEtaTagged(AIn(c), tag)) deadlocked_top_environment ->
-      LPar(LList(EEtaTagged(AOut(c), tag), LNil), LList(eta, deadlock_solver_2 l deadlocked_top_environment))
-  | LList(eta, l) -> LList(eta, deadlock_solver_2 l deadlocked_top_environment)
-  | LPar(a, b) -> LPar(deadlock_solver_2 a deadlocked_top_environment, deadlock_solver_2 b deadlocked_top_environment)
-  | LOrI(a, b) -> LOrI(deadlock_solver_2 a deadlocked_top_environment, deadlock_solver_2 b deadlocked_top_environment)
-  | LOrE(a, b) -> LOrE(deadlock_solver_2 a deadlocked_top_environment, deadlock_solver_2 b deadlocked_top_environment)
-  | LNil -> LNil
-  | LSubst | LChi(_, _) -> failwith "These shouldn't appear"
+    do_deadlock_solver_2 lambda
+
+let deadlock_solver_2 = deadlock_solver_2_dfs
 
 let rec top_environment ((lambdas, print_ctx): possible_execution): eta_tagged list =
   match lambdas with
@@ -167,6 +178,8 @@ let rec detect_and_resolve fmt lambdaTaggedExp =
     (true, [], [lambdaTaggedExp])
   ) else (
     let deadlocked_top_environments = List.flatten (List.map top_environment deadlocked_executions) in
+    (* Remove Duplicates *)
+    let deadlocked_top_environments = List.fold_left ( fun tl hd -> (if List.mem hd tl then tl else hd :: tl))  [] deadlocked_top_environments in
     (* List.iter (fun eta -> (print_eta_tagged fmt eta; fprintf fmt "\n")) deadlocked_top_environments; *)
     let deadlock_solver = if !ds < 2 then deadlock_solver_1 else deadlock_solver_2 in
     let solved_exp = (deadlock_solver lambdaTaggedExp deadlocked_top_environments) in
