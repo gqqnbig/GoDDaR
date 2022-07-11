@@ -111,8 +111,9 @@ let printMode_base nl fmt exp p =
       print_proc_simple fmt (toProc exp);
     ) else if !simplified then(
       print_proc_simple fmt (toProc exp);
-    )
-  ); if nl then fprintf fmt "\n"
+    );
+    if nl then fprintf fmt "\n"
+  )
 
 let printMode = printMode_base true
 let printMode_no_nl = printMode_base false
