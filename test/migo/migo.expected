@@ -146,6 +146,10 @@ benchmark/go_by_example_select/main.migo
 benchmark/go_by_example_select/main.migo: lineNum:Char 17:4
 FAILED TO PARSE MIGO
 ==================================================
+benchmark/gomela-x-sender-x-receiver/main.migo
+benchmark/gomela-x-sender-x-receiver/main.migo: lineNum:Char 11:4
+FAILED TO PARSE MIGO
+==================================================
 benchmark/gomela-x-sender-x-receiver+1/main.migo
 benchmark/gomela-x-sender-x-receiver+1/main.migo: lineNum:Char 11:4
 FAILED TO PARSE MIGO
