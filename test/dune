@@ -15,3 +15,14 @@
  (modules deadlock_detector)
  (libraries dlock)
  (modes byte))
+
+(test
+ (name migo)
+ (modules migo)
+ (libraries dlock)
+ (modes byte))
+
+(rule
+ (alias runtest)
+ (deps (source_tree ./data))
+ (action (diff migo.expected migo.output)))
