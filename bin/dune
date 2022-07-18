@@ -18,3 +18,10 @@
  (modules MiGo_parser)
  (libraries dlock)
  (modes byte))
+
+(executable
+ (public_name test_comb)
+ (name test_comb)
+ (modules test_comb)
+ (libraries dlock)
+ (modes byte))
