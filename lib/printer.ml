@@ -41,6 +41,7 @@ let rec print_lambda_tagged fmt l =
     | LList(e1, l1) -> fprintf fmt "LList(%a, %a)" print_eta_tagged e1 print_lambda_tagged l1
     | LPar(l1, l2) -> fprintf fmt "LPar(%a, %a)" print_lambda_tagged l1 print_lambda_tagged l2
     | LChi(el, ll) -> fprintf fmt "LChi(%a; %a)" print_eta_tagged_list el print_lambda_tagged_list ll
+    | LRepl(e1, l1) -> fprintf fmt "LRepl(%a, %a)" print_eta_tagged e1 print_lambda_tagged l1
     | LSubst -> fprintf fmt "LSubst"
 and print_eta_tagged_list fmt lst =
     match lst with
@@ -61,6 +62,7 @@ let rec print_lambdas fmt l =
     | LList(e1, l1) -> fprintf fmt "LList(%a, %a)" print_eta e1 print_lambdas l1
     | LPar(l1, l2) -> fprintf fmt "LPar(%a, %a)" print_lambdas l1 print_lambdas l2
     | LChi(el, ll) -> fprintf fmt "LChi(%a; %a)" print_etalist el print_lambdalist ll
+    | LRepl(e1, l1) -> fprintf fmt "LRepl(%a, %a)" print_eta e1 print_lambdas l1
     | LSubst -> fprintf fmt "LSubst"
 and print_lambdalist fmt lst =
     match lst with
@@ -92,6 +94,7 @@ let rec print_proc fmt p =
     | POrE(p1, p2) -> fprintf fmt "POrE(%a, %a)" print_proc p1 print_proc p2
     | PPref(a, pp) -> fprintf fmt "PPref(%a, %a)" print_action a print_proc pp
     | PPar(p1, p2) -> fprintf fmt "PPar(%a, %a)" print_proc p1 print_proc p2
+    | PRepl(a, pp) -> fprintf fmt "PRepl(%a, %a)" print_action a print_proc pp
 
 let rec print_proc_simple fmt p =
     match p with
@@ -100,6 +103,7 @@ let rec print_proc_simple fmt p =
     | POrE(p1, p2) -> fprintf fmt "(%a & %a)" print_proc_simple p1 print_proc_simple p2
     | PPref(a, pp) -> fprintf fmt "%a.%a" print_action_simple a print_proc_simple pp
     | PPar(p1, p2) -> fprintf fmt "(%a || %a)" print_proc_simple p1 print_proc_simple p2
+    | PRepl(a, pp) -> fprintf fmt "*%a.%a" print_action_simple a print_proc_simple pp
 
 (* ----------- Misc ----------- *)
 

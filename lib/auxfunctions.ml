@@ -149,7 +149,7 @@ let rec hasLNil exp =
   | _ -> false
 
 (** Strips the expression from containing [LNil] located inside [LPar] *)
-let rec remLNils exp =
+let rec remLNils exp: 'a lambda_base =
   let rec rem exp =
     match exp with
     | LPar(LNil, LNil) -> LNil

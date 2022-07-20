@@ -12,7 +12,7 @@ open Cmd
 exception RuntimeException of string
 
 type possible_execution =
-  (lambda_tagged  list) * (* List of the parallel compositions that can't reduce without syncronization *)
+  (lambda_tagged  list) * (* List of the parallel compositions *)
   print_ctx
 
 let possible_executionToLambda (lambdas, print_ctx: possible_execution): lambda =
@@ -43,6 +43,17 @@ let eval_sync ((lambdas, print_ctx) as execution: possible_execution): possible_
         (do_eval_sync (Sync(a)) (tl, print_ctx))
         |> List.map (fun (lambdas, print_ctx) -> (b::lambdas, print_ctx))
       )
+    | NoSync  , (LRepl(EEtaTagged(a, _), b) as l)::tl
+    | MustSync, (LRepl(EEtaTagged(a, _), b) as l)::tl ->
+      (
+        if action = NoSync then 
+          (do_eval_sync NoSync (tl, print_ctx))
+          |> List.map (fun (lambdas, print_ctx) -> (l::lambdas, print_ctx))
+        else []
+      ) @ (
+        (do_eval_sync (Sync(a)) (tl, print_ctx))
+        |> List.map (fun (lambdas, print_ctx) -> (b::l::lambdas, print_ctx))
+      )
     | Sync(action), (LList(EEtaTagged(a, _), b) as l)::tl ->
       if a = compl_action action then (
         (* found match *)
@@ -52,10 +63,19 @@ let eval_sync ((lambdas, print_ctx) as execution: possible_execution): possible_
         (do_eval_sync (Sync(action)) (tl, print_ctx))
         |> List.map (fun (lambdas, print_ctx) -> (l::lambdas, print_ctx))
       )
+    | Sync(action), (LRepl(EEtaTagged(a, _), b) as l)::tl ->
+      if a = compl_action action then (
+        (* found match *)
+        [(b::l::tl, {print_ctx with level = print_ctx.level ^ "." ^ (actionToString a)})]
+      ) else (
+        (* Keep seaching*)
+        (do_eval_sync (Sync(action)) (tl, print_ctx))
+        |> List.map (fun (lambdas, print_ctx) -> (l::lambdas, print_ctx))
+      )
     | NoSync, LOrI(a, b)::tl ->
       [(a::tl, conc_lvl print_ctx "+1"); (b::tl, conc_lvl print_ctx "+2")]
-    | MustSync, LOrI(a, b)::tl
-    | Sync(_), LOrI(a, b)::tl ->
+    | Sync(_) , LOrI(a, b)::tl
+    | MustSync, LOrI(a, b)::tl -> 
       let res1 = (do_eval_sync action (a::tl, conc_lvl print_ctx "+1")) in
       let res2 = (do_eval_sync action (b::tl, conc_lvl print_ctx "+2")) in
       res1 @ res2
@@ -132,6 +152,7 @@ let rec deadlock_solver_1 (lambda: lambda_tagged) (deadlocked_top_environment: e
   | LList(eta, LNil) -> LList(eta, LNil)
   | LList(eta, l) when List.mem eta deadlocked_top_environment -> LPar(LList(eta, LNil), deadlock_solver_1 l deadlocked_top_environment)
   | LList(eta, l) -> LList(eta, deadlock_solver_1 l deadlocked_top_environment)
+  | LRepl(eta, l) -> LRepl(eta, deadlock_solver_1 l deadlocked_top_environment)
   | LPar(a, b) -> LPar(deadlock_solver_1 a deadlocked_top_environment, deadlock_solver_1 b deadlocked_top_environment)
   | LOrI(a, b) -> LOrI(deadlock_solver_1 a deadlocked_top_environment, deadlock_solver_1 b deadlocked_top_environment)
   | LOrE(a, b) -> LOrE(deadlock_solver_1 a deadlocked_top_environment, deadlock_solver_1 b deadlocked_top_environment)
@@ -161,6 +182,7 @@ let deadlock_solver_2_dfs (lambda: lambda_tagged) (deadlocked_top_environment: e
       LPar(LList(EEtaTagged(AOut(c), tag), LNil), LList(eta, do_deadlock_solver_2 l))
 
     | LList(eta, l) -> LList(eta, do_deadlock_solver_2 l)
+    | LRepl(eta, l) -> LRepl(eta, do_deadlock_solver_2 l)
     | LPar(a, b) -> LPar(do_deadlock_solver_2 a, do_deadlock_solver_2 b)
     | LOrI(a, b) -> LOrI(do_deadlock_solver_2 a, do_deadlock_solver_2 b)
     | LOrE(a, b) -> LOrE(do_deadlock_solver_2 a, do_deadlock_solver_2 b)
@@ -174,7 +196,8 @@ let deadlock_solver_2 = deadlock_solver_2_dfs
 let rec top_environment ((lambdas, print_ctx): possible_execution): eta_tagged list =
   match lambdas with
   | [] -> []
-  | LList(eta, _)::tl ->
+  | LList(eta, _)::tl
+  | LRepl(eta, _)::tl -> (* TODO *)
     eta::(top_environment (tl, print_ctx))
   | LOrE(a, b)::tl
   | LOrI(a, b)::tl ->

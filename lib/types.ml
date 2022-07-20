@@ -14,6 +14,7 @@ type proc =
     | POrE of proc * proc
     | PPref of action * proc
     | PPar of proc * proc
+    | PRepl of action * proc
 
 type eta = 
     | EEta of action
@@ -28,6 +29,7 @@ type 'a lambda_base =
     | LList of 'a * 'a lambda_base
     | LChi of 'a list * 'a lambda_base list
     | LPar of 'a lambda_base * 'a lambda_base
+    | LRepl of 'a * 'a lambda_base
     | LSubst
 
 type lambda = eta lambda_base
@@ -57,6 +59,7 @@ let rec lambdaToLambdaTagged (exp: lambda): lambda_tagged =
         | LOrI(a, b) -> LOrI(do_lambdaToLambdaTagged a, do_lambdaToLambdaTagged b)
         | LOrE(a, b) -> LOrE(do_lambdaToLambdaTagged a, do_lambdaToLambdaTagged b)
         | LList(e, l) -> LList(etaToEtaTagged e, do_lambdaToLambdaTagged l)
+        | LRepl(e, l) -> LRepl(etaToEtaTagged e, do_lambdaToLambdaTagged l)
     in do_lambdaToLambdaTagged exp
 
 let rec etaTaggedToEta (EEtaTagged(a, _): eta_tagged): eta =
@@ -71,6 +74,7 @@ let rec lambdaTaggedToLambda (exp: lambda_tagged): lambda =
     | LOrI(a, b) -> LOrI(lambdaTaggedToLambda a, lambdaTaggedToLambda b)
     | LOrE(a, b) -> LOrE(lambdaTaggedToLambda a, lambdaTaggedToLambda b)
     | LList(e, l) -> LList(etaTaggedToEta e, lambdaTaggedToLambda l)
+    | LRepl(e, l) -> LRepl(etaTaggedToEta e, lambdaTaggedToLambda l)
 
 let rec toLambda proc =
     match proc with
@@ -79,6 +83,7 @@ let rec toLambda proc =
     | POrE(a, b) -> LOrE(toLambda a, toLambda b)
     | PPref(a, p) -> LList(EEta(a), toLambda p)
     | PPar(p1, p2) -> LPar(toLambda p1, toLambda p2)
+    | PRepl(a, p) -> LRepl(EEta(a), toLambda p)
 
 let toAction eta =
     match eta with
@@ -96,6 +101,7 @@ let rec toProc lambda =
     | LOrE(a, b) -> POrE(toProc a, toProc b)
     | LList(e, l) -> PPref(toAction e, toProc l)
     | LPar(l1, l2) -> PPar(toProc l1, toProc l2)
+    | LRepl(e, l) -> PRepl(toAction e, toProc l)
     | LChi(et, ll) -> chi_to_proc lambda
 and chi_to_proc chi =
     match chi with
@@ -179,6 +185,7 @@ module LambdaFlattened =
       | LPar of 'a lambda_flattened list
       | LOrI of 'a lambda_flattened list
       | LOrE of 'a lambda_flattened list
+      | LRepl of 'a * 'a lambda_flattened
       | LNil
     
     type t = eta lambda_flattened
@@ -215,6 +222,7 @@ module LambdaFlattened =
       | LPar(_, _) -> lambdaLParToLambdaFlattenedLPar lambda
       | LOrI(_, _) -> lambdaLOrIToLambdaFlattenedLOrI lambda
       | LOrE(_, _) -> lambdaLOrEToLambdaFlattenedLOrE lambda
+      | LRepl(eta, l) -> LRepl(eta, lambdaToLambdaFlattened l)
       | LNil -> LNil
       | LChi(_,_) | LSubst -> failwith "not supported"
     
@@ -245,6 +253,7 @@ module LambdaFlattened =
       | LPar(lambda_list) -> fold_LPar (List.map lambdaFlattenedToLambda lambda_list)
       | LOrI(lambda_list) -> fold_LOrI (List.map lambdaFlattenedToLambda lambda_list)
       | LOrE(lambda_list) -> fold_LOrE (List.map lambdaFlattenedToLambda lambda_list)
+      | LRepl(eta, l) -> LRepl(eta, lambdaFlattenedToLambda l)
       | LNil -> LNil
 
     let canonicalizeLambda lambda =
