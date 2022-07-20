@@ -185,8 +185,8 @@ module LambdaFlattened =
 
     let compare = compare
 
-    let rec lambdaLParToLambdaFlattenedLPar (exp: lambda): 'a lambda_flattened = 
-      let rec do_lambdaLParToLambdaFlattenedLPar (exp: lambda): 'a lambda_flattened list = 
+    let rec lambdaLParToLambdaFlattenedLPar (exp: 'a lambda_base): 'a lambda_flattened = 
+      let rec do_lambdaLParToLambdaFlattenedLPar (exp: 'a lambda_base): 'a lambda_flattened list = 
         match exp with
         | LPar(l, r) -> (do_lambdaLParToLambdaFlattenedLPar l) @ (do_lambdaLParToLambdaFlattenedLPar r)
         | LNil -> []
@@ -194,7 +194,7 @@ module LambdaFlattened =
       in
       LPar(List.sort compare (do_lambdaLParToLambdaFlattenedLPar exp))
     and lambdaLOrIToLambdaFlattenedLOrI (exp: 'a lambda_base): 'a lambda_flattened = 
-      let rec do_lambdaLOrIToLambdaFlattenedLOrI (exp: lambda): 'a lambda_flattened list = 
+      let rec do_lambdaLOrIToLambdaFlattenedLOrI (exp: 'a lambda_base): 'a lambda_flattened list = 
         match exp with
         | LOrI(l, r) -> (do_lambdaLOrIToLambdaFlattenedLOrI l) @ (do_lambdaLOrIToLambdaFlattenedLOrI r)
         | LNil -> []
@@ -202,7 +202,7 @@ module LambdaFlattened =
       in
       LOrI(List.sort compare (do_lambdaLOrIToLambdaFlattenedLOrI exp))
     and lambdaLOrEToLambdaFlattenedLOrE (exp: 'a lambda_base): 'a lambda_flattened = 
-      let rec do_lambdaLOrEToLambdaFlattenedLOrE (exp: lambda): 'a lambda_flattened list = 
+      let rec do_lambdaLOrEToLambdaFlattenedLOrE (exp: 'a lambda_base): 'a lambda_flattened list = 
         match exp with
         | LOrE(l, r) -> (do_lambdaLOrEToLambdaFlattenedLOrE l) @ (do_lambdaLOrEToLambdaFlattenedLOrE r)
         | LNil -> []
