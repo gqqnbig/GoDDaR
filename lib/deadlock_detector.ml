@@ -92,23 +92,37 @@ let eval_sync ((lambdas, print_ctx) as execution: possible_execution): possible_
       (List.filter ((<>) LNil) lambdas, print_ctx)
   )
 
+let is_LNil_or_LRepl l =
+  match l with
+  | LNil | LRepl(_, _) -> true
+  | _ -> false
+
 let eval fmt (lambda: lambda_tagged) = 
+  let past_execs = Hashtbl.create 1 in
   let rec do_eval (executions: possible_execution list) (deadlocks: possible_execution list) =
     match executions with
     | [] -> List.rev deadlocks
     | ((lambdas, print_ctx) as execution)::tl -> 
-      print_possible_execution fmt execution;
       (* Strip LNil processes *)
-      let lambdas = List.map (remLNils) lambdas in
-      if (List.for_all ((=) LNil) lambdas) then
+      let lambdas = List.map lparToList lambdas |> List.flatten |> List.map remLNils in
+      let execution_flattened = LambdaFlattened.lambdaToLambdaFlattened (assocLeftList lambdas) in
+      if Hashtbl.mem past_execs execution_flattened then (
+        (* Format.fprintf fmt " Already eval'ed\n"; *)
         do_eval tl deadlocks
-      else (
-        let reductions = eval_sync execution in
-        if reductions = [] then
-          do_eval tl (execution::deadlocks)
-        else
-          do_eval (reductions@tl) deadlocks
+      ) else (
+        print_possible_execution fmt execution;
+        Hashtbl.add past_execs execution_flattened print_ctx;
+        if (List.for_all is_LNil_or_LRepl lambdas) then
+          do_eval tl deadlocks
+        else (
+          let reductions = eval_sync execution in
+          if reductions = [] then
+            do_eval tl (execution::deadlocks)
+          else
+            do_eval (reductions@tl) deadlocks
+        )
       )
+
   in
     do_eval [([lambda], {level="1"; print=true})] []
 
