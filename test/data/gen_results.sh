@@ -1,9 +1,16 @@
 #!/bin/bash -xe
 
+list_files() {
+        if [ $# -eq 0 ]; then
+		find . -name "main.go"
+        else
+                echo $@
+        fi
+}
 
 
 BASE_PATH="$PWD"
-find . -name "main.go" |
+list_files $@ |
 	while read file; do
 		echo $file
 		dir="${file%\/*}";
@@ -12,7 +19,7 @@ find . -name "main.go" |
 		cd "$BASE_PATH"
 	done
 
-find . -name "main.migo" |
+list_files $@ |
 	while read file; do
 		echo $file
 		dir="${file%\/*}";

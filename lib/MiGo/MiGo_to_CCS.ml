@@ -51,11 +51,20 @@ let rec do_migo_to_ccs migo_defs (stack: stack_entry list): string =
           (do_migo_to_ccs migo_defs ((fun_name, stmt_tl, var_map)::tl))
           (do_migo_to_ccs migo_defs ((def_name, def_stmts, call_var_map)::stack_without_stmts))
       | MiGo_Types.Select(cases) -> 
-        let case_strings: string list = List.map (
+        let (tau_cases, other_cases) = List.partition (fun (prefix, _) -> prefix = MiGo_Types.Tau) cases in
+        let gen_case_strings = List.map (
           fun (prefix, stmts) -> 
             Format.sprintf "(%s)" (do_migo_to_ccs migo_defs ((fun_name, Prefix(prefix)::stmts, var_map)::tl))
-        ) cases in
-        Format.sprintf "(%s)" (String.concat " & " case_strings)
+        ) in
+        let tau_case_strings = gen_case_strings tau_cases in
+        let other_case_strings = gen_case_strings other_cases in
+        Format.sprintf "(%s)" (String.concat " & " other_case_strings)
+        |> fun other_case_expr -> 
+        if tau_case_strings = [] then (
+          other_case_expr
+        ) else (
+          Format.sprintf "(%s)" (String.concat " + " (other_case_expr::tau_case_strings))
+        )
       | MiGo_Types.Lock(_)
       | MiGo_Types.Unlock(_)
       | MiGo_Types.Prefix(Tau)
@@ -70,7 +79,7 @@ let migo_to_ccs (migo_defs: MiGo_Types.migo_def list): string =
       Hashtbl.add migo_def_hashtbl name def
     )
   ) migo_defs;
-  let Def(_, params, stmts) as main = (Hashtbl.find migo_def_hashtbl "main.main") in
+  let Def(_, params, stmts) = (Hashtbl.find migo_def_hashtbl "main.main") in
   assert (params = []);
   do_migo_to_ccs migo_def_hashtbl [("maim.main", stmts, [])]
 
