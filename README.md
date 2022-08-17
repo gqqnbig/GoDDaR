@@ -1,6 +1,5 @@
-# Deadlock-Detector-and-Resolver
-## A Tool for Static Deadlock Detection and Resolution in Go Programs
-
+### GoDDaR
+A tool for Static **D**eadlock **D**etection **a**nd **R**esolution in **Go** Programs.
 
 ### Requirements:
 
@@ -10,7 +9,7 @@
 
 ### Example usage
 ```
-Usage: ./dlock [-v | -s | -ds] [-p <process> | -m <MiGo file>]
+Usage: ./GoDDar [-v | -s | -ds] [-p <process> | -m <MiGo file>]
 -v Output debug information
 -s Output a simpler representation of the process
 -ds Select deadlock resolution algorithm (1 or 2)
@@ -22,7 +21,7 @@ Usage: ./dlock [-v | -s | -ds] [-p <process> | -m <MiGo file>]
 
 Analyse CCS process:
 ```
-$ dune exec -- dlock -s -p 'a!.b?.0 || b!.a?.0'
+$ dune exec -- GoDDar -s -p 'a!.b?.0 || b!.a?.0'
 ---- 1 ----
     (a!.b?.0 || b!.a?.0)
 
@@ -35,7 +34,7 @@ Resolved:
 
 Analyse MiGo type:
 ```
-$ dune exec -- dlock -s -m test/data/benchmark/bad-order-circular/main.migo
+$ dune exec -- GoDDar -s -m test/data/benchmark/bad-order-circular/main.migo
 ---- 1 ----
 (t0!.t1?.0 || t1!.t0?.0)
 

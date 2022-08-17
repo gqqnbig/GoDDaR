@@ -1,9 +1,14 @@
+ (install
+  (section bin)
+  (files (deadlock_detector.exe as GoDDaR)))
+
 (executable
  (public_name dlock)
  (name deadlock_detector)
  (modules Deadlock_detector)
  (libraries dlock)
- (modes byte))
+ (modes byte)
+)
 
 (executable
  (public_name dlock-orig)
