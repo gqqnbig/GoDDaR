@@ -174,59 +174,57 @@ let lchi_to_lpar exp =
     loop a b
   | _ -> exp
 
-(** lambda flattned
-
-This is an attempt to provide a canonical version of the lambda type, such that it can be compared
+(** This is an attempt to provide a canonical version of the lambda type, such that it can be compared
 and sorted correctly *)
-module LambdaFlattened =
+module LambdaC =
     struct
-    type 'a lambda_flattened = 
-      | LList of 'a * 'a lambda_flattened
-      | LPar of 'a lambda_flattened list
-      | LOrI of 'a lambda_flattened list
-      | LOrE of 'a lambda_flattened list
-      | LRepl of 'a * 'a lambda_flattened
+    type 'a lambdaC = 
+      | LList of 'a * 'a lambdaC
+      | LPar of 'a lambdaC list
+      | LOrI of 'a lambdaC list
+      | LOrE of 'a lambdaC list
+      | LRepl of 'a * 'a lambdaC
       | LNil
     
-    type t = eta lambda_flattened
+    type t = eta lambdaC
 
     let compare = compare
 
-    let rec lambdaLParToLambdaFlattenedLPar (exp: 'a lambda_base): 'a lambda_flattened = 
-      let rec do_lambdaLParToLambdaFlattenedLPar (exp: 'a lambda_base): 'a lambda_flattened list = 
+    let rec lambdaLParToLambdaCLPar (exp: 'a lambda_base): 'a lambdaC = 
+      let rec do_lambdaLParToLambdaCLPar (exp: 'a lambda_base): 'a lambdaC list = 
         match exp with
-        | LPar(l, r) -> (do_lambdaLParToLambdaFlattenedLPar l) @ (do_lambdaLParToLambdaFlattenedLPar r)
+        | LPar(l, r) -> (do_lambdaLParToLambdaCLPar l) @ (do_lambdaLParToLambdaCLPar r)
         | LNil -> []
-        | _ -> [lambdaToLambdaFlattened exp]
+        | _ -> [lambdaToLambdaC exp]
       in
-      LPar(List.sort compare (do_lambdaLParToLambdaFlattenedLPar exp))
-    and lambdaLOrIToLambdaFlattenedLOrI (exp: 'a lambda_base): 'a lambda_flattened = 
-      let rec do_lambdaLOrIToLambdaFlattenedLOrI (exp: 'a lambda_base): 'a lambda_flattened list = 
+      LPar(List.sort compare (do_lambdaLParToLambdaCLPar exp))
+    and lambdaLOrIToLambdaCLOrI (exp: 'a lambda_base): 'a lambdaC = 
+      let rec do_lambdaLOrIToLambdaCLOrI (exp: 'a lambda_base): 'a lambdaC list = 
         match exp with
-        | LOrI(l, r) -> (do_lambdaLOrIToLambdaFlattenedLOrI l) @ (do_lambdaLOrIToLambdaFlattenedLOrI r)
+        | LOrI(l, r) -> (do_lambdaLOrIToLambdaCLOrI l) @ (do_lambdaLOrIToLambdaCLOrI r)
         | LNil -> []
-        | _ -> [lambdaToLambdaFlattened exp]
+        | _ -> [lambdaToLambdaC exp]
       in
-      LOrI(List.sort compare (do_lambdaLOrIToLambdaFlattenedLOrI exp))
-    and lambdaLOrEToLambdaFlattenedLOrE (exp: 'a lambda_base): 'a lambda_flattened = 
-      let rec do_lambdaLOrEToLambdaFlattenedLOrE (exp: 'a lambda_base): 'a lambda_flattened list = 
+      LOrI(List.sort compare (do_lambdaLOrIToLambdaCLOrI exp))
+    and lambdaLOrEToLambdaCLOrE (exp: 'a lambda_base): 'a lambdaC = 
+      let rec do_lambdaLOrEToLambdaCLOrE (exp: 'a lambda_base): 'a lambdaC list = 
         match exp with
-        | LOrE(l, r) -> (do_lambdaLOrEToLambdaFlattenedLOrE l) @ (do_lambdaLOrEToLambdaFlattenedLOrE r)
+        | LOrE(l, r) -> (do_lambdaLOrEToLambdaCLOrE l) @ (do_lambdaLOrEToLambdaCLOrE r)
         | LNil -> []
-        | _ -> [lambdaToLambdaFlattened exp]
+        | _ -> [lambdaToLambdaC exp]
       in
-      LOrE(List.sort compare (do_lambdaLOrEToLambdaFlattenedLOrE exp))
-    and lambdaToLambdaFlattened (lambda: 'a lambda_base): 'a lambda_flattened = 
+      LOrE(List.sort compare (do_lambdaLOrEToLambdaCLOrE exp))
+    and lambdaToLambdaC (lambda: 'a lambda_base): 'a lambdaC = 
       match lambda with
-      | LList(eta, l) -> LList(eta, lambdaToLambdaFlattened l)
-      | LPar(_, _) -> lambdaLParToLambdaFlattenedLPar lambda
-      | LOrI(_, _) -> lambdaLOrIToLambdaFlattenedLOrI lambda
-      | LOrE(_, _) -> lambdaLOrEToLambdaFlattenedLOrE lambda
-      | LRepl(eta, l) -> LRepl(eta, lambdaToLambdaFlattened l)
+      | LList(eta, l) -> LList(eta, lambdaToLambdaC l)
+      | LPar(_, _) -> lambdaLParToLambdaCLPar lambda
+      | LOrI(_, _) -> lambdaLOrIToLambdaCLOrI lambda
+      | LOrE(_, _) -> lambdaLOrEToLambdaCLOrE lambda
+      | LRepl(eta, l) -> LRepl(eta, lambdaToLambdaC l)
       | LNil -> LNil
       | LChi(_,_) | LSubst -> failwith "not supported"
     
-    let rec lambdaFlattenedToLambda (lambda_flattened: 'a lambda_flattened): 'a lambda_base = 
+    let rec lambdaCToLambda (lambdaC: 'a lambdaC): 'a lambda_base = 
       let rec fold_LPar list: 'a lambda_base =
         match list with
         | [] -> LNil
@@ -248,15 +246,15 @@ module LambdaFlattened =
         | hd::tl::[] -> LOrE(tl, hd)
         | hd::md::tl -> LOrE(LOrE(fold_LOrE tl, md), hd)
       in
-      match lambda_flattened with
-      | LList(eta, l) -> LList(eta, lambdaFlattenedToLambda l)
-      | LPar(lambda_list) -> fold_LPar (List.map lambdaFlattenedToLambda lambda_list)
-      | LOrI(lambda_list) -> fold_LOrI (List.map lambdaFlattenedToLambda lambda_list)
-      | LOrE(lambda_list) -> fold_LOrE (List.map lambdaFlattenedToLambda lambda_list)
-      | LRepl(eta, l) -> LRepl(eta, lambdaFlattenedToLambda l)
+      match lambdaC with
+      | LList(eta, l) -> LList(eta, lambdaCToLambda l)
+      | LPar(lambda_list) -> fold_LPar (List.map lambdaCToLambda lambda_list)
+      | LOrI(lambda_list) -> fold_LOrI (List.map lambdaCToLambda lambda_list)
+      | LOrE(lambda_list) -> fold_LOrE (List.map lambdaCToLambda lambda_list)
+      | LRepl(eta, l) -> LRepl(eta, lambdaCToLambda l)
       | LNil -> LNil
 
     let canonicalizeLambda lambda =
-        lambdaFlattenedToLambda (lambdaToLambdaFlattened lambda)
+        lambdaCToLambda (lambdaToLambdaC lambda)
 
 end

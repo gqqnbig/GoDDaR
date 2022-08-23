@@ -125,13 +125,13 @@ let eval fmt (lambda: lambda_tagged) =
     | ((lambdas, print_ctx) as execution)::tl -> 
       (* Strip LNil processes *)
       let lambdas = List.map lparToList lambdas |> List.flatten |> List.map remLNils in
-      let execution_flattened = LambdaFlattened.lambdaToLambdaFlattened (assocLeftList lambdas) in
-      if Hashtbl.mem past_execs execution_flattened then (
+      let execution_canonical = LambdaC.lambdaToLambdaC (assocLeftList lambdas) in
+      if Hashtbl.mem past_execs execution_canonical then (
         (* Format.fprintf fmt " Already eval'ed\n"; *)
         do_eval tl deadlocks
       ) else (
         print_possible_execution fmt execution;
-        Hashtbl.add past_execs execution_flattened print_ctx;
+        Hashtbl.add past_execs execution_canonical print_ctx;
         if (List.for_all is_LNil_or_LRepl lambdas) then
           do_eval tl deadlocks
         else (

@@ -3,21 +3,21 @@ open Dlock.Printer
 open Dlock.Types
 open Format
 
-module LambdaFlattenedSet = Set.Make(LambdaFlattened)
+module LambdaCSet = Set.Make(LambdaC)
 
 let bool_to_string b =
   match b with
   | true  -> "true "
   | false -> "false"
 
-let lambdaFlattenedToProc l: proc =
-  toProc (LambdaFlattened.lambdaFlattenedToLambda l)
+let lambdaCToProc l: proc =
+  toProc (LambdaC.lambdaCToLambda l)
 
 let convert_res (passed_act_ver, deadlocked0, resolved0) =
   let deadlocked0_no_LNil = List.filter (fun l -> l <> LNil) deadlocked0 in
   (passed_act_ver,
-   LambdaFlattenedSet.of_list (List.map LambdaFlattened.lambdaToLambdaFlattened deadlocked0_no_LNil),
-   LambdaFlattenedSet.of_list (List.map LambdaFlattened.lambdaToLambdaFlattened resolved0  ))
+   LambdaCSet.of_list (List.map LambdaC.lambdaToLambdaC deadlocked0_no_LNil),
+   LambdaCSet.of_list (List.map LambdaC.lambdaToLambdaC resolved0  ))
 
 let convert_res_manual (passed_act_ver, deadlocked0, resolved0) =
   convert_res (passed_act_ver,
@@ -36,35 +36,35 @@ let compare_failure_to_string (failure: compare_failure) =
 
 let compare_res (passed_act_ver0, deadlocked0, resolved0) (passed_act_ver1, deadlocked1, resolved1): compare_failure list =
   (if passed_act_ver0 = passed_act_ver1 then [] else [ACT_VER]) @
-  (if LambdaFlattenedSet.compare deadlocked0 deadlocked1 == 0 then [] else [DEADLOCK_LIST]) @
-  (if LambdaFlattenedSet.compare resolved0 resolved1 == 0 then [] else [RESOLVED])
+  (if LambdaCSet.compare deadlocked0 deadlocked1 == 0 then [] else [DEADLOCK_LIST]) @
+  (if LambdaCSet.compare resolved0 resolved1 == 0 then [] else [RESOLVED])
 
 let print_res_summary fmt exp (passed_act_ver0, deadlocked0, resolved0) : unit =
-  let len_deadlocked = (LambdaFlattenedSet.cardinal deadlocked0) in
+  let len_deadlocked = (LambdaCSet.cardinal deadlocked0) in
   fprintf fmt "act_ver: %s #deadlock: %i, exp: %s" (bool_to_string passed_act_ver0) len_deadlocked exp;
   if len_deadlocked > 0 then (
     fprintf fmt ", resolved: ";
-    let [@warning "-8"] hd::_ = (LambdaFlattenedSet.elements resolved0) in
-    print_proc_simple fmt (lambdaFlattenedToProc hd);
+    let [@warning "-8"] hd::_ = (LambdaCSet.elements resolved0) in
+    print_proc_simple fmt (lambdaCToProc hd);
   );
   fprintf fmt "\n"
 
 let print_res fmt (name0, (passed_act_ver0, deadlocked0, resolved0)) (name1, (passed_act_ver1, deadlocked1, resolved1)): unit =
-  let deadlocked0 = LambdaFlattenedSet.elements deadlocked0 in
-  let deadlocked1 = LambdaFlattenedSet.elements deadlocked1 in
-  let resolved0   = LambdaFlattenedSet.elements resolved0 in
-  let resolved1   = LambdaFlattenedSet.elements resolved1 in
+  let deadlocked0 = LambdaCSet.elements deadlocked0 in
+  let deadlocked1 = LambdaCSet.elements deadlocked1 in
+  let resolved0   = LambdaCSet.elements resolved0 in
+  let resolved1   = LambdaCSet.elements resolved1 in
   fprintf fmt " passed_act_ver: 0: %b, 1: %b\n" passed_act_ver0 passed_act_ver1;
   fprintf fmt " Deadlocked:\n";
   fprintf fmt "  %s:\n" name0;
-  List.iter (fun l -> fprintf fmt "   "; print_proc_simple fmt (lambdaFlattenedToProc l); fprintf fmt "\n") deadlocked0;
+  List.iter (fun l -> fprintf fmt "   "; print_proc_simple fmt (lambdaCToProc l); fprintf fmt "\n") deadlocked0;
   fprintf fmt "  %s:\n" name1;
-  List.iter (fun l -> fprintf fmt "   "; print_proc_simple fmt (lambdaFlattenedToProc l); fprintf fmt "\n") deadlocked1;
+  List.iter (fun l -> fprintf fmt "   "; print_proc_simple fmt (lambdaCToProc l); fprintf fmt "\n") deadlocked1;
   fprintf fmt " Solved:\n";
   fprintf fmt "  %s:\n" name0;
-  List.iter (fun l -> fprintf fmt "   "; print_proc_simple fmt (lambdaFlattenedToProc l); fprintf fmt "\n") resolved0;
+  List.iter (fun l -> fprintf fmt "   "; print_proc_simple fmt (lambdaCToProc l); fprintf fmt "\n") resolved0;
   fprintf fmt "  %s:\n" name1;
-  List.iter (fun l -> fprintf fmt "   "; print_proc_simple fmt (lambdaFlattenedToProc l); fprintf fmt "\n") resolved1
+  List.iter (fun l -> fprintf fmt "   "; print_proc_simple fmt (lambdaCToProc l); fprintf fmt "\n") resolved1
 
 let test_manual fmt exp (name0, result0) (name1, result1) =
   let compare_failures = compare_res result0 result1 in
