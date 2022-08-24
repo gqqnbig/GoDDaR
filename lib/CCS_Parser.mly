@@ -37,4 +37,3 @@ expr:
     | e1 = expr; EXTERNAL_CHOICE; e2 = expr { POrE(e1, e2) }
     | e1 = expr; PAR; e2 = expr { PPar(e1, e2) }
     | STAR; s = LABEL; INPUT; PREFIX; e = expr { PRepl(AIn(s), e) }
-    | STAR; s = LABEL; OUTPUT; PREFIX; e = expr { PRepl(AOut(s), e) }

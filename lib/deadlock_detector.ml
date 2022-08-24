@@ -12,14 +12,20 @@ open Cmd
 exception RuntimeException of string
 
 type possible_execution =
-  (lambda_tagged  list) * (* List of the parallel compositions *)
+  (lambda_tagged list) *     (* List of the parallel compositions *)
   print_ctx
+
+type prev_exec = (eta_tagged LambdaC.lambdaC list * print_ctx)
+type possible_execution2 =
+  possible_execution *
+  prev_exec list
 
 let possible_executionToLambda (lambdas, print_ctx: possible_execution): lambda =
   assocLeftList (List.map lambdaTaggedToLambda lambdas)
 
 let print_possible_execution fmt (lambdas, print_ctx: possible_execution) = 
   printCtxLevel_noln fmt print_ctx;
+  Format.fprintf fmt "    ";
   printMode fmt (assocLeftList (List.map lambdaTaggedToLambda (lambdas))) print_ctx.print;
   flush stdout
 
@@ -117,34 +123,111 @@ let is_LNil_or_LRepl l =
   | LNil | LRepl(_, _) -> true
   | _ -> false
 
+
+(** Receives the current [lambdas] of a possible_execution, and a list of the previous states of that
+    execution 
+
+    Returns the list of matches between a subset of [lambdas] and a previous state.
+*)
+let find_duplicates_old (lambdas: lambda_tagged list) (prev_execs: (eta_tagged LambdaC.lambdaC list) list):
+  (* (lambda_tagged list * lambda_tagged list) list = *)
+  lambda_tagged list =
+  let rec superset = function
+  | [] -> [[]]
+  | x :: xs -> 
+     let ps = superset xs in
+     ps @ List.map (fun ss -> x :: ss) ps
+  in
+  let lambdas =
+    lambdas
+    |> List.map lparToList
+    |> List.flatten
+    |> List.map remLNils 
+    |> List.map LambdaC.lambdaToLambdaC
+  in
+  let lambdas_powerset =
+    lambdas |> superset
+  in
+
+  let rec do_find_duplicates lp pe =
+    match lp with
+    | [] -> []
+    | lp_hd::lp_tl -> 
+      match pe with
+      | [] -> do_find_duplicates lp_tl prev_execs
+      | pe_hd::pe_tl -> (if pe_hd = lp_hd then lp_hd else [])::do_find_duplicates lp pe_tl
+  in
+    do_find_duplicates lambdas_powerset prev_execs
+    |> List.map (fun l ->  assocLeftList (List.map LambdaC.lambdaCToLambda l))
+
+let find_duplicates (lambdas: eta_tagged LambdaC.lambdaC list) (prev_execs: prev_exec list):
+  (lambda_tagged list * (lambda_tagged list * print_ctx)) list =
+  List.filter_map (
+    fun (pe, pe_ctx) ->
+      if List.for_all (fun e -> List.mem e lambdas) pe then
+        Some(List.filter (fun e -> not (List.mem e pe)) lambdas, (pe, pe_ctx))
+      else
+        None
+  ) prev_execs
+  |> List.map (fun (l1, (l2, ctx)) -> (List.map LambdaC.lambdaCToLambda l1, ((List.map LambdaC.lambdaCToLambda l2), ctx)))
+
 let eval fmt (lambda: lambda_tagged) = 
-  let past_execs = Hashtbl.create 1 in
-  let rec do_eval (executions: possible_execution list) (deadlocks: possible_execution list) =
+  let rec do_eval (executions: possible_execution2 list) (deadlocks: possible_execution list) =
     match executions with
     | [] -> List.rev deadlocks
-    | ((lambdas, print_ctx) as execution)::tl -> 
+    | (((lambdas, print_ctx) as execution), prev_execs)::tl -> 
+      print_possible_execution fmt execution;
       (* Strip LNil processes *)
-      let lambdas = List.map lparToList lambdas |> List.flatten |> List.map remLNils in
-      let execution_canonical = LambdaC.lambdaToLambdaC (assocLeftList lambdas) in
-      if Hashtbl.mem past_execs execution_canonical then (
-        (* Format.fprintf fmt " Already eval'ed\n"; *)
+      if (List.for_all is_LNil_or_LRepl lambdas) then
         do_eval tl deadlocks
-      ) else (
-        print_possible_execution fmt execution;
-        Hashtbl.add past_execs execution_canonical print_ctx;
-        if (List.for_all is_LNil_or_LRepl lambdas) then
-          do_eval tl deadlocks
+      else (
+        let reductions = eval_sync execution in
+        if reductions = [] then
+          do_eval tl (execution::deadlocks)
         else (
-          let reductions = eval_sync execution in
-          if reductions = [] then
-            do_eval tl (execution::deadlocks)
-          else
-            do_eval (reductions@tl) deadlocks
+          let lambdasC =
+            lambdas
+            |> List.map lparToList
+            |> List.flatten
+            |> List.map remLNils 
+            |> List.map LambdaC.lambdaToLambdaC
+          in
+          let reductions = reductions
+          |> List.map (fun r -> (r, (lambdasC, print_ctx)::prev_execs))
+          |> List.map (
+            fun (((lambdas, ctx) as pe, prev_execs): possible_execution2): possible_execution2 list -> 
+              let lambdasC =
+                lambdas
+                |> List.map lparToList
+                |> List.flatten
+                |> List.map remLNils 
+                |> List.map LambdaC.lambdaToLambdaC
+              in
+              let dupl = find_duplicates lambdasC prev_execs in
+              if dupl = [] then (
+                [((lambdas, ctx), prev_execs)]
+              ) else (
+                print_possible_execution fmt pe;
+                Format.fprintf fmt "    DUPLICATES: \n";
+                List.map (
+                  fun (remaining, (common, common_ctx)) ->
+                  Format.fprintf fmt "    ";
+                  printMode_no_nl fmt (lambdaTaggedToLambda (assocLeftList remaining)) true;
+                  Format.fprintf fmt " ; ";
+                  printMode_no_nl fmt (lambdaTaggedToLambda (assocLeftList common)) true;
+                  Format.fprintf fmt " -- %s\n" common_ctx.level;
+
+                  ((remaining, ctx), prev_execs)
+                ) dupl
+              )
+          ) 
+          |> List.flatten
+        in
+          do_eval (reductions@tl) deadlocks
         )
       )
-
   in
-    do_eval [([lambda], {level="1"; print=true})] []
+    do_eval [(([lambda], {level="1"; print=true}), [])] []
 
 let rec deadlock_solver_1 (lambda: lambda_tagged) (deadlocked_top_environment: eta_tagged list): (lambda_tagged) =
   match lambda with
@@ -208,15 +291,25 @@ let rec top_environment ((lambdas, print_ctx): possible_execution): eta_tagged l
     top_environment (tl, print_ctx)
   | LSubst::_ | LChi(_, _)::_ -> failwith "These shouldn't appear"
 
+
 (* A single iteration of a deadlock detection and resolution *)
 let rec detect_and_resolve fmt lambdaTaggedExp =
+  (* Format.printf "DaR: \n";
+  lambdaTaggedToLambda lambdaTaggedExp
+  |> toProc
+  |> print_proc_simple Format.std_formatter; *)
   let deadlocked_executions = (eval fmt lambdaTaggedExp) in
+  Format.fprintf fmt "\n\n";
   if deadlocked_executions = [] then (
     (true, [], [lambdaTaggedExp])
   ) else (
-    let deadlocked_top_environments = List.flatten (List.map top_environment deadlocked_executions) in
-    (* Remove Duplicates *)
-    let deadlocked_top_environments = List.fold_left ( fun tl hd -> (if List.mem hd tl then tl else hd :: tl))  [] deadlocked_top_environments in
+    let deadlocked_top_environments =
+      deadlocked_executions
+      |> List.map top_environment
+      |> List.flatten
+      (* Remove Duplicates *)
+      |> List.fold_left ( fun tl hd -> (if List.mem hd tl then tl else hd :: tl)) []
+    in
     (* List.iter (fun eta -> (print_eta_tagged fmt eta; fprintf fmt "\n")) deadlocked_top_environments; *)
     let deadlock_solver = if !ds < 2 then deadlock_solver_1 else deadlock_solver_2 in
     let solved_exp = (deadlock_solver lambdaTaggedExp deadlocked_top_environments) in
@@ -242,6 +335,13 @@ let main fmt exp: bool * lambda list * lambda list (*passed act_ver * deadlocked
          resolved expression, so here we do the same. *)
       let (passed_act_ver, deadlocks, resolved) = detect_and_resolve fmt lambdaTaggedExp in
 
+      if deadlocks = [] then (
+        fprintf fmt "\nNo deadlocks!\n";
+      ) else (
+        fprintf fmt "\nDeadlocks:\n";
+        List.iter (print_possible_execution fmt) deadlocks;
+      );
+
       let rec detect_and_resolve_loop (passed_act_ver, deadlocked, resolved) (last_resolved: lambda_tagged list option)= 
         match last_resolved with
         (* When resolved program remains the same then exit loop*)
@@ -256,11 +356,7 @@ let main fmt exp: bool * lambda list * lambda list (*passed act_ver * deadlocked
       in
       let (_, _, resolved) = detect_and_resolve_loop (passed_act_ver, deadlocks, resolved) None in
 
-      if deadlocks = [] then (
-        fprintf fmt "\nNo deadlocks!\n";
-      ) else (
-        fprintf fmt "\nDeadlocks:\n";
-        List.iter (print_possible_execution fmt) deadlocks;
+      if deadlocks <> [] then (
         fprintf fmt "Resolved:\n";
         printMode fmt (List.hd resolved) true
       );
