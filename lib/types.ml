@@ -190,6 +190,16 @@ module LambdaC =
 
     let compare = compare
 
+    let rec eta_equals_eta_tagged (exp1: eta lambdaC) (exp2: eta_tagged lambdaC): bool =
+    match exp1, exp2 with
+    | LList(EEta(c1), l), LList(EEtaTagged(c2, _), r) when c1 = c2 -> eta_equals_eta_tagged l r
+    | LRepl(EEta(c1), l), LRepl(EEtaTagged(c2, _), r) when c1 = c2 -> eta_equals_eta_tagged l r
+    | LPar(l), LPar(r)
+    | LOrI(l), LOrI(r)
+    | LOrE(l), LOrE(r) -> List.for_all2 (fun l r -> eta_equals_eta_tagged l r) l r
+    | LNil, LNil -> true
+    | _, _ -> false
+
     let rec lambdaLParToLambdaCLPar (exp: 'a lambda_base): 'a lambdaC = 
       let rec do_lambdaLParToLambdaCLPar (exp: 'a lambda_base): 'a lambdaC list = 
         match exp with

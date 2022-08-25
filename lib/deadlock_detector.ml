@@ -15,7 +15,7 @@ type state =
   (lambda_tagged list) *     (* List of the parallel compositions *)
   print_ctx
 
-type prev_state = (eta_tagged LambdaC.lambdaC list * print_ctx)
+type prev_state = (eta LambdaC.lambdaC list * print_ctx)
   
 
 let stateToLambda (lambdas, print_ctx: state): lambda =
@@ -121,47 +121,33 @@ let is_LNil_or_LRepl l =
   | LNil | LRepl(_, _) -> true
   | _ -> false
 
-
-let find_duplicates_old (lambdas: lambda_tagged list) (prev_states: (eta_tagged LambdaC.lambdaC list) list):
-  (* (lambda_tagged list * lambda_tagged list) list = *)
-  lambda_tagged list =
-  let rec superset = function
-  | [] -> [[]]
-  | x :: xs -> 
-     let ps = superset xs in
-     ps @ List.map (fun ss -> x :: ss) ps
+let rec prev_state_contained_in_state ((ps_lambdas, ctx): prev_state) (lambdas: eta_tagged LambdaC.lambdaC list) =
+  let rec inner (ps_l: eta LambdaC.lambdaC) (lambdas: eta_tagged LambdaC.lambdaC list) =
+      match lambdas with
+      | [] -> raise (RuntimeException "asd")
+      | l_hd::l_tl -> 
+        if (LambdaC.eta_equals_eta_tagged ps_l l_hd) then
+          l_tl
+        else
+          l_hd::(inner ps_l l_tl)
   in
-  let lambdas =
-    lambdas
-    |> List.map lparToList
-    |> List.flatten
-    |> List.map remLNils 
-    |> List.map LambdaC.lambdaToLambdaC
-  in
-  let lambdas_powerset =
-    lambdas |> superset
-  in
-
-  let rec do_find_duplicates lp pe =
-    match lp with
-    | [] -> []
-    | lp_hd::lp_tl -> 
-      match pe with
-      | [] -> do_find_duplicates lp_tl prev_states
-      | pe_hd::pe_tl -> (if pe_hd = lp_hd then lp_hd else [])::do_find_duplicates lp pe_tl
-  in
-    do_find_duplicates lambdas_powerset prev_states
-    |> List.map (fun l ->  assocLeftList (List.map LambdaC.lambdaCToLambda l))
+  match ps_lambdas with
+  | [] -> lambdas
+  | ps_hd::ps_tl ->
+    let l = inner ps_hd lambdas in
+      prev_state_contained_in_state (ps_tl, ctx) l
 
 let find_duplicates (lambdas: eta_tagged LambdaC.lambdaC list) (prev_states: prev_state list):
-  (lambda_tagged list * (lambda_tagged list * print_ctx)) list =
-  List.filter_map (
-    fun (pe, pe_ctx) ->
-      if List.for_all (fun e -> List.mem e lambdas) pe then
-        Some(List.filter (fun e -> not (List.mem e pe)) lambdas, (pe, pe_ctx))
-      else
-        None
-  ) prev_states
+  (lambda_tagged list * (lambda list * print_ctx)) list =
+  prev_states
+  |> List.filter_map (
+    fun (((ps, ps_ctx) as prev_state): prev_state): 'a option ->
+      try 
+        let remaining = prev_state_contained_in_state prev_state lambdas in
+        Some( (remaining, ( ps, ps_ctx)) )
+      with
+      | _ -> None
+  )
   |> List.map (fun (l1, (l2, ctx)) -> (List.map LambdaC.lambdaCToLambda l1, ((List.map LambdaC.lambdaCToLambda l2), ctx)))
 
 let eval fmt (lambda: lambda_tagged) = 
@@ -183,12 +169,13 @@ let eval fmt (lambda: lambda_tagged) =
             |> List.map lparToList
             |> List.flatten
             |> List.map remLNils 
+            |> List.map lambdaTaggedToLambda
             |> List.map LambdaC.lambdaToLambdaC
           in
           let reductions = reductions
           |> List.map (fun r -> (r, (lambdasC, print_ctx)::prev_states))
           |> List.map (
-            fun (((lambdas, ctx) as pe, prev_states): (state * prev_state list) ): (state * prev_state list) list -> 
+            fun (((lambdas, ctx) as state, prev_states): (state * prev_state list) ): (state * prev_state list) list -> 
               let lambdasC =
                 lambdas
                 |> List.map lparToList
@@ -200,17 +187,17 @@ let eval fmt (lambda: lambda_tagged) =
               if dupl = [] then (
                 [((lambdas, ctx), prev_states)]
               ) else (
-                print_state fmt pe;
+                print_state fmt state;
                 Format.fprintf fmt "    DUPLICATES: \n";
                 List.map (
                   fun (remaining, (common, common_ctx)) ->
-                  Format.fprintf fmt "    ";
-                  printMode_no_nl fmt (lambdaTaggedToLambda (assocLeftList remaining)) true;
-                  Format.fprintf fmt " ; ";
-                  printMode_no_nl fmt (lambdaTaggedToLambda (assocLeftList common)) true;
-                  Format.fprintf fmt " -- %s\n" common_ctx.level;
+                    Format.fprintf fmt "    ";
+                    printMode_no_nl fmt (lambdaTaggedToLambda (assocLeftList remaining)) true;
+                    Format.fprintf fmt " ; ";
+                    printMode_no_nl fmt (assocLeftList common) true;
+                    Format.fprintf fmt " -- %s\n" common_ctx.level;
 
-                  ((remaining, ctx), prev_states)
+                    ((remaining, ctx), prev_states)
                 ) dupl
               )
           ) 
