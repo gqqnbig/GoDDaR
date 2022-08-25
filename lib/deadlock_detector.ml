@@ -157,6 +157,7 @@ let eval fmt (lambda: lambda_tagged) =
     | (((lambdas, print_ctx) as state), prev_states)::tl -> 
       print_state fmt state;
       (* Strip LNil processes *)
+      let lambdas = List.map (remLNils) lambdas in
       if (List.for_all is_LNil_or_LRepl lambdas) then
         do_eval tl deadlocks
       else (
