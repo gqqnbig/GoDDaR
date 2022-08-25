@@ -16,5 +16,6 @@ rule read = parse
     | "("        { (* Format.eprintf "LPAREN ";              *) LPAREN }
     | ")"        { (* Format.eprintf "RPAREN ";              *) RPAREN }
     | "."        { (* Format.eprintf "PREFIX ";              *) PREFIX }
-    | identifier { (* Format.eprintf "LABEL %c " (Lexing.lexeme_char lexbuf 0); *) LABEL (Lexing.lexeme lexbuf)}
+    | "*"        { (* Format.eprintf "STAR ";                *) STAR }
+    | identifier { (* Format.eprintf "LABEL %c " (Lexing.lexeme lexbuf); *) LABEL (Lexing.lexeme lexbuf)}
     | eof        { EOF }

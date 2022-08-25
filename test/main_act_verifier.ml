@@ -6,11 +6,11 @@ open Dlock.Printer
 
 let fmt = Format.std_formatter
 
-let test exp_string ((res0: (eta LambdaFlattened.lambda_flattened * eta list) list), has_miss_acts0)
-                    ((res1: (eta LambdaFlattened.lambda_flattened * eta list) list), has_miss_acts1) = 
+let test exp_string ((res0: (eta LambdaC.lambdaC * eta list) list), has_miss_acts0)
+                    ((res1: (eta LambdaC.lambdaC * eta list) list), has_miss_acts1) = 
   (* Check if lambdas are equal, if the unbalanced actions are the same, even if reordered, and if
     the [has_miss_acts] returns the same *)
-  let equal_res (res0: (eta LambdaFlattened.lambda_flattened * eta list) list) (res1: (eta LambdaFlattened.lambda_flattened * eta list) list) = 
+  let equal_res (res0: (eta LambdaC.lambdaC * eta list) list) (res1: (eta LambdaC.lambdaC * eta list) list) = 
     (List.compare_lengths res0 res1) = 0
     && let res0_sorted = List.sort (fun (lf1, _) (lf2, _) -> compare lf1 lf2) res0 in
        let res1_sorted = List.sort (fun (lf1, _) (lf2, _) -> compare lf1 lf2) res1 in
@@ -29,7 +29,7 @@ let test exp_string ((res0: (eta LambdaFlattened.lambda_flattened * eta list) li
         List.iteri (fun res_n (res, has_miss_acts )-> 
           Format.fprintf fmt " RES%i:\n" res_n;
           List.iteri (fun i (lambda_flattened, eta_list) ->
-            let lambda = LambdaFlattened.lambdaFlattenedToLambda lambda_flattened in
+            let lambda = LambdaC.lambdaCToLambda lambda_flattened in
             Format.fprintf fmt "  LAMBDA %i: " i;
             print_proc_simple fmt (toProc lambda);
             Format.fprintf fmt "\n  ETAS %i: " i;
@@ -52,14 +52,14 @@ let test_pass = ref true in
         (
           let result = (Main_act_verifier_orig.main_act_verifier lambda) in
             (
-              (List.map (fun (lambda, eta_list) -> ( (LambdaFlattened.lambdaToLambdaFlattened lambda), List.sort compare eta_list)) result),
+              (List.map (fun (lambda, eta_list) -> ( (LambdaC.lambdaToLambdaC lambda), List.sort compare eta_list)) result),
               Main_act_verifier_orig.has_miss_acts result
             )
         )
         (
           let result = List.rev (Main_act_verifier.main_act_verifier lambda) in
             (
-              (List.map (fun (lambda, eta_list) -> ( LambdaFlattened.lambdaToLambdaFlattened lambda, List.sort compare eta_list)) result),
+              (List.map (fun (lambda, eta_list) -> ( LambdaC.lambdaToLambdaC lambda, List.sort compare eta_list)) result),
               Main_act_verifier.has_miss_acts result
             )
         )
