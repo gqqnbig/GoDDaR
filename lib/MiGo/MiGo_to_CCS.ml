@@ -81,5 +81,5 @@ let migo_to_ccs (migo_defs: MiGo_Types.migo_def list): string =
   ) migo_defs;
   let Def(_, params, stmts) = (Hashtbl.find migo_def_hashtbl "main.main") in
   assert (params = []);
-  do_migo_to_ccs migo_def_hashtbl [("maim.main", stmts, [])]
+  do_migo_to_ccs migo_def_hashtbl [("main.main", stmts, [])]
 
