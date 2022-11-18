@@ -40,9 +40,7 @@ let rec print_lambda_tagged fmt l =
     | LOrE(l1, l2) -> fprintf fmt "LOrE(%a, %a)" print_lambda_tagged l1 print_lambda_tagged l2
     | LList(e1, l1) -> fprintf fmt "LList(%a, %a)" print_eta_tagged e1 print_lambda_tagged l1
     | LPar(l1, l2) -> fprintf fmt "LPar(%a, %a)" print_lambda_tagged l1 print_lambda_tagged l2
-    | LChi(el, ll) -> fprintf fmt "LChi(%a; %a)" print_eta_tagged_list el print_lambda_tagged_list ll
     | LRepl(e1, l1) -> fprintf fmt "LRepl(%a, %a)" print_eta_tagged e1 print_lambda_tagged l1
-    | LSubst -> fprintf fmt "LSubst"
 and print_eta_tagged_list fmt lst =
     match lst with
     | [] -> ()
@@ -61,9 +59,7 @@ let rec print_lambdas fmt l =
     | LOrE(l1, l2) -> fprintf fmt "LOrE(%a, %a)" print_lambdas l1 print_lambdas l2
     | LList(e1, l1) -> fprintf fmt "LList(%a, %a)" print_eta e1 print_lambdas l1
     | LPar(l1, l2) -> fprintf fmt "LPar(%a, %a)" print_lambdas l1 print_lambdas l2
-    | LChi(el, ll) -> fprintf fmt "LChi(%a; %a)" print_etalist el print_lambdalist ll
     | LRepl(e1, l1) -> fprintf fmt "LRepl(%a, %a)" print_eta e1 print_lambdas l1
-    | LSubst -> fprintf fmt "LSubst"
 and print_lambdalist fmt lst =
     match lst with
     | [] -> ()
@@ -121,47 +117,6 @@ let printMode_base nl fmt exp p =
 
 let printMode = printMode_base true
 let printMode_no_nl = printMode_base false
-
-let rec print_list_comb fmt lst =
-    let rec find_list lst =
-        match lst with
-        | [] -> ()
-        | hd::[] -> 
-          (match hd with 
-          | (l, c) -> 
-            if !verbose then (
-              fprintf fmt "("; print_lambdas fmt l; fprintf fmt ", %s)" c.level; fprintf fmt "]";
-              fprintf fmt " ---> "; print_proc_simple fmt (toProc l)
-            ) else (
-              fprintf fmt "("; print_proc_simple fmt (toProc l); fprintf fmt ", %s)" c.level; fprintf fmt "]"
-            )
-          )
-        | hd::tl -> 
-          (match hd with 
-          | (l, c) -> 
-            if !verbose then (
-              fprintf fmt "("; print_lambdas fmt l; fprintf fmt ", %s)" c.level;
-              fprintf fmt "; ---> ";print_proc_simple fmt (toProc l); fprintf fmt "\n"; find_list tl
-            ) else (
-              fprintf fmt "("; print_proc_simple fmt (toProc l); fprintf fmt ", %s)" c.level; fprintf fmt "\n"; find_list tl
-            )
-          )
-    in
-    fprintf fmt "\n[";
-    find_list lst;
-    fprintf fmt "\n"
-
-let printFinalArrComb fmt lst =
-    if !verbose then (
-      fprintf fmt "Initial Combinations:\n";
-      let i = ref 0 in
-        List.iter (
-          fun x -> i:= !i+1;
-          fprintf fmt "---- %d ----\n" !i;
-          printMode fmt x true;
-          fprintf fmt "\n"
-        ) lst
-    )
 
 let count_level print_ctx =
   let count = ref 0 in

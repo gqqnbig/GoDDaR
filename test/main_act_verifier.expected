@@ -1,22 +1,100 @@
 MAIN_ACT_VERIFIER:
-PASS: 3 3 a!.a?.0 || (b!.x?.0 + (b?.0 + c?.0) )
-PASS: 3 3 a!.a?.0 || (b!.0 + (b?.0 + c?.0) )
-PASS: 3 3 a!.0 || (b!.0 + (b?.0 + c?.0) )
-PASS: 2 2 a!.0 || (b?.0 + c?.0)
-PASS: 4 4 (a!.0 + a?.0) || (b?.0 + c?.0)
-PASS: 1 0 a!.0 || a?.0
-PASS: 1 0 a!.b?.0 || a?.b!.0
-PASS: 4 2 (a!.0 + b!.0) || (a?.0 + b?.0)
-PASS: 2 2 (a!.0 || b!.0) || (a?.0 + b?.0)
-PASS: 2 0 (a!.0 || b!.0) || (a?.b?.0 + b?.a?.0)
-PASS: 2 1 a!.0 || (a?.0 + 0)
-FAIL: (a!.(b!.c!.0 || b?.c?.d?.0) || a?.d!.0)
+a!.a?.0 || (b!.x?.0 + (b?.0 + c?.0) )
  RES0:
-  LAMBDA 0: (a!.(b!.c!.0 || b?.c?.d?.0) || a?.d!.0)
+  LAMBDA 0: (b!.x?.0 || a!.a?.0)
+  ETAS 0: EEta(AIn(x)) | EEta(AOut(b))
+  HAS MISSING ACTS: true  LAMBDA 1: (a!.a?.0 || b?.0)
+  ETAS 1: EEta(AIn(b))
+  HAS MISSING ACTS: true  LAMBDA 2: (a!.a?.0 || c?.0)
+  ETAS 2: EEta(AIn(c))
+  HAS MISSING ACTS: true
+a!.a?.0 || (b!.0 + (b?.0 + c?.0) )
+ RES0:
+  LAMBDA 0: (b!.0 || a!.a?.0)
+  ETAS 0: EEta(AOut(b))
+  HAS MISSING ACTS: true  LAMBDA 1: (a!.a?.0 || b?.0)
+  ETAS 1: EEta(AIn(b))
+  HAS MISSING ACTS: true  LAMBDA 2: (a!.a?.0 || c?.0)
+  ETAS 2: EEta(AIn(c))
+  HAS MISSING ACTS: true
+a!.0 || (b!.0 + (b?.0 + c?.0) )
+ RES0:
+  LAMBDA 0: (b!.0 || a!.0)
+  ETAS 0: EEta(AOut(a)) | EEta(AOut(b))
+  HAS MISSING ACTS: true  LAMBDA 1: (a!.0 || b?.0)
+  ETAS 1: EEta(AIn(b)) | EEta(AOut(a))
+  HAS MISSING ACTS: true  LAMBDA 2: (a!.0 || c?.0)
+  ETAS 2: EEta(AIn(c)) | EEta(AOut(a))
+  HAS MISSING ACTS: true
+a!.0 || (b?.0 + c?.0)
+ RES0:
+  LAMBDA 0: (a!.0 || b?.0)
+  ETAS 0: EEta(AIn(b)) | EEta(AOut(a))
+  HAS MISSING ACTS: true  LAMBDA 1: (a!.0 || c?.0)
+  ETAS 1: EEta(AIn(c)) | EEta(AOut(a))
+  HAS MISSING ACTS: true
+(a!.0 + a?.0) || (b?.0 + c?.0)
+ RES0:
+  LAMBDA 0: (a!.0 || b?.0)
+  ETAS 0: EEta(AIn(b)) | EEta(AOut(a))
+  HAS MISSING ACTS: true  LAMBDA 1: (a!.0 || c?.0)
+  ETAS 1: EEta(AIn(c)) | EEta(AOut(a))
+  HAS MISSING ACTS: true  LAMBDA 2: (b?.0 || a?.0)
+  ETAS 2: EEta(AIn(a)) | EEta(AIn(b))
+  HAS MISSING ACTS: true  LAMBDA 3: (c?.0 || a?.0)
+  ETAS 3: EEta(AIn(a)) | EEta(AIn(c))
+  HAS MISSING ACTS: true
+a!.0 || a?.0
+ RES0:
+  LAMBDA 0: (a!.0 || a?.0)
   ETAS 0: 
   HAS MISSING ACTS: false
- RES1:
+a!.b?.0 || a?.b!.0
+ RES0:
+  LAMBDA 0: (a!.b?.0 || a?.b!.0)
+  ETAS 0: 
+  HAS MISSING ACTS: false
+(a!.0 + b!.0) || (a?.0 + b?.0)
+ RES0:
+  LAMBDA 0: (a!.0 || a?.0)
+  ETAS 0: 
+  HAS MISSING ACTS: true  LAMBDA 1: (a!.0 || b?.0)
+  ETAS 1: EEta(AIn(b)) | EEta(AOut(a))
+  HAS MISSING ACTS: true  LAMBDA 2: (b!.0 || a?.0)
+  ETAS 2: EEta(AIn(a)) | EEta(AOut(b))
+  HAS MISSING ACTS: true  LAMBDA 3: (b!.0 || b?.0)
+  ETAS 3: 
+  HAS MISSING ACTS: true
+(a!.0 || b!.0) || (a?.0 + b?.0)
+ RES0:
+  LAMBDA 0: ((b!.0 || a!.0) || a?.0)
+  ETAS 0: EEta(AOut(b))
+  HAS MISSING ACTS: true  LAMBDA 1: ((b!.0 || a!.0) || b?.0)
+  ETAS 1: EEta(AOut(a))
+  HAS MISSING ACTS: true
+(a!.0 || b!.0) || (a?.b?.0 + b?.a?.0)
+ RES0:
+  LAMBDA 0: ((b!.0 || a!.0) || a?.b?.0)
+  ETAS 0: 
+  HAS MISSING ACTS: false  LAMBDA 1: ((b!.0 || a!.0) || b?.a?.0)
+  ETAS 1: 
+  HAS MISSING ACTS: false
+a!.0 || (a?.0 + 0)
+ RES0:
+  LAMBDA 0: (a!.0 || a?.0)
+  ETAS 0: 
+  HAS MISSING ACTS: true  LAMBDA 1: a!.0
+  ETAS 1: EEta(AOut(a))
+  HAS MISSING ACTS: true
+(a!.(b!.c!.0 || b?.c?.d?.0) || a?.d!.0)
+ RES0:
   LAMBDA 0: ((a!.b!.c!.0 || b?.c?.d?.0) || a?.d!.0)
   ETAS 0: 
   HAS MISSING ACTS: false
-PASS: 2 2 a?.(c?.0 + d?.0) || a!.e!.0
+a?.(c?.0 + d?.0) || a!.e!.0
+ RES0:
+  LAMBDA 0: (a!.e!.0 || a?.c?.0)
+  ETAS 0: EEta(AIn(c)) | EEta(AOut(e))
+  HAS MISSING ACTS: true  LAMBDA 1: (a!.e!.0 || a?.d?.0)
+  ETAS 1: EEta(AIn(d)) | EEta(AOut(e))
+  HAS MISSING ACTS: true

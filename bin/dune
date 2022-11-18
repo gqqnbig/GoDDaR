@@ -11,22 +11,8 @@
 )
 
 (executable
- (public_name dlock-orig)
- (name deadlock_detector_orig)
- (modules Deadlock_detector_orig)
- (libraries dlock)
- (modes byte))
-
-(executable
  (public_name migo_parser)
  (name MiGo_parser)
  (modules MiGo_parser)
- (libraries dlock)
- (modes byte))
-
-(executable
- (public_name test_comb)
- (name test_comb)
- (modules test_comb)
  (libraries dlock)
  (modes byte))

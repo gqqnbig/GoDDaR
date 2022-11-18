@@ -44,8 +44,6 @@ let possible_executions exp =
             (* Add the extra parallel process  *)
             | LPar(a, b) -> [(eta_sequences, (a, eta_sequence)::(b, [])::tl_parallel_processes)]
             | LNil -> [((List.rev eta_sequence)::eta_sequences, tl_parallel_processes)]
-            | LSubst
-            | LChi(_,_) -> failwith "LSubst|LChi should not appear here!"
         in
         do_possible_executions (possible_execution' @ tl_possible_executions) result
   in

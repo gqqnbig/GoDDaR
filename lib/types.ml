@@ -27,10 +27,8 @@ type 'a lambda_base =
     | LOrI of 'a lambda_base * 'a lambda_base
     | LOrE of 'a lambda_base * 'a lambda_base
     | LList of 'a * 'a lambda_base
-    | LChi of 'a list * 'a lambda_base list
     | LPar of 'a lambda_base * 'a lambda_base
     | LRepl of 'a * 'a lambda_base
-    | LSubst
 
 type lambda = eta lambda_base
 
@@ -53,9 +51,7 @@ let rec lambdaToLambdaTagged (exp: lambda): lambda_tagged =
     let rec do_lambdaToLambdaTagged exp =
         match exp with
         | LNil -> LNil
-        | LSubst -> LSubst
         | LPar(a, b) -> LPar(do_lambdaToLambdaTagged a, do_lambdaToLambdaTagged b)
-        | LChi(a, b) -> LChi(List.map etaToEtaTagged a, List.map (do_lambdaToLambdaTagged) b)
         | LOrI(a, b) -> LOrI(do_lambdaToLambdaTagged a, do_lambdaToLambdaTagged b)
         | LOrE(a, b) -> LOrE(do_lambdaToLambdaTagged a, do_lambdaToLambdaTagged b)
         | LList(e, l) -> LList(etaToEtaTagged e, do_lambdaToLambdaTagged l)
@@ -68,9 +64,7 @@ let rec etaTaggedToEta (EEtaTagged(a, _): eta_tagged): eta =
 let rec lambdaTaggedToLambda (exp: lambda_tagged): lambda = 
     match exp with
     | LNil -> LNil
-    | LSubst -> LSubst
     | LPar(a, b) -> LPar(lambdaTaggedToLambda a, lambdaTaggedToLambda b)
-    | LChi(a, b) -> LChi(List.map etaTaggedToEta a, List.map (lambdaTaggedToLambda) b)
     | LOrI(a, b) -> LOrI(lambdaTaggedToLambda a, lambdaTaggedToLambda b)
     | LOrE(a, b) -> LOrE(lambdaTaggedToLambda a, lambdaTaggedToLambda b)
     | LList(e, l) -> LList(etaTaggedToEta e, lambdaTaggedToLambda l)
@@ -102,14 +96,6 @@ let rec toProc lambda =
     | LList(e, l) -> PPref(toAction e, toProc l)
     | LPar(l1, l2) -> PPar(toProc l1, toProc l2)
     | LRepl(e, l) -> PRepl(toAction e, toProc l)
-    | LChi(et, ll) -> chi_to_proc lambda
-and chi_to_proc chi =
-    match chi with
-    | LChi([], []) -> PNil
-    | LChi(ehd::[], lhd::[]) -> PPref(toAction ehd, toProc lhd)
-    | LChi(ehd::etl, lhd::ltl) -> 
-        let c_ehd = toAction ehd in
-        let c_lhd = toProc lhd in PPar(PPref(c_ehd, c_lhd), chi_to_proc (LChi(etl, ltl)))
 
 let assign_ctx lst print =
     let i = ref 0 in
@@ -139,40 +125,10 @@ let isLPar exp =
     | LPar(_,_) -> true
     | _ -> false
 
-let isLChi exp =
-    match exp with
-    | LChi(_, _) -> true
-    | _ -> false
-
 let isLOrI exp =
     match exp with
     | LOrI(_,_) -> true
     | _ -> false
-
-let getEl chi =
-    match chi with
-    | LChi(el, ll) -> el
-
-let getL1 lpar =
-    match lpar with
-    | LPar(l1, l2) -> l1
-    | LOrI(l1, l2) -> l1
-
-let getL2 lpar =
-    match lpar with
-    | LPar(l1, l2) -> l2
-    | LOrI(l1, l2) -> l2
-
-let lchi_to_lpar exp =
-  match exp with
-  | LChi(a, b) ->
-    let rec loop arr1 arr2 =
-      match arr1, arr2 with
-      | hd::[], hd1::[] -> LList(hd, hd1)
-      | hd::tl, hd1::tl1 -> LPar(LList(hd, hd1), loop tl tl1)
-    in
-    loop a b
-  | _ -> exp
 
 (** This is an attempt to provide a canonical version of the lambda type, such that it can be compared
 and sorted correctly *)
@@ -232,7 +188,6 @@ module LambdaC =
       | LOrE(_, _) -> lambdaLOrEToLambdaCLOrE lambda
       | LRepl(eta, l) -> LRepl(eta, lambdaToLambdaC l)
       | LNil -> LNil
-      | LChi(_,_) | LSubst -> failwith "not supported"
     
     let rec lambdaCToLambda (lambdaC: 'a lambdaC): 'a lambda_base = 
       let rec fold_LPar list: 'a lambda_base =
