@@ -8,14 +8,6 @@ type action =
     | AIn of chan
     | AOut of chan
 
-type proc = 
-    | PNil
-    | POrI of proc * proc
-    | POrE of proc * proc
-    | PPref of action * proc
-    | PPar of proc * proc
-    | PRepl of action * proc
-
 type eta = 
     | EEta of action
 
@@ -70,15 +62,6 @@ let rec lambdaTaggedToLambda (exp: lambda_tagged): lambda =
     | LList(e, l) -> LList(etaTaggedToEta e, lambdaTaggedToLambda l)
     | LRepl(e, l) -> LRepl(etaTaggedToEta e, lambdaTaggedToLambda l)
 
-let rec toLambda proc =
-    match proc with
-    | PNil -> LNil
-    | POrI(a, b) -> LOrI(toLambda a, toLambda b)
-    | POrE(a, b) -> LOrE(toLambda a, toLambda b)
-    | PPref(a, p) -> LList(EEta(a), toLambda p)
-    | PPar(p1, p2) -> LPar(toLambda p1, toLambda p2)
-    | PRepl(a, p) -> LRepl(EEta(a), toLambda p)
-
 let toAction eta =
     match eta with
     | EEta(a) -> a
@@ -87,15 +70,6 @@ let actionToString action: string =
   match action with
   | AIn(c) -> c
   | AOut(c) -> c
-
-let rec toProc lambda =
-    match lambda with
-    | LNil -> PNil
-    | LOrI(a, b) -> POrI(toProc a, toProc b)
-    | LOrE(a, b) -> POrE(toProc a, toProc b)
-    | LList(e, l) -> PPref(toAction e, toProc l)
-    | LPar(l1, l2) -> PPar(toProc l1, toProc l2)
-    | LRepl(e, l) -> PRepl(toAction e, toProc l)
 
 let assign_ctx lst print =
     let i = ref 0 in

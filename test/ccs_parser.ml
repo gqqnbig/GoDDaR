@@ -1,7 +1,7 @@
 open Dlock
 
 type test_result = Success
-  | Failure of Types.proc * Types.proc
+  | Failure of Types.lambda * Types.lambda
 
 let (&&) (a: test_result) (b: test_result): test_result =
   match a, b with
@@ -16,34 +16,34 @@ let (==) (a: Types.action) (b: Types.action) : bool =
     | AOut(a1), AOut(b1) -> a1 = b1
     | _ -> false
 
-let rec proc_equals (a: Types.proc) (b: Types.proc) : test_result =
+let rec proc_equals (a: Types.lambda) (b: Types.lambda) : test_result =
   match a, b with
-    | PNil, PNil -> Success
-    | POrI(a1, a2), POrI(b1, b2) -> (proc_equals a1 b1) && (proc_equals a2 b2)
-    | PPref(a1, a2), PPref(b1, b2) -> (match (a1 = b1), (proc_equals a2 b2) with
+    | LNil, LNil -> Success
+    | LOrI(a1, a2), LOrI(b1, b2) -> (proc_equals a1 b1) && (proc_equals a2 b2)
+    | LList(a1, a2), LList(b1, b2) -> (match (a1 = b1), (proc_equals a2 b2) with
                                         | true, Success -> Success
                                         | _, (Failure(_, _) as f) -> f
                                         | false, _ -> Failure(a, b))
-    | PPar(a1, a2), PPar(b1, b2) -> (proc_equals a1 b1) && (proc_equals a2 b2)
+    | LPar(a1, a2), LPar(b1, b2) -> (proc_equals a1 b1) && (proc_equals a2 b2)
     | _ -> Failure(a, b)
 
 let fmt = Format.std_formatter
 
-let parse_and_test (s: string) (p: Types.proc) =
+let parse_and_test (s: string) (p: Types.lambda) =
   let parsed = CCS.parse(s) in 
     match proc_equals parsed p with
       | Failure(p1, p2) -> (
         Format.fprintf fmt "FAILED:\n";
-        Format.fprintf fmt "GOT          :"; (Printer.print_proc_simple fmt p1);     Format.fprintf fmt "\n"; 
-        Format.fprintf fmt "EXPECTED     :"; (Printer.print_proc_simple fmt p2);     Format.fprintf fmt "\n"; 
-        Format.fprintf fmt "GOT FULL     :"; (Printer.print_proc_simple fmt parsed); Format.fprintf fmt "\n"; 
-        Format.fprintf fmt "EXPECTED FULL:"; (Printer.print_proc_simple fmt p);      Format.fprintf fmt "\n"; 
+        Format.fprintf fmt "GOT          :"; (Printer.print_lambda_simple fmt p1);     Format.fprintf fmt "\n"; 
+        Format.fprintf fmt "EXPECTED     :"; (Printer.print_lambda_simple fmt p2);     Format.fprintf fmt "\n"; 
+        Format.fprintf fmt "GOT FULL     :"; (Printer.print_lambda_simple fmt parsed); Format.fprintf fmt "\n"; 
+        Format.fprintf fmt "EXPECTED FULL:"; (Printer.print_lambda_simple fmt p);      Format.fprintf fmt "\n"; 
         exit 1)
-      | Success -> Format.fprintf fmt "SUCCESS:"; (Printer.print_proc_simple fmt p); Format.fprintf fmt "\n";
+      | Success -> Format.fprintf fmt "SUCCESS:"; (Printer.print_lambda_simple fmt p); Format.fprintf fmt "\n";
 ;;
 
 Format.fprintf fmt "CCS_PARSER:\n";
-parse_and_test "(a!.a?.0 || b?.b!.c?.c!.0) + c!.c?.0" ( POrI(PPar(PPref(AOut("a"), PPref(AIn("a"), PNil)), PPref(AIn("b"), PPref(AOut("b"), PPref(AIn("c"), PPref(AOut("c"), PNil))))), PPref(AOut("c"), PPref(AIn("c"), PNil))) );
-parse_and_test "a!.0 || (b!.b?.a?.0 + a?.0)" (PPar(PPref(AOut("a"), PNil), POrI(PPref(AOut("b"), PPref(AIn("b"), PPref(AIn("a"), PNil))), PPref(AIn("a"), PNil))));
-parse_and_test "a?.(c?.0 + d?.0) || a!.e!.0" (PPar(PPref(AIn("a"), POrI(PPref(AIn("c"), PNil), PPref(AIn("d"), PNil))), PPref(AOut("a"), PPref(AOut("e"), PNil))) );
-parse_and_test "a!.(b!.c!.0 || b?.c?.d?.0) || a?.d!.0" ( PPar(PPref(AOut("a"), PPar(PPref(AOut("b"), PPref(AOut("c"), PNil)), PPref(AIn("b"), PPref(AIn("c"), PPref(AIn("d"), PNil))))), PPref(AIn("a"), PPref(AOut("d"), PNil))) );
+parse_and_test "(a!.a?.0 || b?.b!.c?.c!.0) + c!.c?.0" ( LOrI(LPar(LList(EEta(AOut("a")), LList(EEta(AIn("a")), LNil)), LList(EEta(AIn("b")), LList(EEta(AOut("b")), LList(EEta(AIn("c")), LList(EEta(AOut("c")), LNil))))), LList(EEta(AOut("c")), LList(EEta(AIn("c")), LNil))) );
+parse_and_test "a!.0 || (b!.b?.a?.0 + a?.0)" (LPar(LList(EEta(AOut("a")), LNil), LOrI(LList(EEta(AOut("b")), LList(EEta(AIn("b")), LList(EEta(AIn("a")), LNil))), LList(EEta(AIn("a")), LNil))));
+parse_and_test "a?.(c?.0 + d?.0) || a!.e!.0" (LPar(LList(EEta(AIn("a")), LOrI(LList(EEta(AIn("c")), LNil), LList(EEta(AIn("d")), LNil))), LList(EEta(AOut("a")), LList(EEta(AOut("e")), LNil))) );
+parse_and_test "a!.(b!.c!.0 || b?.c?.d?.0) || a?.d!.0" ( LPar(LList(EEta(AOut("a")), LPar(LList(EEta(AOut("b")), LList(EEta(AOut("c")), LNil)), LList(EEta(AIn("b")), LList(EEta(AIn("c")), LList(EEta(AIn("d")), LNil))))), LList(EEta(AIn("a")), LList(EEta(AOut("d")), LNil))) );

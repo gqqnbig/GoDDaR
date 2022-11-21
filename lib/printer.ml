@@ -81,25 +81,15 @@ let rec print_etalist_alt_simple fmt lst =
     print_action_simple fmt k; fprintf fmt ", "; print_etalist_alt_simple fmt tl
 
 
-(* ----------- Proc ----------- *)
 
-let rec print_proc fmt p =
-    match p with
-    | PNil -> fprintf fmt "PNil"
-    | POrI(p1, p2) -> fprintf fmt "POrI(%a, %a)" print_proc p1 print_proc p2
-    | POrE(p1, p2) -> fprintf fmt "POrE(%a, %a)" print_proc p1 print_proc p2
-    | PPref(a, pp) -> fprintf fmt "PPref(%a, %a)" print_action a print_proc pp
-    | PPar(p1, p2) -> fprintf fmt "PPar(%a, %a)" print_proc p1 print_proc p2
-    | PRepl(a, pp) -> fprintf fmt "PRepl(%a, %a)" print_action a print_proc pp
-
-let rec print_proc_simple fmt p =
-    match p with
-    | PNil -> fprintf fmt "0"
-    | POrI(p1, p2) -> fprintf fmt "(%a + %a)" print_proc_simple p1 print_proc_simple p2
-    | POrE(p1, p2) -> fprintf fmt "(%a & %a)" print_proc_simple p1 print_proc_simple p2
-    | PPref(a, pp) -> fprintf fmt "%a.%a" print_action_simple a print_proc_simple pp
-    | PPar(p1, p2) -> fprintf fmt "(%a || %a)" print_proc_simple p1 print_proc_simple p2
-    | PRepl(a, pp) -> fprintf fmt "*%a.%a" print_action_simple a print_proc_simple pp
+let rec print_lambda_simple fmt l =
+    match l with
+    | LNil -> fprintf fmt "0"
+    | LOrI(p1, p2) -> fprintf fmt "(%a + %a)" print_lambda_simple p1 print_lambda_simple p2
+    | LOrE(p1, p2) -> fprintf fmt "(%a & %a)" print_lambda_simple p1 print_lambda_simple p2
+    | LList(EEta(a), pp) -> fprintf fmt "%a.%a" print_action_simple a print_lambda_simple pp
+    | LPar(p1, p2) -> fprintf fmt "(%a || %a)" print_lambda_simple p1 print_lambda_simple p2
+    | LRepl(EEta(a), pp) -> fprintf fmt "*%a.%a" print_action_simple a print_lambda_simple pp
 
 (* ----------- Misc ----------- *)
 
@@ -108,9 +98,9 @@ let printMode_base nl fmt exp p =
     if !verbose then (
       print_lambdas fmt exp;
       fprintf fmt " ---> ";
-      print_proc_simple fmt (toProc exp);
+      print_lambda_simple fmt exp;
     ) else if !simplified then(
-      print_proc_simple fmt (toProc exp);
+      print_lambda_simple fmt exp;
     );
     if nl then fprintf fmt "\n"
   )

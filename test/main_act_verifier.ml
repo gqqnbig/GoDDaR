@@ -13,7 +13,7 @@ let test exp_string ((res0: (eta LambdaC.lambdaC * eta list) list), has_miss_act
     List.iteri (fun i (lambda_flattened, eta_list) ->
       let lambda = LambdaC.lambdaCToLambda lambda_flattened in
       Format.fprintf fmt "  LAMBDA %i: " i;
-      print_proc_simple fmt (toProc lambda);
+      print_lambda_simple fmt lambda;
       Format.fprintf fmt "\n  ETAS %i: " i;
       print_etalist fmt eta_list;
       Format.fprintf fmt "\n  HAS MISSING ACTS: %b" has_miss_acts
@@ -24,7 +24,7 @@ let test exp_string ((res0: (eta LambdaC.lambdaC * eta list) list), has_miss_act
 
 Format.fprintf fmt "MAIN_ACT_VERIFIER:\n";
   List.iter (fun exp -> 
-    let lambda = toLambda (parse exp) in
+    let lambda = parse exp in
       test 
         exp
         (

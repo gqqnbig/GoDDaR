@@ -1,4 +1,4 @@
-let parse (s) : Types.proc =
+let parse (s) : Types.lambda =
     let lexbuf = Lexing.from_string s in
     try 
         CCS_Parser.prog CCS_Lexer.read lexbuf

@@ -10,9 +10,6 @@ let bool_to_string b =
   | true  -> "true "
   | false -> "false"
 
-let lambdaCToProc l: proc =
-  toProc (LambdaC.lambdaCToLambda l)
-
 let convert_res (passed_act_ver, deadlocked0, resolved0) =
   let deadlocked0_no_LNil = List.filter (fun l -> l <> LNil) deadlocked0 in
   (passed_act_ver,
@@ -21,8 +18,8 @@ let convert_res (passed_act_ver, deadlocked0, resolved0) =
 
 let convert_res_manual (passed_act_ver, deadlocked0, resolved0) =
   convert_res (passed_act_ver,
-   List.map (fun exp -> toLambda (CCS.parse exp)) deadlocked0,
-   List.map (fun exp -> toLambda (CCS.parse exp)) resolved0)
+   List.map (fun exp -> CCS.parse exp) deadlocked0,
+   List.map (fun exp -> CCS.parse exp) resolved0)
 
 type compare_failure =
   | ACT_VER
@@ -45,7 +42,7 @@ let print_res_summary fmt exp (passed_act_ver0, deadlocked0, resolved0) : unit =
   if len_deadlocked > 0 then (
     fprintf fmt ", resolved: ";
     let [@warning "-8"] hd::_ = (LambdaCSet.elements resolved0) in
-    print_proc_simple fmt (lambdaCToProc hd);
+    print_lambda_simple fmt (LambdaC.lambdaCToLambda hd);
   );
   fprintf fmt "\n"
 
@@ -55,9 +52,9 @@ let print_res fmt (passed_act_ver, deadlocked, resolved): unit =
   (
     fprintf fmt " passed_act_ver: %b\n" passed_act_ver;
     fprintf fmt " Deadlocked:\n";
-    List.iter (fun l -> fprintf fmt "   "; print_proc_simple fmt (lambdaCToProc l); fprintf fmt "\n") deadlocked;
+    List.iter (fun l -> fprintf fmt "   "; print_lambda_simple fmt (LambdaC.lambdaCToLambda l); fprintf fmt "\n") deadlocked;
     fprintf fmt " Solved:\n";
-    List.iter (fun l -> fprintf fmt "   "; print_proc_simple fmt (lambdaCToProc l); fprintf fmt "\n") resolved;
+    List.iter (fun l -> fprintf fmt "   "; print_lambda_simple fmt (LambdaC.lambdaCToLambda l); fprintf fmt "\n") resolved;
   )
 
 let test fmt (exp: string) = 

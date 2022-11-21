@@ -20,7 +20,7 @@ open Types
 %left PAR
 %left PREFIX
 
-%start <proc> prog
+%start <lambda> prog
 
 %%
 
@@ -28,12 +28,12 @@ prog:
     | e = expr; EOF { e }
 
 expr:
-    | EOF { PNil }
-    | INACTIVE { PNil }
-    | s = LABEL; OUTPUT; PREFIX; e = expr { PPref(AOut(s), e) }
-    | s = LABEL; INPUT; PREFIX; e = expr { PPref(AIn(s), e) }
+    | EOF { LNil }
+    | INACTIVE { LNil }
+    | s = LABEL; OUTPUT; PREFIX; e = expr { LList(EEta(AOut(s)), e) }
+    | s = LABEL; INPUT; PREFIX; e = expr { LList(EEta(AIn(s)), e) }
     | LPAREN; e = expr; RPAREN { e }
-    | e1 = expr; INTERNAL_CHOICE; e2 = expr { POrI(e1, e2) }
-    | e1 = expr; EXTERNAL_CHOICE; e2 = expr { POrE(e1, e2) }
-    | e1 = expr; PAR; e2 = expr { PPar(e1, e2) }
-    | STAR; s = LABEL; INPUT; PREFIX; e = expr { PRepl(AIn(s), e) }
+    | e1 = expr; INTERNAL_CHOICE; e2 = expr { LOrI(e1, e2) }
+    | e1 = expr; EXTERNAL_CHOICE; e2 = expr { LOrE(e1, e2) }
+    | e1 = expr; PAR; e2 = expr { LPar(e1, e2) }
+    | STAR; s = LABEL; INPUT; PREFIX; e = expr { LRepl(EEta(AIn(s)), e) }
