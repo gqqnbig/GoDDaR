@@ -3,6 +3,6 @@ def main.main():
     call main.send(t0);
     call main.recv(t0);
 def main.send(a):
-    send a;
+    send a (main.go:4:4);
 def main.recv(b):
-    recv b;
+    recv b (main.go:8:2);

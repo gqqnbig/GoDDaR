@@ -4,14 +4,14 @@ def main.main():
     spawn main.main$1(t2);
     spawn main.main$2(t3);
     select
-      case recv t2; call main.main#2(t2, t3);
-      case recv t3; call main.main#4(t2, t3);
+      case recv t2 (main.go:13:7); call main.main#2(t2, t3);
+      case recv t3 (main.go:15:7); call main.main#4(t2, t3);
     endselect;
 def main.main$1(a):
-    send a;
+    send a (main.go:6:5);
 def main.main$2(b):
-    recv b;
+    recv b (main.go:9:3);
 def main.main#2(t2, t3):
-    send t3;
+    send t3 (main.go:14:5);
 def main.main#4(t2, t3):
-    send t2;
+    send t2 (main.go:16:5);

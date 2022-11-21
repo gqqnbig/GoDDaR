@@ -6,6 +6,7 @@
 let whitespace = [' ' '\t']+
 let newline = ['\n']+
 let identifier = ['a'-'z' 'A'-'Z' '0'-'9' '.' '$' '#' '_']+
+let tag = ['a'-'z' 'A'-'Z' '0'-'9' '.' '$' '#' '_' ':' '/' '-']+
 let digit      = ['0'-'9']+
 
 rule read = parse
@@ -37,4 +38,5 @@ rule read = parse
     | "--"[^'\n']*'\n' { (* Format.fprintf fmt "COMMENT ";      *) Lexing.new_line lexbuf; read lexbuf }
     | digit      { (* Format.fprintf fmt "DIGIT ";              *) DIGIT (int_of_string (Lexing.lexeme lexbuf)) }
     | identifier { (* Format.fprintf fmt "IDENTIFIER %s " (Lexing.lexeme lexbuf); *) IDENTIFIER (Lexing.lexeme lexbuf) }
+    | tag        { (* Format.fprintf fmt "TAG %s " (Lexing.lexeme lexbuf); *) TAG (Lexing.lexeme lexbuf) }
     | eof        { (* Format.fprintf fmt "EOF ";                *) EOF }

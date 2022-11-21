@@ -1,4 +1,4 @@
 def main.main():
     let t0 = newchan main.main0.t0_chan0, 0;
-    recv t0;
-    send t0;
+    recv t0 (main.go:5:2);
+    send t0 (main.go:6:4);

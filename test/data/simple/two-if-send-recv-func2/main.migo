@@ -6,6 +6,6 @@ def main.main():
 def main.send(a, b):
     if call main.send#1(a, b); else call main.send#3(a, b); endif;
 def main.send#1(a, b):
-    send a;
+    send a (main.go:5:5);
 def main.send#3(a, b):
-    recv b;
+    recv b (main.go:7:3);

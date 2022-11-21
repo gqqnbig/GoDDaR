@@ -3,6 +3,7 @@ open MiGo_Types
 %}
 
 %token <string> IDENTIFIER
+%token <string> TAG
 %token <int> DIGIT
 %token DEFINITION
 %token LPAREN
@@ -57,9 +58,13 @@ def_body2:
     | e = def_stmt; p = def_body2 {e::p}
 
 prefix:
-    | SEND; id = IDENTIFIER { Send(id) }
-    | RECEIVE; id = IDENTIFIER { Receive(id) }
+    | SEND; id = IDENTIFIER; tag = prefix_tag { Send(id, tag) }
+    | RECEIVE; id = IDENTIFIER; tag = prefix_tag { Receive(id, tag) }
     | TAU { Tau }
+
+prefix_tag:
+    | LPAREN; tag = TAG; RPAREN { tag }
+    | { "" }
 
 def_stmt:
     | p = prefix; SEMICOLON { Prefix(p) }

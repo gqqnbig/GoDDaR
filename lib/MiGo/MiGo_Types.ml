@@ -11,15 +11,15 @@ and  migo_stmt =
   | Lock of string
   | Unlock of string
 and migo_prefix = 
-  | Send of string
-  | Receive of string
+  | Send of string * string
+  | Receive of string * string
   | Tau
 
 let indentation_space_multiplier = 4
 let print_migo_prefix fmt prefix = 
   match prefix with
-  | Send(c)    -> Format.fprintf fmt "send %s" c
-  | Receive(c) -> Format.fprintf fmt "recv %s" c
+  | Send(c, tag)    -> Format.fprintf fmt "send %s" c; if tag <> "" then Format.fprintf fmt " (%s)" tag;
+  | Receive(c, tag) -> Format.fprintf fmt "recv %s" c; if tag <> "" then Format.fprintf fmt " (%s)" tag;
   | Tau -> Format.fprintf fmt "tau"
 
 let rec print_migo_stmts fmt indent stmts: unit =

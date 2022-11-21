@@ -16,6 +16,20 @@ let rec assocLeftList list =
   | hd::tl::[] -> LPar(tl, hd)
   | hd::md::tl -> LPar(LPar(assocLeftList tl, md), hd)
 
+let rec assocLOrIList list = 
+  match list with
+  | [] -> LNil
+  | [hd] -> hd
+  | hd::tl::[] -> LOrI(tl, hd)
+  | hd::md::tl -> LOrI(hd, LOrI(md, assocLOrIList tl))
+
+let rec assocLOrEList list = 
+  match list with
+  | [] -> LNil
+  | [hd] -> hd
+  | hd::tl::[] -> LOrE(hd, tl)
+  | hd::md::tl -> LOrE(hd, LOrE(md, assocLOrEList tl))
+
 let rec hasLNil exp =
   match exp with
   | LNil -> true

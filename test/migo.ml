@@ -25,11 +25,8 @@ Sys.chdir "data";
               (
                 try 
                   let ccs = (MiGo_to_CCS.migo_to_ccs migo) in
-                  Format.printf "%s\n" ccs;
-                  try 
-                    ignore (CCS.parse ccs);
-                  with
-                  | _ -> Format.printf "NOT VALID CCS %s\n" ccs
+                  Printer.print_lambda_simple Format.std_formatter (Types.lambdaTaggedToLambda ccs);
+                  Format.printf "\n";
                 with
                 | MiGo_to_CCS.Fail(reason) -> Format.printf "FAILED TO CONVERT: %s\n" reason;
               );

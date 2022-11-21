@@ -22,5 +22,6 @@ in
   Option.iter (
     fun migo -> 
       MiGo_Types.print_migo_list Format.std_formatter migo;
-      Format.printf "\n\n\n%s\n" (MiGo_to_CCS.migo_to_ccs migo);
+      Format.printf "\n\n\n";
+      Printer.print_lambda_simple Format.std_formatter (Types.lambdaTaggedToLambda (MiGo_to_CCS.migo_to_ccs migo));
   ) migo;

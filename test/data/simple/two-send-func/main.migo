@@ -3,4 +3,4 @@ def main.main():
     call main.send(t0);
     call main.send(t0);
 def main.send(a):
-    send a;
+    send a (main.go:4:4);

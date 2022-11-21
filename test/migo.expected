@@ -208,7 +208,7 @@ def main.provide1(x):
 def main.provide2(y):
     send y;
 ==========
-((((t0?.0) & (t1?.0)) || t1!.0) || t0!.0)
+(((t0?.0 & t1?.0) || t1!.0) || t0!.0)
 ==================================================
 benchmark/partial_deadlock/main.migo
 def main.main():
@@ -231,9 +231,9 @@ simple/go/main.migo
 def main.main():
     let t1 = newchan main.main0.t1_chan0, 0;
     spawn main.main$1(t1);
-    recv t1;
+    recv t1 (main.go:9:2);
 def main.main$1(a):
-    send a;
+    send a (main.go:6:5);
 ==========
 (t1?.0 || t1!.0)
 ==================================================
@@ -243,9 +243,9 @@ def main.main():
     spawn main.main$1(t1);
     spawn main.main$2(t1);
 def main.main$1(a):
-    send a;
+    send a (main.go:6:5);
 def main.main$2(a):
-    recv a;
+    recv a (main.go:9:3);
 ==========
 ((0 || t1?.0) || t1!.0)
 ==================================================
@@ -258,10 +258,10 @@ def main.main():
         call main.main#2(t0);
     endif;
 def main.main#1(t0):
-    send t0;
+    send t0 (main.go:6:5);
     call main.main#2(t0);
 def main.main#2(t0):
-    recv t0;
+    recv t0 (main.go:8:2);
 ==========
 (t0!.t0?.0 + t0?.0)
 ==================================================
@@ -274,9 +274,9 @@ def main.main():
         call main.main#3(t0);
     endif;
 def main.main#1(t0):
-    send t0;
+    send t0 (main.go:6:5);
 def main.main#3(t0):
-    recv t0;
+    recv t0 (main.go:8:3);
 ==========
 (t0!.0 + t0?.0)
 ==================================================
@@ -285,7 +285,7 @@ def main.main():
     let t0 = newchan main.main0.t0_chan0, 0;
     call main.main#1(t0);
 def main.main#1(t0):
-    send t0;
+    send t0 (main.go:6:5);
     call main.main#1(t0);
 ==========
 FAILED TO CONVERT: Recursive call (main.main#1)
@@ -293,7 +293,7 @@ FAILED TO CONVERT: Recursive call (main.main#1)
 simple/recv/main.migo
 def main.main():
     let t0 = newchan main.main0.t0_chan0, 0;
-    recv t0;
+    recv t0 (main.go:5:2);
 ==========
 t0?.0
 ==================================================
@@ -301,38 +301,38 @@ simple/select/main.migo
 def main.main():
     let t0 = newchan main.main0.t0_chan0, 0;
     select
-      case recv t0;
-      case send t0;
+      case recv t0 (main.go:6:7);
+      case send t0 (main.go:7:9);
     endselect;
 ==========
-((t0?.0) & (t0!.0))
+(t0?.0 & t0!.0)
 ==================================================
 simple/select-default/main.migo
 def main.main():
     let t0 = newchan main.main0.t0_chan0, 0;
     select
-      case recv t0;
-      case send t0;
+      case recv t0 (main.go:6:7);
+      case send t0 (main.go:7:9);
       case tau;
     endselect;
 ==========
-(((t0?.0) & (t0!.0)) + (0))
+(0 + (t0?.0 & t0!.0))
 ==================================================
 simple/select-nested/main.migo
 def main.main():
     let t0 = newchan main.main0.t0_chan0, 0;
     select
-      case recv t0;
+      case recv t0 (main.go:6:7);
         call main.main#2(t0);
-      case send t0;
+      case send t0 (main.go:11:9);
     endselect;
 def main.main#2(t0):
     select
-      case recv t0;
-      case send t0;
+      case recv t0 (main.go:8:8);
+      case send t0 (main.go:9:10);
     endselect;
 ==========
-((t0?.((t0?.0) & (t0!.0))) & (t0!.0))
+(t0?.(t0?.0 & t0!.0) & t0!.0)
 ==================================================
 simple/select2/main.migo
 def main.main():
@@ -341,34 +341,34 @@ def main.main():
     spawn main.main$1(t2);
     spawn main.main$2(t3);
     select
-      case recv t2;
+      case recv t2 (main.go:13:7);
         call main.main#2(t2, t3);
-      case recv t3;
+      case recv t3 (main.go:15:7);
         call main.main#4(t2, t3);
     endselect;
 def main.main$1(a):
-    send a;
+    send a (main.go:6:5);
 def main.main$2(b):
-    recv b;
+    recv b (main.go:9:3);
 def main.main#2(t2, t3):
-    send t3;
+    send t3 (main.go:14:5);
 def main.main#4(t2, t3):
-    send t2;
+    send t2 (main.go:16:5);
 ==========
-((((t2?.t3!.0) & (t3?.t2!.0)) || t3?.0) || t2!.0)
+(((t2?.t3!.0 & t3?.t2!.0) || t3?.0) || t2!.0)
 ==================================================
 simple/send/main.migo
 def main.main():
     let t0 = newchan main.main0.t0_chan0, 0;
-    send t0;
+    send t0 (main.go:5:4);
 ==========
 t0!.0
 ==================================================
 simple/send-recv/main.migo
 def main.main():
     let t0 = newchan main.main0.t0_chan0, 0;
-    recv t0;
-    send t0;
+    recv t0 (main.go:5:2);
+    send t0 (main.go:6:4);
 ==========
 t0?.t0!.0
 ==================================================
@@ -378,9 +378,9 @@ def main.main():
     call main.send(t0);
     call main.recv(t0);
 def main.send(a):
-    send a;
+    send a (main.go:4:4);
 def main.recv(b):
-    recv b;
+    recv b (main.go:8:2);
 ==========
 t0!.t0?.0
 ==================================================
@@ -396,9 +396,9 @@ def main.send(a):
         call main.send#3(a);
     endif;
 def main.send#1(a):
-    send a;
+    send a (main.go:5:5);
 def main.send#3(a):
-    recv a;
+    recv a (main.go:7:3);
 ==========
 (t0!.(t0!.0 + t0?.0) + t0?.(t0!.0 + t0?.0))
 ==================================================
@@ -415,9 +415,9 @@ def main.send(a, b):
         call main.send#3(a, b);
     endif;
 def main.send#1(a, b):
-    send a;
+    send a (main.go:5:5);
 def main.send#3(a, b):
-    recv b;
+    recv b (main.go:7:3);
 ==========
 (t0!.(t1!.0 + t0?.0) + t1?.(t1!.0 + t0?.0))
 ==================================================
@@ -427,7 +427,7 @@ def main.main():
     call main.send(t0);
     call main.send(t0);
 def main.send(a):
-    send a;
+    send a (main.go:4:4);
 ==========
 t0!.t0!.0
 ==================================================

@@ -52,19 +52,19 @@ and print_lambda_tagged_list fmt lst =
     | hd::[] -> fprintf fmt "%a" print_lambda_tagged hd
     | hd::tl -> fprintf fmt "%a, " print_lambda_tagged hd; print_lambda_tagged_list fmt tl
 
-let rec print_lambdas fmt l =
+let rec print_lambda fmt l =
     match l with
     | LNil -> fprintf fmt "LNil"
-    | LOrI(l1, l2) -> fprintf fmt "LOrI(%a, %a)" print_lambdas l1 print_lambdas l2
-    | LOrE(l1, l2) -> fprintf fmt "LOrE(%a, %a)" print_lambdas l1 print_lambdas l2
-    | LList(e1, l1) -> fprintf fmt "LList(%a, %a)" print_eta e1 print_lambdas l1
-    | LPar(l1, l2) -> fprintf fmt "LPar(%a, %a)" print_lambdas l1 print_lambdas l2
-    | LRepl(e1, l1) -> fprintf fmt "LRepl(%a, %a)" print_eta e1 print_lambdas l1
+    | LOrI(l1, l2) -> fprintf fmt "LOrI(%a, %a)" print_lambda l1 print_lambda l2
+    | LOrE(l1, l2) -> fprintf fmt "LOrE(%a, %a)" print_lambda l1 print_lambda l2
+    | LList(e1, l1) -> fprintf fmt "LList(%a, %a)" print_eta e1 print_lambda l1
+    | LPar(l1, l2) -> fprintf fmt "LPar(%a, %a)" print_lambda l1 print_lambda l2
+    | LRepl(e1, l1) -> fprintf fmt "LRepl(%a, %a)" print_eta e1 print_lambda l1
 and print_lambdalist fmt lst =
     match lst with
     | [] -> ()
-    | hd::[] -> fprintf fmt "%a" print_lambdas hd
-    | hd::tl -> fprintf fmt "%a, " print_lambdas hd; print_lambdalist fmt tl
+    | hd::[] -> fprintf fmt "%a" print_lambda hd
+    | hd::tl -> fprintf fmt "%a, " print_lambda hd; print_lambdalist fmt tl
 
 let rec print_etalist_alt fmt lst =
   match lst with
@@ -96,7 +96,7 @@ let rec print_lambda_simple fmt l =
 let printMode_base nl fmt exp p =
   if p then (
     if !verbose then (
-      print_lambdas fmt exp;
+      print_lambda fmt exp;
       fprintf fmt " ---> ";
       print_lambda_simple fmt exp;
     ) else if !simplified then(

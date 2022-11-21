@@ -3,6 +3,6 @@ def main.main():
     spawn main.main$1(t1);
     spawn main.main$2(t1);
 def main.main$1(a):
-    send a;
+    send a (main.go:6:5);
 def main.main$2(a):
-    recv a;
+    recv a (main.go:9:3);
