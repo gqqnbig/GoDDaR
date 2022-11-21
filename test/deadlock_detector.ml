@@ -18,8 +18,8 @@ let convert_res (passed_act_ver, deadlocked0, resolved0) =
 
 let convert_res_manual (passed_act_ver, deadlocked0, resolved0) =
   convert_res (passed_act_ver,
-   List.map (fun exp -> CCS.parse exp) deadlocked0,
-   List.map (fun exp -> CCS.parse exp) resolved0)
+   List.map (fun exp -> lambdaTaggedToLambda (CCS.parse exp)) deadlocked0,
+   List.map (fun exp -> lambdaTaggedToLambda (CCS.parse exp)) resolved0)
 
 type compare_failure =
   | ACT_VER

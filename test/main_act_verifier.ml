@@ -24,7 +24,7 @@ let test exp_string ((res0: (eta LambdaC.lambdaC * eta list) list), has_miss_act
 
 Format.fprintf fmt "MAIN_ACT_VERIFIER:\n";
   List.iter (fun exp -> 
-    let lambda = parse exp in
+    let lambda = lambdaTaggedToLambda (parse exp) in
       test 
         exp
         (

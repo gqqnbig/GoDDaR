@@ -12,7 +12,7 @@ type eta =
     | EEta of action
 
 type eta_tagged = 
-    | EEtaTagged of action * int
+    | EEtaTagged of action * string
 
 type 'a lambda_base = 
     | LNil
@@ -38,7 +38,7 @@ type print_ctx =
 let rec lambdaToLambdaTagged (exp: lambda): lambda_tagged = 
     let i = ref 0 in
     let rec etaToEtaTagged (EEta(a): eta): eta_tagged =
-        EEtaTagged(a, (i := !i+1; !i))
+        EEtaTagged(a, (i := !i+1; string_of_int !i))
     in
     let rec do_lambdaToLambdaTagged exp =
         match exp with

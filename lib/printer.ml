@@ -21,7 +21,7 @@ let print_action_simple fmt a =
 (* ----------- Lambda ----------- *)
 let print_eta_tagged fmt (e: eta_tagged) = 
     match e with
-    | EEtaTagged(a, i) -> fprintf fmt "EEtaTagged(%a, %i)" print_action a i
+    | EEtaTagged(a, i) -> fprintf fmt "EEtaTagged(%a, %s)" print_action a i
 
 let print_eta fmt e = 
     match e with

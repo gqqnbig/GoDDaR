@@ -297,22 +297,21 @@ let rec detect_and_resolve fmt lambdaTaggedExp =
   )
 
 
-let main fmt exp: bool * lambda list * lambda list (*passed act_ver * deadlocked processes * resolved process*) =
+let main fmt (exp:lambda_tagged): bool * lambda list * lambda list (*passed act_ver * deadlocked processes * resolved process*) =
   try
     Printexc.record_backtrace true;
     (* Process Completeness Verification *)
-    let act_ver = main_act_verifier exp in
+    let act_ver = main_act_verifier (lambdaTaggedToLambda exp) in
     if false then (
-      printMode fmt exp true;
+      printMode fmt (lambdaTaggedToLambda exp) true;
       fprintf fmt "\n";
       print_act_ver fmt act_ver;
       (false, [], [])
     ) else (
-      let lambdaTaggedExp = lambdaToLambdaTagged exp in
       (* Ideally, we would just loop until no dealdock is found and discard the intermediary results.
          But the original implementation returns the first set of deadlocks and the fully deadlock
          resolved expression, so here we do the same. *)
-      let (passed_act_ver, deadlocks, resolved) = detect_and_resolve fmt lambdaTaggedExp in
+      let (passed_act_ver, deadlocks, resolved) = detect_and_resolve fmt exp in
 
       if deadlocks = [] then (
         fprintf fmt "\nNo deadlocks!\n";

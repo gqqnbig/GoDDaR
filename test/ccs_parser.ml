@@ -30,7 +30,7 @@ let rec proc_equals (a: Types.lambda) (b: Types.lambda) : test_result =
 let fmt = Format.std_formatter
 
 let parse_and_test (s: string) (p: Types.lambda) =
-  let parsed = CCS.parse(s) in 
+  let parsed = Types.lambdaTaggedToLambda (CCS.parse(s)) in 
     match proc_equals parsed p with
       | Failure(p1, p2) -> (
         Format.fprintf fmt "FAILED:\n";

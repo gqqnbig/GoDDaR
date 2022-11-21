@@ -2,6 +2,7 @@ open Format
 open Dlock
 open Dlock.Cmd
 open Dlock.Deadlock_detector
+open Types
 
 
 (* ------------------- COMMAND LINE -------------------- *)

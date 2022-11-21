@@ -1,7 +1,10 @@
-let parse (s) : Types.lambda =
+open Types
+;;
+
+let parse (s) : Types.lambda_tagged =
     let lexbuf = Lexing.from_string s in
     try 
-        CCS_Parser.prog CCS_Lexer.read lexbuf
+        lambdaToLambdaTagged (CCS_Parser.prog CCS_Lexer.read lexbuf)
     with
       | _ ->
         let position = Lexing.lexeme_start_p lexbuf in
