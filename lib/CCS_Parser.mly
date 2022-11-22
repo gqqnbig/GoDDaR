@@ -20,7 +20,7 @@ open Types
 %left PAR
 %left PREFIX
 
-%start <lambda> prog
+%start <Lambda.t> prog
 
 %%
 

@@ -1,7 +1,7 @@
 open Types
 ;;
 
-let parse (s) : Types.lambda_tagged =
+let parse (s) : Types.LambdaTagged.t =
     let lexbuf = Lexing.from_string s in
     try 
         lambdaToLambdaTagged (CCS_Parser.prog CCS_Lexer.read lexbuf)

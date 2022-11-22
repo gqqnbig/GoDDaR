@@ -1,21 +1,20 @@
 open Dlock
-open Dlock.Auxfunctions
 open Dlock.Types
 open Dlock.CCS
 open Dlock.Printer
 
 let fmt = Format.std_formatter
 
-let test exp_string ((res0: (eta LambdaC.lambdaC * eta list) list), has_miss_acts0) = 
+let test exp_string ((res0: (LambdaC.t * Eta.eta list) list), has_miss_acts0) = 
   Format.fprintf fmt "%s\n" exp_string;
   List.iteri (fun res_n (res, has_miss_acts )-> 
     Format.fprintf fmt " RES%i:\n" res_n;
     List.iteri (fun i (lambda_flattened, eta_list) ->
       let lambda = LambdaC.lambdaCToLambda lambda_flattened in
       Format.fprintf fmt "  LAMBDA %i: " i;
-      print_lambda_simple fmt lambda;
+      Lambda.print_lambda_simple fmt lambda;
       Format.fprintf fmt "\n  ETAS %i: " i;
-      print_etalist fmt eta_list;
+      Eta.print_etalist fmt eta_list;
       Format.fprintf fmt "\n  HAS MISSING ACTS: %b" has_miss_acts
       ) res;
     Format.fprintf fmt "\n"

@@ -1,7 +1,8 @@
 open Dlock
+open Dlock.Types
 
 type test_result = Success
-  | Failure of Types.lambda * Types.lambda
+  | Failure of Lambda.t * Lambda.t
 
 let (&&) (a: test_result) (b: test_result): test_result =
   match a, b with
@@ -16,7 +17,7 @@ let (==) (a: Types.action) (b: Types.action) : bool =
     | AOut(a1), AOut(b1) -> a1 = b1
     | _ -> false
 
-let rec proc_equals (a: Types.lambda) (b: Types.lambda) : test_result =
+let rec proc_equals (a: Lambda.t) (b: Lambda.t) : test_result =
   match a, b with
     | LNil, LNil -> Success
     | LOrI(a1, a2), LOrI(b1, b2) -> (proc_equals a1 b1) && (proc_equals a2 b2)
@@ -29,17 +30,17 @@ let rec proc_equals (a: Types.lambda) (b: Types.lambda) : test_result =
 
 let fmt = Format.std_formatter
 
-let parse_and_test (s: string) (p: Types.lambda) =
+let parse_and_test (s: string) (p: Lambda.t) =
   let parsed = Types.lambdaTaggedToLambda (CCS.parse(s)) in 
     match proc_equals parsed p with
       | Failure(p1, p2) -> (
         Format.fprintf fmt "FAILED:\n";
-        Format.fprintf fmt "GOT          :"; (Printer.print_lambda_simple fmt p1);     Format.fprintf fmt "\n"; 
-        Format.fprintf fmt "EXPECTED     :"; (Printer.print_lambda_simple fmt p2);     Format.fprintf fmt "\n"; 
-        Format.fprintf fmt "GOT FULL     :"; (Printer.print_lambda_simple fmt parsed); Format.fprintf fmt "\n"; 
-        Format.fprintf fmt "EXPECTED FULL:"; (Printer.print_lambda_simple fmt p);      Format.fprintf fmt "\n"; 
+        Format.fprintf fmt "GOT          :"; (Lambda.print_lambda_simple fmt p1);     Format.fprintf fmt "\n"; 
+        Format.fprintf fmt "EXPECTED     :"; (Lambda.print_lambda_simple fmt p2);     Format.fprintf fmt "\n"; 
+        Format.fprintf fmt "GOT FULL     :"; (Lambda.print_lambda_simple fmt parsed); Format.fprintf fmt "\n"; 
+        Format.fprintf fmt "EXPECTED FULL:"; (Lambda.print_lambda_simple fmt p);      Format.fprintf fmt "\n"; 
         exit 1)
-      | Success -> Format.fprintf fmt "SUCCESS:"; (Printer.print_lambda_simple fmt p); Format.fprintf fmt "\n";
+      | Success -> Format.fprintf fmt "SUCCESS:"; (Lambda.print_lambda_simple fmt p); Format.fprintf fmt "\n";
 ;;
 
 Format.fprintf fmt "CCS_PARSER:\n";

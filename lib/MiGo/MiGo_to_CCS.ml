@@ -1,5 +1,4 @@
 open Types
-open Auxfunctions
 
 exception Fail of string
 
@@ -23,7 +22,7 @@ let rec rename_param c stack =
 
 
 
-let rec do_migo_to_ccs migo_defs (stack: stack_entry list): lambda_tagged =
+let rec do_migo_to_ccs migo_defs (stack: stack_entry list): LambdaTagged.t =
   match stack with 
   | [] -> Format.fprintf debug_fmt "No more stack\n"; LNil
   | (fun_name, stmts, var_map)::tl ->
@@ -33,12 +32,12 @@ let rec do_migo_to_ccs migo_defs (stack: stack_entry list): lambda_tagged =
       match stmt with
       | MiGo_Types.Prefix(Send(c, tag)) ->
         LList(
-          EEtaTagged(AOut(rename_param c stack), tag),
+          EEta(AOut(rename_param c stack), tag),
           (do_migo_to_ccs migo_defs ((fun_name, stmt_tl, var_map)::tl))
         )
       | MiGo_Types.Prefix(Receive(c, tag)) ->
         LList(
-          EEtaTagged(AIn(rename_param c stack), tag),
+          EEta(AIn(rename_param c stack), tag),
           (do_migo_to_ccs migo_defs ((fun_name, stmt_tl, var_map)::tl))
         )
       | MiGo_Types.If(t, f) -> 
@@ -69,9 +68,9 @@ let rec do_migo_to_ccs migo_defs (stack: stack_entry list): lambda_tagged =
         let tau_cases = gen_case tau_cases in
         let other_cases = gen_case other_cases in
         if tau_cases = [] then (
-          assocLOrEList other_cases
+          LambdaTagged.assocLOrEList other_cases
         ) else (
-          assocLOrIList ((assocLOrEList other_cases)::tau_cases)
+          LambdaTagged.assocLOrIList ((LambdaTagged.assocLOrEList other_cases)::tau_cases)
         )
         (* Format.sprintf "(%s)" (String.concat " & " other_case_strings)
         |> fun other_case_expr -> 
@@ -87,7 +86,7 @@ let rec do_migo_to_ccs migo_defs (stack: stack_entry list): lambda_tagged =
       | MiGo_Types.Newchan(_) (* TODO: Check if channel names are unique *) -> 
         do_migo_to_ccs migo_defs ((fun_name, stmt_tl, var_map)::tl)
 
-let migo_to_ccs (migo_defs: MiGo_Types.migo_def list): Types.lambda_tagged = 
+let migo_to_ccs (migo_defs: MiGo_Types.migo_def list): LambdaTagged.t = 
   let migo_def_hashtbl = Hashtbl.create (List.length migo_defs) in
   List.iter (
     fun (MiGo_Types.Def(name, params, stmts) as def) -> (

@@ -1,3 +1,5 @@
+open Cmd
+open Format
 (* Definition of types and some conversion functions *)
 
 (* ---------- Types ----------  *)
@@ -8,23 +10,199 @@ type action =
     | AIn of chan
     | AOut of chan
 
-type eta = 
+let print_action fmt a =
+    match a with
+    | AIn(a) -> fprintf fmt "AIn(%s)" a
+    | AOut(a) -> fprintf fmt "AOut(%s)" a
+
+let print_action_simple fmt a =
+    match a with
+    | AIn(a) -> fprintf fmt "%s?" a
+    | AOut(a) -> fprintf fmt "%s!" a
+
+
+module type Eta_type =
+  sig 
+    type eta
+    val print_eta: formatter -> eta -> unit
+    val print_eta_simple: formatter -> eta -> unit
+    val print_etalist: formatter -> eta list -> unit
+  end
+
+
+module Eta =
+  struct
+  type eta =
     | EEta of action
 
-type eta_tagged = 
-    | EEtaTagged of action * string
+  let print_eta fmt e = 
+      match e with
+      | EEta(a) -> fprintf fmt "EEta(%a)" print_action a
+  let print_eta_simple fmt e = 
+      match e with
+      | EEta(a) -> print_action_simple fmt a
 
-type 'a lambda_base = 
-    | LNil
-    | LOrI of 'a lambda_base * 'a lambda_base
-    | LOrE of 'a lambda_base * 'a lambda_base
-    | LList of 'a * 'a lambda_base
-    | LPar of 'a lambda_base * 'a lambda_base
-    | LRepl of 'a * 'a lambda_base
+  let rec print_etalist_alt fmt lst =
+    match lst with
+    | [] -> ()
+    | hd::[] -> print_eta fmt hd
+    | hd::tl -> print_eta fmt hd; fprintf fmt ", "; print_etalist_alt fmt tl
 
-type lambda = eta lambda_base
+  let rec print_etalist_alt_simple fmt lst =
+    match lst with
+    | [] -> ()
+    | EEta(k)::[] ->
+      print_action_simple fmt k
+    | EEta(k)::tl ->
+      print_action_simple fmt k; fprintf fmt ", "; print_etalist_alt_simple fmt tl
 
-type lambda_tagged = eta_tagged lambda_base
+  let rec print_etalist fmt lst =
+      match lst with
+      | [] -> ()
+      | hd::[] -> fprintf fmt "%a" print_eta hd
+      | hd::tl -> fprintf fmt "%a | " print_eta hd; print_etalist fmt tl
+  end
+
+
+module EtaTagged =
+  struct
+  type eta =
+    | EEta of action * string
+  let print_eta fmt (e: eta) = 
+      match e with
+      | EEta(a, i) -> fprintf fmt "EEtaTagged(%a, %s)" print_action a i
+  let print_eta_simple fmt e = 
+      match e with
+      | EEta(a, _) -> print_action_simple fmt a
+  let rec print_etalist fmt lst =
+      match lst with
+      | [] -> ()
+      | hd::[] -> fprintf fmt "%a" print_eta hd
+      | hd::tl -> fprintf fmt "%a | " print_eta hd; print_etalist fmt tl
+  end
+
+
+module Lambda_Base(Eta_base: Eta_type) =
+    struct
+    type t = 
+        | LNil
+        | LOrI of t * t
+        | LOrE of t * t
+        | LList of Eta_base.eta * t
+        | LPar of t * t
+        | LRepl of Eta_base.eta * t
+
+    let isLPar (exp: t) =
+        match exp with
+        | LPar(_,_) -> true
+        | _ -> false
+    
+    let isLOrI exp =
+        match exp with
+        | LOrI(_,_) -> true
+        | _ -> false
+
+  (* Retrieves the lambdas from a LPar type and adds them to a list *)
+  let rec lparToList exp = 
+    match exp with
+    | LPar(l, r) -> lparToList l @ lparToList r
+    | _ -> [exp]
+
+  let rec assocLeftList list =
+    match list with
+    | [] -> LNil
+    | [hd] -> hd
+    | hd::tl::[] -> LPar(tl, hd)
+    | hd::md::tl -> LPar(LPar(assocLeftList tl, md), hd)
+  
+  let rec assocLOrIList list = 
+    match list with
+    | [] -> LNil
+    | [hd] -> hd
+    | hd::tl::[] -> LOrI(tl, hd)
+    | hd::md::tl -> LOrI(hd, LOrI(md, assocLOrIList tl))
+  
+  let rec assocLOrEList list = 
+    match list with
+    | [] -> LNil
+    | [hd] -> hd
+    | hd::tl::[] -> LOrE(hd, tl)
+    | hd::md::tl -> LOrE(hd, LOrE(md, assocLOrEList tl))
+  
+  let rec hasLNil exp =
+    match exp with
+    | LNil -> true
+    | LPar(l1, l2) -> hasLNil l1 || hasLNil l2
+    | _ -> false
+
+
+  (** Strips the expression from containing [LNil] located inside [LPar] *)
+  let rec remLNils exp =
+    let rec rem exp =
+      match exp with
+      | LPar(LNil, LNil) -> LNil
+      | LPar(a, LNil) -> rem a
+      | LPar(LNil, b) -> rem b 
+      | LPar(a, b) -> LPar(rem a, rem b)
+      | _ -> exp
+    in
+    let currExp = ref exp in
+    while hasLNil !currExp && !currExp != LNil do
+        currExp := rem !currExp
+    done; 
+    !currExp
+
+
+  let rec print_lambda fmt l =
+      match l with
+      | LNil -> fprintf fmt "LNil"
+      | LOrI(l1, l2) -> fprintf fmt "LOrI(%a, %a)" print_lambda l1 print_lambda l2
+      | LOrE(l1, l2) -> fprintf fmt "LOrE(%a, %a)" print_lambda l1 print_lambda l2
+      | LList(e1, l1) -> fprintf fmt "LList(%a, %a)" Eta_base.print_eta e1 print_lambda l1
+      | LPar(l1, l2) -> fprintf fmt "LPar(%a, %a)" print_lambda l1 print_lambda l2
+      | LRepl(e1, l1) -> fprintf fmt "LRepl(%a, %a)" Eta_base.print_eta e1 print_lambda l1
+  and print_lambdalist fmt lst =
+      match lst with
+      | [] -> ()
+      | hd::[] -> fprintf fmt "%a" print_lambda hd
+      | hd::tl -> fprintf fmt "%a, " print_lambda hd; print_lambdalist fmt tl
+
+  let rec print_lambda_simple fmt l =
+      match l with
+      | LNil -> fprintf fmt "0"
+      | LOrI(p1, p2) -> fprintf fmt "(%a + %a)" print_lambda_simple p1 print_lambda_simple p2
+      | LOrE(p1, p2) -> fprintf fmt "(%a & %a)" print_lambda_simple p1 print_lambda_simple p2
+      | LList(e, pp) -> fprintf fmt "%a.%a" Eta_base.print_eta_simple e print_lambda_simple pp
+      | LPar(p1, p2) -> fprintf fmt "(%a || %a)" print_lambda_simple p1 print_lambda_simple p2
+      | LRepl(e, pp) -> fprintf fmt "*%a.%a" Eta_base.print_eta_simple e print_lambda_simple pp
+
+  let printMode_base nl fmt exp p =
+    if p then (
+      if !verbose then (
+        print_lambda fmt exp;
+        fprintf fmt " ---> ";
+        print_lambda_simple fmt exp;
+      ) else if !simplified then(
+        print_lambda_simple fmt exp;
+      );
+      if nl then fprintf fmt "\n"
+    )
+
+  let printMode = printMode_base true
+  let printMode_no_nl = printMode_base false
+  end
+
+module Lambda = 
+  struct 
+  include Lambda_Base(Eta)
+
+  end
+
+module LambdaTagged =
+  struct
+    include Lambda_Base(EtaTagged)
+    
+  end
 
 (* Print_context *)
 type print_ctx =
@@ -35,12 +213,12 @@ type print_ctx =
 
 (* ---------- Functions ----------  *)
 
-let rec lambdaToLambdaTagged (exp: lambda): lambda_tagged = 
+let rec lambdaToLambdaTagged (exp: Lambda.t): LambdaTagged.t = 
     let i = ref 0 in
-    let rec etaToEtaTagged (EEta(a): eta): eta_tagged =
-        EEtaTagged(a, (i := !i+1; string_of_int !i))
+    let rec etaToEtaTagged (EEta(a): Eta.eta): EtaTagged.eta =
+        EEta(a, (i := !i+1; string_of_int !i))
     in
-    let rec do_lambdaToLambdaTagged exp =
+    let rec do_lambdaToLambdaTagged (exp: Lambda.t): LambdaTagged.t =
         match exp with
         | LNil -> LNil
         | LPar(a, b) -> LPar(do_lambdaToLambdaTagged a, do_lambdaToLambdaTagged b)
@@ -50,10 +228,10 @@ let rec lambdaToLambdaTagged (exp: lambda): lambda_tagged =
         | LRepl(e, l) -> LRepl(etaToEtaTagged e, do_lambdaToLambdaTagged l)
     in do_lambdaToLambdaTagged exp
 
-let rec etaTaggedToEta (EEtaTagged(a, _): eta_tagged): eta =
+let rec etaTaggedToEta (EEta(a, _): EtaTagged.eta): Eta.eta =
     EEta(a)
 
-let rec lambdaTaggedToLambda (exp: lambda_tagged): lambda = 
+let rec lambdaTaggedToLambda (exp: LambdaTagged.t): Lambda.t = 
     match exp with
     | LNil -> LNil
     | LPar(a, b) -> LPar(lambdaTaggedToLambda a, lambdaTaggedToLambda b)
@@ -62,7 +240,7 @@ let rec lambdaTaggedToLambda (exp: lambda_tagged): lambda =
     | LList(e, l) -> LList(etaTaggedToEta e, lambdaTaggedToLambda l)
     | LRepl(e, l) -> LRepl(etaTaggedToEta e, lambdaTaggedToLambda l)
 
-let toAction eta =
+let toAction (eta: Eta.eta) =
     match eta with
     | EEta(a) -> a
 
@@ -90,71 +268,50 @@ let compl_action action =
     | AIn(k) -> AOut(k)
     | AOut(k) -> AIn(k)
 
-let compl_eta eta =
+let compl_eta (eta: Eta.eta): Eta.eta =
     match eta with
     | EEta(action) -> EEta(compl_action action)
 
-let isLPar exp =
-    match exp with
-    | LPar(_,_) -> true
-    | _ -> false
-
-let isLOrI exp =
-    match exp with
-    | LOrI(_,_) -> true
-    | _ -> false
 
 (** This is an attempt to provide a canonical version of the lambda type, such that it can be compared
 and sorted correctly *)
-module LambdaC =
+module LambdaC_base(Eta_base: Eta_type) =
     struct
-    type 'a lambdaC = 
-      | LList of 'a * 'a lambdaC
-      | LPar of 'a lambdaC list
-      | LOrI of 'a lambdaC list
-      | LOrE of 'a lambdaC list
-      | LRepl of 'a * 'a lambdaC
+    type t = 
+      | LList of Eta_base.eta * t
+      | LPar of t list
+      | LOrI of t list
+      | LOrE of t list
+      | LRepl of Eta_base.eta * t
       | LNil
     
-    type t = eta lambdaC
-
     let compare = compare
 
-    let rec eta_equals_eta_tagged (exp1: eta lambdaC) (exp2: eta_tagged lambdaC): bool =
-    match exp1, exp2 with
-    | LList(EEta(c1), l), LList(EEtaTagged(c2, _), r) when c1 = c2 -> eta_equals_eta_tagged l r
-    | LRepl(EEta(c1), l), LRepl(EEtaTagged(c2, _), r) when c1 = c2 -> eta_equals_eta_tagged l r
-    | LPar(l), LPar(r)
-    | LOrI(l), LOrI(r)
-    | LOrE(l), LOrE(r) -> List.for_all2 (fun l r -> eta_equals_eta_tagged l r) l r
-    | LNil, LNil -> true
-    | _, _ -> false
-
-    let rec lambdaLParToLambdaCLPar (exp: 'a lambda_base): 'a lambdaC = 
-      let rec do_lambdaLParToLambdaCLPar (exp: 'a lambda_base): 'a lambdaC list = 
+    let rec lambdaLParToLambdaCLPar (exp: Lambda_Base(Eta_base).t): t = 
+      let rec do_lambdaLParToLambdaCLPar (exp: Lambda_Base(Eta_base).t): t list = 
         match exp with
         | LPar(l, r) -> (do_lambdaLParToLambdaCLPar l) @ (do_lambdaLParToLambdaCLPar r)
         | LNil -> []
         | _ -> [lambdaToLambdaC exp]
       in
       LPar(List.sort compare (do_lambdaLParToLambdaCLPar exp))
-    and lambdaLOrIToLambdaCLOrI (exp: 'a lambda_base): 'a lambdaC = 
-      let rec do_lambdaLOrIToLambdaCLOrI (exp: 'a lambda_base): 'a lambdaC list = 
+    and lambdaLOrIToLambdaCLOrI (exp: Lambda_Base(Eta_base).t): t = 
+      let rec do_lambdaLOrIToLambdaCLOrI (exp: Lambda_Base(Eta_base).t): t list = 
         match exp with
         | LOrI(l, r) -> (do_lambdaLOrIToLambdaCLOrI l) @ (do_lambdaLOrIToLambdaCLOrI r)
         | LNil -> []
         | _ -> [lambdaToLambdaC exp]
       in
       LOrI(List.sort compare (do_lambdaLOrIToLambdaCLOrI exp))
-    and lambdaLOrEToLambdaCLOrE (exp: 'a lambda_base): 'a lambdaC = 
-      let rec do_lambdaLOrEToLambdaCLOrE (exp: 'a lambda_base): 'a lambdaC list = 
+    and lambdaLOrEToLambdaCLOrE (exp: Lambda_Base(Eta_base).t): t = 
+      let rec do_lambdaLOrEToLambdaCLOrE (exp: Lambda_Base(Eta_base).t): t list = 
         match exp with
         | LOrE(l, r) -> (do_lambdaLOrEToLambdaCLOrE l) @ (do_lambdaLOrEToLambdaCLOrE r)
         | LNil -> []
         | _ -> [lambdaToLambdaC exp]
       in
       LOrE(List.sort compare (do_lambdaLOrEToLambdaCLOrE exp))
-    and lambdaToLambdaC (lambda: 'a lambda_base): 'a lambdaC = 
+    and lambdaToLambdaC (lambda: Lambda_Base(Eta_base).t): t = 
       match lambda with
       | LList(eta, l) -> LList(eta, lambdaToLambdaC l)
       | LPar(_, _) -> lambdaLParToLambdaCLPar lambda
@@ -163,29 +320,29 @@ module LambdaC =
       | LRepl(eta, l) -> LRepl(eta, lambdaToLambdaC l)
       | LNil -> LNil
     
-    let rec lambdaCToLambda (lambdaC: 'a lambdaC): 'a lambda_base = 
-      let rec fold_LPar list: 'a lambda_base =
+    let rec lambdaCToLambda (lambda: t): Lambda_Base(Eta_base).t = 
+      let rec fold_LPar list: Lambda_Base(Eta_base).t =
         match list with
         | [] -> LNil
         | [hd] -> hd
         | hd::tl::[] -> LPar(tl, hd)
         | hd::md::tl -> LPar(LPar(fold_LPar tl, md), hd)
       in
-      let rec fold_LOrI list: 'a lambda_base =
+      let rec fold_LOrI list: Lambda_Base(Eta_base).t =
         match list with
         | [] -> LNil
         | [hd] -> hd
         | hd::tl::[] -> LOrI(tl, hd)
         | hd::md::tl -> LOrI(LOrI(fold_LOrI tl, md), hd)
       in
-      let rec fold_LOrE list: 'a lambda_base =
+      let rec fold_LOrE list: Lambda_Base(Eta_base).t =
         match list with
         | [] -> LNil
         | [hd] -> hd
         | hd::tl::[] -> LOrE(tl, hd)
         | hd::md::tl -> LOrE(LOrE(fold_LOrE tl, md), hd)
       in
-      match lambdaC with
+      match lambda with
       | LList(eta, l) -> LList(eta, lambdaCToLambda l)
       | LPar(lambda_list) -> fold_LPar (List.map lambdaCToLambda lambda_list)
       | LOrI(lambda_list) -> fold_LOrI (List.map lambdaCToLambda lambda_list)
@@ -195,5 +352,18 @@ module LambdaC =
 
     let canonicalizeLambda lambda =
         lambdaCToLambda (lambdaToLambdaC lambda)
-
 end
+
+module LambdaC = LambdaC_base(Eta)
+module LambdaCTagged = LambdaC_base(EtaTagged)
+
+
+let rec eta_equals_eta_tagged (exp1: LambdaC.t) (exp2: LambdaCTagged.t): bool =
+match exp1, exp2 with
+| LList(EEta(c1), l), LList(EEta(c2, _), r) when c1 = c2 -> eta_equals_eta_tagged l r
+| LRepl(EEta(c1), l), LRepl(EEta(c2, _), r) when c1 = c2 -> eta_equals_eta_tagged l r
+| LPar(l), LPar(r)
+| LOrI(l), LOrI(r)
+| LOrE(l), LOrE(r) -> List.for_all2 (fun l r -> eta_equals_eta_tagged l r) l r
+| LNil, LNil -> true
+| _, _ -> false
