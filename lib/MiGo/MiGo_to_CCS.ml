@@ -4,7 +4,7 @@ exception Fail of string
 
 type stack_entry = string * (MiGo_Types.migo_stmt list) * (string * string) list
 
-let debug_fmt = Printer.null_fmt
+let debug_fmt = null_fmt
 
 let check_has_been_called call_name stack =
   if (Option.is_some (List.find_opt (fun (name, _, _) -> call_name = name) stack)) then

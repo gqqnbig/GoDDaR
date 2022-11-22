@@ -1,7 +1,6 @@
 open Dlock
 open Dlock.Types
 open Dlock.CCS
-open Dlock.Printer
 
 let fmt = Format.std_formatter
 

@@ -1,4 +1,6 @@
 open Types
+open Cmd
+open Format
 
 
 (* This tupple store some data about a possible execution of the program
@@ -101,3 +103,30 @@ let main_act_verifier (exp: Lambda.t) : (Lambda.t * Eta.eta list) list=
 
 let has_miss_acts ( list : (Lambda.t * Eta.eta list) list ) =
   List.exists (fun (lambda, eta_list) -> (List.length eta_list) <> 0) list
+
+let print_act_ver fmt (arr: (Lambda.t * Eta.eta list) list) =
+  let rec print arr =
+    match arr with
+    | [] -> ()
+    | hd::tl -> 
+        match hd with
+        | (a, []) -> print tl
+        | (a, b) -> 
+          if !verbose then (
+            fprintf fmt "- ";
+            Eta.print_etalist_alt fmt b;
+            fprintf fmt " in ";
+            Lambda.printMode fmt a true;
+            fprintf fmt "\n";
+            print tl
+          ) else (
+            (fprintf fmt "- ";
+            Eta.print_etalist_alt_simple fmt b;
+            fprintf fmt " in ";
+            Lambda.printMode fmt a true;
+            print tl)
+          )
+  in
+  if !verbose then
+    fprintf fmt "Action(s) missing correspondence(s) in process(es):\n";
+    print arr

@@ -1,5 +1,4 @@
 open Dlock
-open Dlock.Printer
 open Dlock.Types
 open Format
 

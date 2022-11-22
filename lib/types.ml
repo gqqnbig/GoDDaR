@@ -1,6 +1,7 @@
 open Cmd
 open Format
-(* Definition of types and some conversion functions *)
+
+let null_fmt = Format.make_formatter ( fun _ _ _ -> () ) (fun _ -> ())
 
 (* ---------- Types ----------  *)
 
@@ -182,7 +183,7 @@ module Lambda_Base(Eta_base: Eta_type) =
         print_lambda fmt exp;
         fprintf fmt " ---> ";
         print_lambda_simple fmt exp;
-      ) else if !simplified then(
+      ) else (
         print_lambda_simple fmt exp;
       );
       if nl then fprintf fmt "\n"
@@ -210,6 +211,11 @@ type print_ctx =
     print   :   bool;
     level   :   string;
 }
+
+let printCtxLevel_noln fmt p_ctx =
+  if p_ctx.print then
+    fprintf fmt "---- %s ----\n" p_ctx.level
+  else ()
 
 (* ---------- Functions ----------  *)
 
