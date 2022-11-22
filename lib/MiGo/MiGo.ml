@@ -5,7 +5,7 @@ let do_parse lexbuf =
       | e ->
         let msg = Printexc.to_string e
         and stack = Printexc.get_backtrace () in
-          Printf.eprintf "there was an error: %s%s\n" msg stack;
+          Printf.printf "there was an error: %s%s\n" msg stack;
 
         let position = Lexing.lexeme_start_p lexbuf in
         let pos_string = Format.sprintf "%s: lineNum:Char %d:%d" position.pos_fname position.pos_lnum (position.pos_cnum - position.pos_bol) in

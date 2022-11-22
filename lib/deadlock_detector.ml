@@ -3,7 +3,6 @@ open Auxfunctions
 open Main_act_verifier
 open Types
 open Printer
-open List2
 open Cmd
 
 

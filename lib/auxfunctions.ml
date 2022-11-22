@@ -1,7 +1,6 @@
 (* Definition of auxiliary functions *)
 open Types
 open Printer
-open List2
 
 (* Retrieves the lambdas from a LPar type and adds them to a list *)
 let rec lparToList exp = 
