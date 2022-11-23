@@ -66,9 +66,9 @@ type FVisitor struct {
 	positions []token.Position
 }
 
-func wrapInGo(node ast.Stmt) *ast.GoStmt {
+func wrapInGo(node ast.Stmt, pos token.Pos) *ast.GoStmt {
 	return &ast.GoStmt{
-		Go: 0,
+		Go: pos,
 		Call: &ast.CallExpr{
 			Fun: &ast.FuncLit{
 				Type: &ast.FuncType{
@@ -117,7 +117,7 @@ func (f FVisitor) Visit(node ast.Node) ast.Visitor {
 				position := fset.Position(op.Arrow)
 				position.Offset = 0
 				if containsPosition(f.positions, position) {
-					n.List[i] = wrapInGo(op)
+					n.List[i] = wrapInGo(op, op.Arrow)
 				}
 			case *ast.ExprStmt:
 				unaryExpr, ok := op.X.(*ast.UnaryExpr)
@@ -125,7 +125,7 @@ func (f FVisitor) Visit(node ast.Node) ast.Visitor {
 					position := fset.Position(unaryExpr.OpPos)
 					position.Offset = 0
 					if containsPosition(f.positions, position) {
-						n.List[i] = wrapInGo(op)
+						n.List[i] = wrapInGo(op, unaryExpr.OpPos)
 					}
 				}
 
@@ -176,6 +176,8 @@ func processFile(changes map[string][]token.Position) error {
 			newSrc := string(newSrc)
 			edits := myers.ComputeEdits(span.URIFromPath(filename), orig, newSrc)
 			fmt.Print(gotextdiff.ToUnified(filename, "fixed/"+filename, orig, edits))
+			fmt.Print("\n\n")
+			fmt.Print(newSrc)
 			return nil
 		}
 
