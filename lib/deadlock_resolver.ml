@@ -5,7 +5,12 @@ let rec deadlock_solver_1 (lambda: LambdaTagged.t) (deadlocked_top_environment: 
   match lambda with
   (* If eta is prefixed with LNil, then theres no need to parallelize *)
   | LList(eta, LNil) -> LList(eta, LNil)
-  | LList(eta, l) when List.mem eta deadlocked_top_environment -> LPar(LList(eta, LNil), deadlock_solver_1 l deadlocked_top_environment)
+  | LList(eta, l) when List.mem eta deadlocked_top_environment ->
+    if !go then (
+      match eta with
+      | EtaTagged.EEta(_, t) -> Format.printf "PARALLELIZE %s\n" t;
+    );
+    LPar(LList(eta, LNil), deadlock_solver_1 l deadlocked_top_environment)
   | LList(eta, l) -> LList(eta, deadlock_solver_1 l deadlocked_top_environment)
   | LRepl(eta, l) -> LRepl(eta, deadlock_solver_1 l deadlocked_top_environment)
   | LPar(a, b) -> LPar(deadlock_solver_1 a deadlocked_top_environment, deadlock_solver_1 b deadlocked_top_environment)
