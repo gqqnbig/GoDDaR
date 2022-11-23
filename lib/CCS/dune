@@ -1,0 +1,3 @@
+(menhir (modules CCS_Parser))
+
+(ocamllex (modules CCS_Lexer))
