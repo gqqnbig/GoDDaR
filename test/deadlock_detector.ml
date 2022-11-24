@@ -45,23 +45,30 @@ let print_res_summary fmt exp (passed_act_ver0, deadlocked0, resolved0) : unit =
   );
   fprintf fmt "\n"
 
-let print_res fmt (passed_act_ver, deadlocked, resolved): unit =
+let print_res fmt (passed_act_ver, deadlocked, resolved) (passed_act_ver2, deadlocked22, resolved2): unit =
   let deadlocked = LambdaCSet.elements deadlocked in
   let resolved   = LambdaCSet.elements resolved in
+  let resolved2   = LambdaCSet.elements resolved2 in
   (
     fprintf fmt " passed_act_ver: %b\n" passed_act_ver;
     fprintf fmt " Deadlocked:\n";
     List.iter (fun l -> fprintf fmt "   "; Lambda.print_lambda_simple fmt (LambdaC.lambdaCToLambda l); fprintf fmt "\n") deadlocked;
     fprintf fmt " Solved:\n";
     List.iter (fun l -> fprintf fmt "   "; Lambda.print_lambda_simple fmt (LambdaC.lambdaCToLambda l); fprintf fmt "\n") resolved;
+    fprintf fmt " Solved2:\n";
+    List.iter (fun l -> fprintf fmt "   "; Lambda.print_lambda_simple fmt (LambdaC.lambdaCToLambda l); fprintf fmt "\n") resolved2;
   )
 
 let test fmt (exp: string) = 
+  Format.printf "%s\n" exp;
   let proc = CCS.parse exp in
+  Cmd.ds := 1;
   let result = convert_res (Deadlock_detector.main  null_fmt proc) in
+  Cmd.ds := 2;
+  let result2 = convert_res (Deadlock_detector.main  null_fmt proc) in
   (
     fprintf fmt "%s\n" exp;
-    print_res fmt result
+    print_res fmt result result2
   )
 
 ;;

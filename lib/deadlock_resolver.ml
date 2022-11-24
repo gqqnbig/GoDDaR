@@ -91,8 +91,9 @@ let rec detect_and_resolve fmt eval lambdaTaggedExp =
   )
 
 let rec detect_and_resolve_loop eval (passed_act_ver, deadlocked, resolved) (last_resolved: LambdaTagged.t list option)= 
-  if !go then (
-    (* In go mode just loop once *)
+  if !go || !ds > 1 then (
+    (* In go or ds=2 mode just loop once *)
+    (* TODO: fix looping when ds=2 *)
     (passed_act_ver, deadlocked, resolved)
   ) else (
     match last_resolved with
