@@ -74,7 +74,7 @@ let rec detect_and_resolve fmt eval lambdaTaggedExp =
   let deadlocked_states = (eval fmt lambdaTaggedExp) in
   Format.fprintf fmt "\n";
   if deadlocked_states = [] then (
-    (true, [], [lambdaTaggedExp])
+    (true, [], lambdaTaggedExp)
   ) else (
     let deadlocked_top_environments =
       deadlocked_states
@@ -87,10 +87,10 @@ let rec detect_and_resolve fmt eval lambdaTaggedExp =
     let deadlock_solver = if !ds < 2 then deadlock_solver_1 else deadlock_solver_2 in
     let solved_exp = (LambdaTagged.remLNils (deadlock_solver lambdaTaggedExp deadlocked_top_environments)) in
 
-    (true, deadlocked_states, [solved_exp])
+    (true, deadlocked_states, solved_exp)
   )
 
-let rec detect_and_resolve_loop eval (passed_act_ver, deadlocked, resolved) (last_resolved: LambdaTagged.t list option)= 
+let rec detect_and_resolve_loop eval (passed_act_ver, deadlocked, resolved) (last_resolved: LambdaTagged.t option)= 
   if !go || !ds > 1 then (
     (* In go or ds=2 mode just loop once *)
     (* TODO: fix looping when ds=2 *)
@@ -98,12 +98,12 @@ let rec detect_and_resolve_loop eval (passed_act_ver, deadlocked, resolved) (las
   ) else (
     match last_resolved with
     (* When resolved program remains the same then exit loop*)
-    | Some(last_resolved) when List.equal (=) last_resolved resolved ->
+    | Some(last_resolved) when last_resolved = resolved ->
       (passed_act_ver, deadlocked, resolved)
     (* When no deadlocks are found then exit loop*)
     | _ when deadlocked = [] -> 
       (passed_act_ver, deadlocked, resolved)
     | _ -> 
-      let res = detect_and_resolve null_fmt eval (List.hd resolved) in
+      let res = detect_and_resolve null_fmt eval resolved in
       detect_and_resolve_loop eval res (Some(resolved))
   )

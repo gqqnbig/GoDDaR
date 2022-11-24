@@ -211,7 +211,7 @@ let eval fmt (lambda: LambdaTagged.t) =
 
 
 
-let main fmt (exp: LambdaTagged.t): bool * Lambda.t list * Lambda.t list (*passed act_ver * deadlocked processes * resolved process*) =
+let main fmt (exp: LambdaTagged.t): bool * Lambda.t list * Lambda.t (*passed act_ver * deadlocked processes * resolved process*) =
   try
     Printexc.record_backtrace true;
     (* Process Completeness Verification *)
@@ -220,7 +220,7 @@ let main fmt (exp: LambdaTagged.t): bool * Lambda.t list * Lambda.t list (*passe
       LambdaTagged.printMode fmt exp true;
       fprintf fmt "\n";
       print_act_ver fmt act_ver;
-      (false, [], [])
+      (false, [], LNil)
     ) else (
       (* Ideally, we would just loop until no dealdock is found and discard the intermediary results.
          But the original implementation returns the first set of deadlocks and the fully deadlock
@@ -238,9 +238,9 @@ let main fmt (exp: LambdaTagged.t): bool * Lambda.t list * Lambda.t list (*passe
 
       if deadlocks <> [] then (
         fprintf fmt "Resolved: %b \n" (has_miss_acts act_ver);
-        LambdaTagged.printMode fmt (List.hd resolved) true
+        LambdaTagged.printMode fmt resolved true
       );
-      (passed_act_ver, List.map stateToLambda deadlocks, List.map lambdaTaggedToLambda resolved)
+      (passed_act_ver, List.map stateToLambda deadlocks, lambdaTaggedToLambda resolved)
     )
   with
   | _ -> Printexc.print_backtrace stdout; exit 1
