@@ -5,11 +5,8 @@ let rec deadlock_solver_1 (lambda: LambdaTagged.t) (deadlocked_top_environment: 
   match lambda with
   (* If eta is prefixed with LNil, then theres no need to parallelize *)
   | LList(eta, LNil) -> LList(eta, LNil)
-  | LList(eta, l) when List.mem eta deadlocked_top_environment ->
-    if !go then (
-      match eta with
-      | EtaTagged.EEta(_, t) -> Format.printf "PARALLELIZE %s\n" t;
-    );
+  | LList(EEta(_, t) as eta, l) when List.mem eta deadlocked_top_environment ->
+    if !go then ( Format.printf "PARALLELIZE\n%s\n" t;);
     LPar(LList(eta, LNil), deadlock_solver_1 l deadlocked_top_environment)
   | LList(eta, l) -> LList(eta, deadlock_solver_1 l deadlocked_top_environment)
   | LRepl(eta, l) -> LRepl(eta, deadlock_solver_1 l deadlocked_top_environment)
@@ -19,22 +16,23 @@ let rec deadlock_solver_1 (lambda: LambdaTagged.t) (deadlocked_top_environment: 
   | LNil -> LNil
 
 let deadlock_solver_2_dfs (lambda: LambdaTagged.t) (deadlocked_top_environment: EtaTagged.eta list): (LambdaTagged.t) =
-  let dte = ref (List.map (fun eta -> (eta, false)) deadlocked_top_environment) in
+  let dte = ref (List.map (fun eta -> (eta, None)) deadlocked_top_environment) in
+
   let rec do_deadlock_solver_2 (lambda: LambdaTagged.t): (LambdaTagged.t) =
-    let is_co_input c1 ((eta, found_co_output): (EtaTagged.eta * bool)) =
+    let is_co_input c1 ((eta, found_co_output): (EtaTagged.eta * EtaTagged.eta option)) =
       match (eta, found_co_output) with
       | (EEta(AOut(_),_), _) -> false
-      | (EEta(AIn(c2),_), _) -> c1 = c2 && (not found_co_output)
+      | (EEta(AIn(c2),_), _) -> c1 = c2 && (Option.is_none found_co_output)
     in
     match lambda with
-    | LList((EEta(AOut(_), _) as eta), l) when List.mem_assoc eta !dte ->
-      dte := List.filter ((<>) (eta, false)) !dte;
+    | LList((EEta(AOut(_), t) as eta), l) when List.mem_assoc eta !dte ->
+      if !go then Format.printf "PARALLELIZE\n%s\n" t;
       LPar(LList(eta, LNil), do_deadlock_solver_2 l)
 
-    | LList( EEta(AOut(c1), _)       , l) when List.exists (is_co_input c1) !dte ->
+    | LList( EEta(AOut(c1), _) as eta, l) when List.exists (is_co_input c1) !dte ->
       let (eta_input, _) = List.find (is_co_input c1) !dte in
       dte := (List.remove_assoc eta_input !dte);
-      dte := (eta_input, true)::!dte;
+      dte := (eta_input, Some(eta))::!dte;
       do_deadlock_solver_2 l
 
     | LList((EEta(AIn(c), tag) as eta), l) when List.mem_assoc eta !dte ->
@@ -47,7 +45,14 @@ let deadlock_solver_2_dfs (lambda: LambdaTagged.t) (deadlocked_top_environment: 
     | LOrE(a, b) -> LOrE(do_deadlock_solver_2 a, do_deadlock_solver_2 b)
     | LNil -> LNil
   in
-    do_deadlock_solver_2 lambda
+    let res = do_deadlock_solver_2 lambda in
+    if !go then List.iter (
+      function 
+      | EtaTagged.EEta(_, tag_input), Some(EtaTagged.EEta(_, tag_output)) -> 
+        Format.printf "MOVE\n%s\n%s\n" tag_output tag_input;
+      | _, _ -> ()
+    ) !dte; 
+    res
 
 let deadlock_solver_2 = deadlock_solver_2_dfs
 

@@ -3,6 +3,9 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"fixer/change"
+	"fixer/change/move"
+	"fixer/change/parallelize"
 	"fmt"
 	"github.com/hexops/gotextdiff"
 	"github.com/hexops/gotextdiff/myers"
@@ -13,179 +16,106 @@ import (
 	"go/token"
 	"io"
 	"os"
-	"strconv"
-	"strings"
 )
-
-func parsePosition(s string) token.Position {
-	split := strings.Split(s, ":")
-	if len(split) != 3 {
-		panic("Invalid position")
-	} else {
-		line, err := strconv.Atoi(split[1])
-		if err != nil {
-			panic("Invalid position (Line not a number)")
-		}
-		column, err := strconv.Atoi(split[2])
-		if err != nil {
-			panic("Invalid position (Column not a number)")
-		}
-		return token.Position{
-			Filename: split[0],
-			Offset:   0,
-			Line:     line,
-			Column:   column,
-		}
-	}
-}
-
-func main() {
-	reader := bufio.NewReader(os.Stdin)
-	changes := make(map[string][]token.Position)
-	for {
-		lineBytes, _, err := reader.ReadLine()
-		line := string(lineBytes)
-		if err != nil {
-			break
-		}
-		if strings.HasPrefix(line, "PARALLELIZE ") {
-			position := parsePosition(line[len("PARALLELIZE "):])
-			changes[position.Filename] = append(changes[position.Filename], position)
-		}
-	}
-
-	processFile(changes)
-}
 
 var fset = token.NewFileSet()
 
-const parserMode = parser.ParseComments
-
-type FVisitor struct {
-	fset      *token.FileSet
-	positions []token.Position
-}
-
-func wrapInGo(node ast.Stmt, pos token.Pos) *ast.GoStmt {
-	return &ast.GoStmt{
-		Go: pos,
-		Call: &ast.CallExpr{
-			Fun: &ast.FuncLit{
-				Type: &ast.FuncType{
-					Func:       0,
-					TypeParams: nil,
-					Params: &ast.FieldList{
-						Opening: 0,
-						List:    nil,
-						Closing: 0,
-					},
-					Results: nil,
-				},
-				Body: &ast.BlockStmt{
-					Lbrace: 0,
-					List:   []ast.Stmt{node},
-					Rbrace: 0,
-				},
-			},
-			Lparen:   0,
-			Args:     nil,
-			Ellipsis: 0,
-			Rparen:   0,
-		},
+func main() {
+	reader := bufio.NewReader(os.Stdin)
+	all_filenames := make(map[string]struct{})
+	changes := []change.Change{
+		parallelize.NewParallelize(fset),
+		move.NewMove(fset),
 	}
-
-}
-
-func containsPosition(positions []token.Position, position token.Position) bool {
-	for _, pos := range positions {
-		if pos == position {
-			return true
+	for {
+		lineBytes, _, err := reader.ReadLine()
+		if err == io.EOF {
+			break
 		}
-	}
-	return false
-}
-
-func (f FVisitor) Visit(node ast.Node) ast.Visitor {
-	if node == nil {
-		return f
-	}
-	var n, ok = node.(*ast.BlockStmt)
-	if ok {
-		for i, stmt := range n.List {
-			switch op := stmt.(type) {
-			case *ast.SendStmt:
-				position := fset.Position(op.Arrow)
-				position.Offset = 0
-				if containsPosition(f.positions, position) {
-					n.List[i] = wrapInGo(op, op.Arrow)
+		if err != nil {
+			panic(err)
+		}
+		line := string(lineBytes)
+		for _, c := range changes {
+			filenames, err := c.Add(reader, line)
+			if err != nil {
+				panic(err)
+			}
+			if filenames != nil {
+				for _, filename := range filenames {
+					all_filenames[filename] = struct{}{}
 				}
-			case *ast.ExprStmt:
-				unaryExpr, ok := op.X.(*ast.UnaryExpr)
-				if ok && unaryExpr.Op == token.ARROW {
-					position := fset.Position(unaryExpr.OpPos)
-					position.Offset = 0
-					if containsPosition(f.positions, position) {
-						n.List[i] = wrapInGo(op, unaryExpr.OpPos)
-					}
-				}
-
-			default:
-				ast.Walk(f, stmt)
 			}
 		}
-		return nil
 	}
-	return f
+
+	err := processFile(all_filenames, changes)
+	if err != nil {
+		panic(err)
+	}
 }
 
-func processFile(changes map[string][]token.Position) error {
+const parserMode = parser.ParseComments
+
+func processFile(filenames map[string]struct{}, changes []change.Change) error {
 	var f *os.File
 	var err error
 
-	for filename, positions := range changes {
-		f, err = os.Open(filename)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
+	for filename := range filenames {
+		err := func() error {
+			f, err = os.Open(filename)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
 
-		src, err := io.ReadAll(f)
-		if err != nil {
-			return err
-		}
+			src, err := io.ReadAll(f)
+			if err != nil {
+				return err
+			}
 
-		srcFile, err := parser.ParseFile(fset, filename, src, parserMode)
-		if err != nil {
-			return err
-		}
+			srcFile, err := parser.ParseFile(fset, filename, src, parserMode)
+			if err != nil {
+				return err
+			}
+			ast.Print(fset, srcFile)
 
-		file, err := parser.ParseFile(fset, filename, src, parserMode)
-		if err != nil {
-			return err
-		}
+			file, err := parser.ParseFile(fset, filename, src, parserMode)
+			if err != nil {
+				return err
+			}
 
-		ast.Walk(FVisitor{fset: fset, positions: positions}, file)
+			for _, c := range changes {
+				file = c.Patch(filename, file)
+			}
 
-		newSrc, err := gofmtFile(file)
-		if err != nil {
-			return err
-		}
+			newSrc, err := gofmtFile(file)
+			if err != nil {
+				return err
+			}
 
-		if true {
-			orig := gofmt(srcFile)
-			newSrc := string(newSrc)
-			edits := myers.ComputeEdits(span.URIFromPath(filename), orig, newSrc)
-			fmt.Print(gotextdiff.ToUnified(filename, "fixed/"+filename, orig, edits))
-			fmt.Print("\n\n")
-			fmt.Print(newSrc)
+			if true {
+				orig := gofmt(srcFile)
+				newSrc := string(newSrc)
+				edits := myers.ComputeEdits(span.URIFromPath(filename), orig, newSrc)
+				fmt.Print(gotextdiff.ToUnified(filename, "fixed/"+filename, orig, edits))
+				fmt.Print("\n\n")
+				fmt.Print(newSrc)
+				return nil
+			}
+
+			// _, err = os.Stdout.Write(newSrc)
+			// return os.WriteFile(f.Name(), newSrc, 0)
+			if err != nil {
+				return err
+			}
+
 			return nil
-		}
-
-		_, err = os.Stdout.Write(newSrc)
-		// return os.WriteFile(f.Name(), newSrc, 0)
+		}()
 		if err != nil {
 			return err
 		}
+
 	}
 
 	return nil

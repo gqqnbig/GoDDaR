@@ -133,10 +133,11 @@ module Lambda_Base(Eta_base: Eta_type) =
   
   let rec hasLNil exp =
     match exp with
-    | LNil -> true
-    | LPar(l1, l2) -> hasLNil l1 || hasLNil l2
-    | _ -> false
-
+    | LNil -> false
+    | LPar(a, b) -> (a = LNil) || (b = LNil)
+    | LOrE(a, b) | LOrI(a, b) ->
+      hasLNil a || hasLNil b
+    | LList(_, l) | LRepl(_, l) -> hasLNil l
 
   (** Strips the expression from containing [LNil] located inside [LPar] *)
   let rec remLNils exp =
@@ -146,10 +147,14 @@ module Lambda_Base(Eta_base: Eta_type) =
       | LPar(a, LNil) -> rem a
       | LPar(LNil, b) -> rem b 
       | LPar(a, b) -> LPar(rem a, rem b)
-      | _ -> exp
+      | LOrE(a, b) -> LOrE(rem a, rem b)
+      | LOrI(a, b) -> LOrI(rem a, rem b)
+      | LList(e, l) -> LList(e, rem l)
+      | LRepl(e, l) -> LRepl(e, rem l)
+      | LNil -> LNil
     in
     let currExp = ref exp in
-    while hasLNil !currExp && !currExp != LNil do
+    while hasLNil !currExp && !currExp <> LNil do
         currExp := rem !currExp
     done; 
     !currExp
