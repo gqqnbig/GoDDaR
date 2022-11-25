@@ -78,7 +78,6 @@ func processFile(filenames map[string]struct{}, changes []change.Change) error {
 			if err != nil {
 				return err
 			}
-			ast.Print(fset, srcFile)
 
 			file, err := parser.ParseFile(fset, filename, src, parserMode)
 			if err != nil {

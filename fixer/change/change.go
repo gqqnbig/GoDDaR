@@ -43,3 +43,31 @@ func ReadPositionLine(reader *bufio.Reader) (token.Position, error) {
 	dataString := string(data)
 	return ParsePosition(dataString), nil
 }
+func WrapInGo(node ast.Stmt, pos token.Pos) *ast.GoStmt {
+	return &ast.GoStmt{
+		Go: pos,
+		Call: &ast.CallExpr{
+			Fun: &ast.FuncLit{
+				Type: &ast.FuncType{
+					Func:       0,
+					TypeParams: nil,
+					Params: &ast.FieldList{
+						Opening: 0,
+						List:    nil,
+						Closing: 0,
+					},
+					Results: nil,
+				},
+				Body: &ast.BlockStmt{
+					Lbrace: 0,
+					List:   []ast.Stmt{node},
+					Rbrace: 0,
+				},
+			},
+			Lparen:   0,
+			Args:     nil,
+			Ellipsis: 0,
+			Rparen:   0,
+		},
+	}
+}

@@ -47,35 +47,6 @@ func (p *Parallelize) Patch(filename string, file *ast.File) *ast.File {
 	return tmp.(*ast.File)
 }
 
-func wrapInGo(node ast.Stmt, pos token.Pos) *ast.GoStmt {
-	return &ast.GoStmt{
-		Go: pos,
-		Call: &ast.CallExpr{
-			Fun: &ast.FuncLit{
-				Type: &ast.FuncType{
-					Func:       0,
-					TypeParams: nil,
-					Params: &ast.FieldList{
-						Opening: 0,
-						List:    nil,
-						Closing: 0,
-					},
-					Results: nil,
-				},
-				Body: &ast.BlockStmt{
-					Lbrace: 0,
-					List:   []ast.Stmt{node},
-					Rbrace: 0,
-				},
-			},
-			Lparen:   0,
-			Args:     nil,
-			Ellipsis: 0,
-			Rparen:   0,
-		},
-	}
-}
-
 func containsPosition(positions []token.Position, position token.Position) bool {
 	for _, pos := range positions {
 		if pos == position {
@@ -101,7 +72,7 @@ func step1(fset *token.FileSet, positions []token.Position, cursor *astutil.Curs
 		position := fset.Position(op.Arrow)
 		position.Offset = 0
 		if containsPosition(positions, position) {
-			cursor.Replace(wrapInGo(op, op.Arrow))
+			cursor.Replace(change.WrapInGo(op, op.Arrow))
 		}
 	case *ast.AssignStmt:
 		for _, rhs := range op.Rhs {
@@ -110,7 +81,7 @@ func step1(fset *token.FileSet, positions []token.Position, cursor *astutil.Curs
 				position := fset.Position(unaryExpr.OpPos)
 				position.Offset = 0
 				if containsPosition(positions, position) {
-					cursor.Replace(wrapInGo(op, unaryExpr.OpPos))
+					cursor.Replace(change.WrapInGo(op, unaryExpr.OpPos))
 					break
 				}
 			}
@@ -121,7 +92,7 @@ func step1(fset *token.FileSet, positions []token.Position, cursor *astutil.Curs
 			position := fset.Position(unaryExpr.OpPos)
 			position.Offset = 0
 			if containsPosition(positions, position) {
-				cursor.Replace(wrapInGo(op, unaryExpr.OpPos))
+				cursor.Replace(change.WrapInGo(op, unaryExpr.OpPos))
 			}
 		}
 	}

@@ -131,7 +131,7 @@ func step2(fset *token.FileSet, toPositions []*FromToStruct, cursor *astutil.Cur
 				position := fset.Position(unaryExpr.OpPos)
 				position.Offset = 0
 				if fromTo := containsTo(toPositions, position); fromTo != nil {
-					cursor.InsertBefore(fromTo.fromStmt)
+					cursor.InsertBefore(change.WrapInGo(fromTo.fromStmt, unaryExpr.OpPos))
 				}
 			}
 		}
@@ -141,7 +141,7 @@ func step2(fset *token.FileSet, toPositions []*FromToStruct, cursor *astutil.Cur
 			position := fset.Position(unaryExpr.OpPos)
 			position.Offset = 0
 			if fromTo := containsTo(toPositions, position); fromTo != nil {
-				cursor.InsertBefore(fromTo.fromStmt)
+				cursor.InsertBefore(change.WrapInGo(fromTo.fromStmt, unaryExpr.OpPos))
 			}
 		}
 	}
