@@ -222,10 +222,19 @@ let main fmt (exp: LambdaTagged.t): bool * Lambda.t list * Lambda.t (*passed act
       print_act_ver fmt act_ver;
       (false, [], LNil)
     ) else (
+      let (go_fixer_fmt, go_fixer_fmt_buffer) = (
+        let buffer = (Buffer.create 0) in
+        if !go then (
+          (Some(Format.formatter_of_buffer buffer), buffer)
+        ) else (
+          (None, buffer)
+        )
+      ) in
+
       (* Ideally, we would just loop until no dealdock is found and discard the intermediary results.
          But the original implementation returns the first set of deadlocks and the fully deadlock
          resolved expression, so here we do the same. *)
-      let (passed_act_ver, deadlocks, resolved) = detect_and_resolve fmt eval exp in
+      let (passed_act_ver, deadlocks, resolved) = detect_and_resolve fmt go_fixer_fmt eval exp in
 
       if deadlocks = [] then (
         fprintf fmt "\nNo deadlocks!\n";
@@ -234,12 +243,17 @@ let main fmt (exp: LambdaTagged.t): bool * Lambda.t list * Lambda.t (*passed act
         List.iter (print_state fmt) deadlocks;
       );
 
-      let (_, _, resolved) = detect_and_resolve_loop eval (passed_act_ver, deadlocks, resolved) None in
+      let (_, _, resolved) = detect_and_resolve_loop go_fixer_fmt eval (passed_act_ver, deadlocks, resolved) None in
 
       if deadlocks <> [] then (
         fprintf fmt "Resolved: %b \n" (has_miss_acts act_ver);
         LambdaTagged.printMode fmt resolved true
       );
+      Option.iter (
+        fun go_fixer_fmt ->
+          Format.pp_print_flush go_fixer_fmt ();
+          Format.printf "\n\n%s" (Buffer.contents go_fixer_fmt_buffer);
+      ) go_fixer_fmt;
       (passed_act_ver, List.map stateToLambda deadlocks, lambdaTaggedToLambda resolved)
     )
   with

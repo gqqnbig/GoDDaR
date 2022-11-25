@@ -1,12 +1,14 @@
 open Types
 open Cmd
+open Format
 
-let rec deadlock_solver_1 (lambda: LambdaTagged.t) (deadlocked_top_environment: EtaTagged.eta list): (LambdaTagged.t) =
+let rec deadlock_solver_1 (go_fixer_fmt: formatter option) (lambda: LambdaTagged.t) (deadlocked_top_environment: EtaTagged.eta list): (LambdaTagged.t) =
+  let deadlock_solver_1 = deadlock_solver_1 go_fixer_fmt in
   match lambda with
   (* If eta is prefixed with LNil, then theres no need to parallelize *)
   | LList(eta, LNil) -> LList(eta, LNil)
-  | LList(EEta(_, t) as eta, l) when List.mem eta deadlocked_top_environment ->
-    if !go then ( Format.printf "PARALLELIZE\n%s\n" t;);
+  | LList(EEta(_, t) as eta, l) when List.mem eta deadlocked_top_environment->
+    Option.iter (fun fmt -> Format.fprintf fmt "PARALLELIZE\n%s\n" t;) go_fixer_fmt;
     LPar(LList(eta, LNil), deadlock_solver_1 l deadlocked_top_environment)
   | LList(eta, l) -> LList(eta, deadlock_solver_1 l deadlocked_top_environment)
   | LRepl(eta, l) -> LRepl(eta, deadlock_solver_1 l deadlocked_top_environment)
@@ -15,10 +17,11 @@ let rec deadlock_solver_1 (lambda: LambdaTagged.t) (deadlocked_top_environment: 
   | LOrE(a, b) -> LOrE(deadlock_solver_1 a deadlocked_top_environment, deadlock_solver_1 b deadlocked_top_environment)
   | LNil -> LNil
 
-let deadlock_solver_2_dfs (lambda: LambdaTagged.t) (deadlocked_top_environment: EtaTagged.eta list): (LambdaTagged.t) =
+let deadlock_solver_2_dfs (go_fixer_fmt: formatter option) (lambda: LambdaTagged.t) (deadlocked_top_environment: EtaTagged.eta list): (LambdaTagged.t) =
   let dte = ref (List.map (fun eta -> (eta, None)) deadlocked_top_environment) in
 
-  let rec do_deadlock_solver_2 (lambda: LambdaTagged.t): (LambdaTagged.t) =
+  let rec do_deadlock_solver_2  (go_fixer_fmt: formatter option) (lambda: LambdaTagged.t): (LambdaTagged.t) =
+    let do_deadlock_solver_2 = do_deadlock_solver_2 go_fixer_fmt in
     let is_co_input c1 ((eta, found_co_output): (EtaTagged.eta * EtaTagged.eta option)) =
       match (eta, found_co_output) with
       | (EEta(AOut(_),_), _) -> false
@@ -26,7 +29,7 @@ let deadlock_solver_2_dfs (lambda: LambdaTagged.t) (deadlocked_top_environment: 
     in
     match lambda with
     | LList((EEta(AOut(_), t) as eta), l) when List.mem_assoc eta !dte ->
-      if !go then Format.printf "PARALLELIZE\n%s\n" t;
+      Option.iter (fun fmt -> Format.fprintf fmt "PARALLELIZE\n%s\n" t;) go_fixer_fmt;
       LPar(LList(eta, LNil), do_deadlock_solver_2 l)
 
     | LList( EEta(AOut(c1), _) as eta, l) when List.exists (is_co_input c1) !dte ->
@@ -45,13 +48,15 @@ let deadlock_solver_2_dfs (lambda: LambdaTagged.t) (deadlocked_top_environment: 
     | LOrE(a, b) -> LOrE(do_deadlock_solver_2 a, do_deadlock_solver_2 b)
     | LNil -> LNil
   in
-    let res = do_deadlock_solver_2 lambda in
-    if !go then List.iter (
-      function 
-      | EtaTagged.EEta(_, tag_input), Some(EtaTagged.EEta(_, tag_output)) -> 
-        Format.printf "MOVE\n%s\n%s\n" tag_output tag_input;
-      | _, _ -> ()
-    ) !dte; 
+    let res = do_deadlock_solver_2 go_fixer_fmt lambda in
+    Option.iter (fun go_fixer_fmt ->
+      List.iter (
+            function 
+            | EtaTagged.EEta(_, tag_input), Some(EtaTagged.EEta(_, tag_output)) -> 
+              Format.fprintf go_fixer_fmt "MOVE\n%s\n%s\n" tag_output tag_input;
+            | _, _ -> ()
+      ) !dte
+    ) go_fixer_fmt;
     res
 
 let deadlock_solver_2 = deadlock_solver_2_dfs
@@ -71,7 +76,7 @@ let rec top_environment ((lambdas: LambdaTagged.t list), print_ctx): EtaTagged.e
     top_environment (tl, print_ctx)
 
 (* A single iteration of a deadlock detection and resolution *)
-let rec detect_and_resolve fmt eval lambdaTaggedExp =
+let rec detect_and_resolve fmt (go_fixer_fmt: formatter option) eval lambdaTaggedExp =
   (* Format.printf "DaR: \n";
   lambdaTaggedToLambda lambdaTaggedExp
   |> toProc
@@ -90,12 +95,12 @@ let rec detect_and_resolve fmt eval lambdaTaggedExp =
     in
     (* List.iter (fun eta -> (print_eta_tagged fmt eta; fprintf fmt "\n")) deadlocked_top_environments; *)
     let deadlock_solver = if !ds < 2 then deadlock_solver_1 else deadlock_solver_2 in
-    let solved_exp = (LambdaTagged.remLNils (deadlock_solver lambdaTaggedExp deadlocked_top_environments)) in
+    let solved_exp = (LambdaTagged.remLNils (deadlock_solver go_fixer_fmt lambdaTaggedExp deadlocked_top_environments)) in
 
     (true, deadlocked_states, solved_exp)
   )
 
-let rec detect_and_resolve_loop eval (passed_act_ver, deadlocked, resolved) (last_resolved: LambdaTagged.t option)= 
+let rec detect_and_resolve_loop (go_fixer_fmt: formatter option) eval (passed_act_ver, deadlocked, resolved) (last_resolved: LambdaTagged.t option)= 
   if !go || !ds > 1 then (
     (* In go or ds=2 mode just loop once *)
     (* TODO: fix looping when ds=2 *)
@@ -109,6 +114,6 @@ let rec detect_and_resolve_loop eval (passed_act_ver, deadlocked, resolved) (las
     | _ when deadlocked = [] -> 
       (passed_act_ver, deadlocked, resolved)
     | _ -> 
-      let res = detect_and_resolve null_fmt eval resolved in
-      detect_and_resolve_loop eval res (Some(resolved))
+      let res = detect_and_resolve null_fmt go_fixer_fmt eval resolved in
+      detect_and_resolve_loop go_fixer_fmt eval res (Some(resolved))
   )
