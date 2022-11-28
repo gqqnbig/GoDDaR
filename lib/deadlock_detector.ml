@@ -11,18 +11,18 @@ exception RuntimeException of string
 
 type state =
   (LambdaTagged.t list) *     (* List of the parallel compositions *)
-  print_ctx
+  ctx
 
-type prev_state = (LambdaC.t list * print_ctx)
+type prev_state = (LambdaC.t list * ctx)
   
 
-let stateToLambda (lambdas, print_ctx: state): Lambda.t =
+let stateToLambda (lambdas, ctx: state): Lambda.t =
   Lambda.assocLeftList (List.map lambdaTaggedToLambda lambdas)
 
-let print_state fmt (lambdas, print_ctx: state) = 
-  printCtxLevel_noln fmt print_ctx;
-  Format.fprintf fmt "    ";
-  LambdaTagged.printMode fmt (LambdaTagged.assocLeftList (lambdas)) print_ctx.print;
+let print_state fmt (lambdas, ctx: state) = 
+  Format.fprintf fmt "%a\n    %a\n"
+    printCtxLevel ctx
+  LambdaTagged.print (LambdaTagged.assocLeftList (lambdas));
   flush stdout
 
 type sync_mode =
@@ -30,89 +30,89 @@ type sync_mode =
   | MustSync
   | Sync of action
 
-let eval_sync ((lambdas, print_ctx) as state: state): state list =
-  let rec do_eval_sync (action: sync_mode) ((lambdas, print_ctx): state): state list =
+let eval_sync ((lambdas, ctx) as state: state): state list =
+  let rec do_eval_sync (action: sync_mode) ((lambdas, ctx): state): state list =
     match action, lambdas with
     | _, [] -> []
     | NoSync  , (LList(EEta(a, _), b) as l)::tl
     | MustSync, (LList(EEta(a, _), b) as l)::tl ->
       (
         if action = NoSync then 
-          (do_eval_sync NoSync (tl, print_ctx))
-          |> List.map (fun (lambdas, print_ctx) -> (l::lambdas, print_ctx))
+          (do_eval_sync NoSync (tl, ctx))
+          |> List.map (fun (lambdas, ctx) -> (l::lambdas, ctx))
         else []
       ) @ (
-        (do_eval_sync (Sync(a)) (tl, print_ctx))
-        |> List.map (fun (lambdas, print_ctx) -> (b::lambdas, print_ctx))
+        (do_eval_sync (Sync(a)) (tl, ctx))
+        |> List.map (fun (lambdas, ctx) -> (b::lambdas, ctx))
       )
     | NoSync  , (LRepl(EEta(a, _), b) as l)::tl
     | MustSync, (LRepl(EEta(a, _), b) as l)::tl ->
       (
         if action = NoSync then 
-          (do_eval_sync NoSync (tl, print_ctx))
-          |> List.map (fun (lambdas, print_ctx) -> (l::lambdas, print_ctx))
+          (do_eval_sync NoSync (tl, ctx))
+          |> List.map (fun (lambdas, ctx) -> (l::lambdas, ctx))
         else []
       ) @ (
-        (do_eval_sync (Sync(a)) (tl, print_ctx))
-        |> List.map (fun (lambdas, print_ctx) -> (b::l::lambdas, print_ctx))
+        (do_eval_sync (Sync(a)) (tl, ctx))
+        |> List.map (fun (lambdas, ctx) -> (b::l::lambdas, ctx))
       )
     | Sync(action), (LList(EEta(a, _), b) as l)::tl ->
       if a = compl_action action then (
         (* found match *)
-        [(b::tl, {print_ctx with level = print_ctx.level ^ "." ^ (actionToString a)})]
+        [(b::tl, {level = ctx.level ^ "." ^ (actionToString a)})]
         @
-        (do_eval_sync (Sync(action)) (tl, print_ctx))
+        (do_eval_sync (Sync(action)) (tl, ctx))
       ) else (
         (* Keep seaching*)
-        (do_eval_sync (Sync(action)) (tl, print_ctx))
-        |> List.map (fun (lambdas, print_ctx) -> (l::lambdas, print_ctx))
+        (do_eval_sync (Sync(action)) (tl, ctx))
+        |> List.map (fun (lambdas, ctx) -> (l::lambdas, ctx))
       )
     | Sync(action), (LRepl(EEta(a, _), b) as l)::tl ->
       if a = compl_action action then (
         (* found match *)
-        [(b::l::tl, {print_ctx with level = print_ctx.level ^ "." ^ (actionToString a)})]
+        [(b::l::tl, {level = ctx.level ^ "." ^ (actionToString a)})]
       ) else (
         (* Keep seaching*)
-        (do_eval_sync (Sync(action)) (tl, print_ctx))
-        |> List.map (fun (lambdas, print_ctx) -> (l::lambdas, print_ctx))
+        (do_eval_sync (Sync(action)) (tl, ctx))
+        |> List.map (fun (lambdas, ctx) -> (l::lambdas, ctx))
       )
     | NoSync, LOrI(a, b)::tl ->
-      [(a::tl, conc_lvl print_ctx "+1"); (b::tl, conc_lvl print_ctx "+2")]
+      [(a::tl, conc_lvl ctx "+1"); (b::tl, conc_lvl ctx "+2")]
     | Sync(_) , LOrI(a, b)::tl
     | MustSync, LOrI(a, b)::tl -> 
-      let res1 = (do_eval_sync action (a::tl, conc_lvl print_ctx "+1")) in
-      let res2 = (do_eval_sync action (b::tl, conc_lvl print_ctx "+2")) in
+      let res1 = (do_eval_sync action (a::tl, conc_lvl ctx "+1")) in
+      let res2 = (do_eval_sync action (b::tl, conc_lvl ctx "+2")) in
       res1 @ res2
     | NoSync  , LOrE(a, b)::tl
     | MustSync, LOrE(a, b)::tl ->
       (
         if action = NoSync then (
-          (do_eval_sync action ([a], conc_lvl print_ctx "&1"))
-          |> List.map (fun (lambdas, print_ctx) -> (LambdaTagged.LOrE((LambdaTagged.assocLeftList lambdas), b)::tl, print_ctx))
+          (do_eval_sync action ([a], conc_lvl ctx "&1"))
+          |> List.map (fun (lambdas, ctx) -> (LambdaTagged.LOrE((LambdaTagged.assocLeftList lambdas), b)::tl, ctx))
         ) @ (
-          (do_eval_sync action ([b], conc_lvl print_ctx "&2")) 
-          |> List.map (fun (lambdas, print_ctx) -> (LambdaTagged.LOrE(a, (LambdaTagged.assocLeftList lambdas))::tl, print_ctx))
+          (do_eval_sync action ([b], conc_lvl ctx "&2")) 
+          |> List.map (fun (lambdas, ctx) -> (LambdaTagged.LOrE(a, (LambdaTagged.assocLeftList lambdas))::tl, ctx))
         ) else []
       ) @ (
-        do_eval_sync MustSync (a::tl, print_ctx)
+        do_eval_sync MustSync (a::tl, ctx)
       ) @ (
-        do_eval_sync MustSync (b::tl, print_ctx)
+        do_eval_sync MustSync (b::tl, ctx)
       )
     | Sync(c), LOrE(a, b)::tl ->
       (
-        do_eval_sync (Sync(c)) (a::tl, conc_lvl print_ctx "&1")
+        do_eval_sync (Sync(c)) (a::tl, conc_lvl ctx "&1")
       ) @ (
-        do_eval_sync (Sync(c)) (b::tl, conc_lvl print_ctx "&2")
+        do_eval_sync (Sync(c)) (b::tl, conc_lvl ctx "&2")
       )
     | _, LPar(a, b)::tl ->
-      do_eval_sync action (a::b::tl, print_ctx)
+      do_eval_sync action (a::b::tl, ctx)
     | _, LNil::tl ->
-      do_eval_sync action (tl, print_ctx)
+      do_eval_sync action (tl, ctx)
   in
   (do_eval_sync NoSync (state))
   |> List.map (
-    fun ((lambdas, print_ctx)) ->
-      (List.filter ((<>) LambdaTagged.LNil) lambdas, print_ctx)
+    fun ((lambdas, ctx)) ->
+      (List.filter ((<>) LambdaTagged.LNil) lambdas, ctx)
   )
 
 let is_LNil_or_LRepl (l: LambdaTagged.t) =
@@ -137,7 +137,7 @@ let rec prev_state_contained_in_state ((ps_lambdas, ctx): prev_state) (lambdas: 
       prev_state_contained_in_state (ps_tl, ctx) l
 
 let find_duplicates (lambdas: LambdaCTagged.t list) (prev_states: prev_state list):
-  (LambdaTagged.t list * (Lambda.t list * print_ctx)) list =
+  (LambdaTagged.t list * (Lambda.t list * ctx)) list =
   prev_states
   |> List.filter_map (
     fun (((ps, ps_ctx) as prev_state): prev_state): 'a option ->
@@ -153,7 +153,7 @@ let eval fmt (lambda: LambdaTagged.t) =
   let rec do_eval (states: (state * prev_state list) list) (deadlocks: state list) =
     match states with
     | [] -> List.rev deadlocks
-    | (((lambdas, print_ctx) as state), prev_states)::tl -> 
+    | (((lambdas, ctx) as state), prev_states)::tl -> 
       print_state fmt state;
       (* Strip LNil processes *)
       let lambdas = List.map (LambdaTagged.remLNils) lambdas in
@@ -173,7 +173,7 @@ let eval fmt (lambda: LambdaTagged.t) =
             |> List.map LambdaC.lambdaToLambdaC
           in
           let reductions = reductions
-          |> List.map (fun r -> (r, (lambdasC, print_ctx)::prev_states))
+          |> List.map (fun r -> (r, (lambdasC, ctx)::prev_states))
           |> List.map (
             fun (((lambdas, ctx) as state, prev_states): (state * prev_state list) ): (state * prev_state list) list -> 
               let lambdasC =
@@ -191,12 +191,10 @@ let eval fmt (lambda: LambdaTagged.t) =
                 Format.fprintf fmt "    DUPLICATES: \n";
                 List.map (
                   fun (remaining, (common, common_ctx)) ->
-                    Format.fprintf fmt "    ";
-                    LambdaTagged.printMode_no_nl fmt  (LambdaTagged.assocLeftList remaining) true;
-                    Format.fprintf fmt " ; ";
-                    Lambda.printMode_no_nl fmt (Lambda.assocLeftList common) true;
-                    Format.fprintf fmt " -- %s\n" common_ctx.level;
-
+                    Format.fprintf fmt "    %a ; %a -- %s\n"
+                      LambdaTagged.print (LambdaTagged.assocLeftList remaining)
+                      Lambda.print       (Lambda.assocLeftList common)
+                      common_ctx.level ;
                     ((remaining, ctx), prev_states)
                 ) dupl
               )
@@ -207,7 +205,7 @@ let eval fmt (lambda: LambdaTagged.t) =
         )
       )
   in
-    do_eval [(([lambda], {level="1"; print=true}), [])] []
+    do_eval [(([lambda], {level="1"}), [])] []
 
 
 
@@ -215,8 +213,7 @@ let main fmt (exp: LambdaTagged.t): bool * Lambda.t list * Lambda.t (*passed act
   (* Process Completeness Verification *)
   let act_ver = main_act_verifier (lambdaTaggedToLambda exp) in
   if false then (
-    LambdaTagged.printMode fmt exp true;
-    fprintf fmt "\n";
+    fprintf fmt "%a\n" LambdaTagged.print exp;
     print_act_ver fmt act_ver;
     (false, [], LNil)
   ) else (
@@ -244,8 +241,7 @@ let main fmt (exp: LambdaTagged.t): bool * Lambda.t list * Lambda.t (*passed act
     let (_, _, resolved) = detect_and_resolve_loop go_fixer_fmt eval (passed_act_ver, deadlocks, resolved) None in
 
     if deadlocks <> [] then (
-      fprintf fmt "Resolved: \n";
-      LambdaTagged.printMode fmt resolved true
+      fprintf fmt "Resolved:\n%a\n" LambdaTagged.print resolved
     );
 
     (* Print and execute Go fixer *)

@@ -113,18 +113,11 @@ let print_act_ver fmt (arr: (Lambda.t * Eta.eta list) list) =
         | (a, []) -> print tl
         | (a, b) -> 
           if !verbose then (
-            fprintf fmt "- ";
-            Eta.print_etalist_alt fmt b;
-            fprintf fmt " in ";
-            Lambda.printMode fmt a true;
-            fprintf fmt "\n";
+            fprintf fmt "- %a in %a\n" Eta.print_etalist_alt b Lambda.print a;
             print tl
           ) else (
-            (fprintf fmt "- ";
-            Eta.print_etalist_alt_simple fmt b;
-            fprintf fmt " in ";
-            Lambda.printMode fmt a true;
-            print tl)
+            fprintf fmt "- %a in %a" Eta.print_etalist_alt_simple b Lambda.print a;
+            print tl
           )
   in
   if !verbose then

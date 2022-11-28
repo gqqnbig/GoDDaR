@@ -183,20 +183,13 @@ module Lambda_Base(Eta_base: Eta_type) =
       | LPar(p1, p2) -> fprintf fmt "(%a || %a)" print_lambda_simple p1 print_lambda_simple p2
       | LRepl(e, pp) -> fprintf fmt "*%a.%a" Eta_base.print_eta_simple e print_lambda_simple pp
 
-  let printMode_base nl fmt exp p =
-    if p then (
-      if !verbose then (
-        print_lambda fmt exp;
-        fprintf fmt " ---> ";
-        print_lambda_simple fmt exp;
-      ) else (
-        print_lambda_simple fmt exp;
-      );
-      if nl then fprintf fmt "\n"
-    )
-
-  let printMode = printMode_base true
-  let printMode_no_nl = printMode_base false
+  let print fmt exp =
+    if !verbose then (
+      print_lambda fmt exp;
+      fprintf fmt " ---> %a" print_lambda_simple exp;
+    ) else (
+      print_lambda_simple fmt exp;
+    );
   end
 
 module Lambda = 
@@ -211,17 +204,10 @@ module LambdaTagged =
     
   end
 
-(* Print_context *)
-type print_ctx =
-{
-    print   :   bool;
-    level   :   string;
-}
+type ctx = { level   :   string; }
 
-let printCtxLevel_noln fmt p_ctx =
-  if p_ctx.print then
-    fprintf fmt "---- %s ----\n" p_ctx.level
-  else ()
+let printCtxLevel fmt ctx =
+    fprintf fmt "---- %s ----" ctx.level
 
 (* ---------- Functions ----------  *)
 
@@ -263,17 +249,17 @@ let actionToString action: string =
 
 let assign_ctx lst print =
     let i = ref 0 in
-        List.map (fun x -> i:=!i+1; (x, {print = print; level = string_of_int !i})) lst
+        List.map (fun x -> i:=!i+1; (x, {level = string_of_int !i})) lst
 
 let assign_ctx2 lst print =
     let i = ref 0 in
         List.map ( fun x -> 
-            List.map ( fun y -> i:=!i+1; (y, {print = print; level = string_of_int !i})) x
+            List.map ( fun y -> i:=!i+1; (y, {level = string_of_int !i})) x
         ) lst
 
-let next_ctx ctx = {ctx with level = ctx.level ^ ".1"}
+let next_ctx ctx = {level = ctx.level ^ ".1"}
 
-let conc_lvl ctx lvl = {ctx with level = ctx.level ^ "." ^ lvl}
+let conc_lvl ctx lvl = {level = ctx.level ^ "." ^ lvl}
 
 let compl_action action = 
     match action with
