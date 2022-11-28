@@ -1,4 +1,6 @@
 (library
- (name dlock))
+ (name dlock)
+ (libraries unix)
+)
 
 (include_subdirs unqualified)

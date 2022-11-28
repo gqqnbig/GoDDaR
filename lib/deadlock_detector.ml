@@ -212,49 +212,58 @@ let eval fmt (lambda: LambdaTagged.t) =
 
 
 let main fmt (exp: LambdaTagged.t): bool * Lambda.t list * Lambda.t (*passed act_ver * deadlocked processes * resolved process*) =
-  try
-    Printexc.record_backtrace true;
-    (* Process Completeness Verification *)
-    let act_ver = main_act_verifier (lambdaTaggedToLambda exp) in
-    if false then (
-      LambdaTagged.printMode fmt exp true;
-      fprintf fmt "\n";
-      print_act_ver fmt act_ver;
-      (false, [], LNil)
-    ) else (
-      let (go_fixer_fmt, go_fixer_fmt_buffer) = (
-        let buffer = (Buffer.create 0) in
-        if !go then (
-          (Some(Format.formatter_of_buffer buffer), buffer)
-        ) else (
-          (None, buffer)
-        )
-      ) in
-
-      (* Ideally, we would just loop until no dealdock is found and discard the intermediary results.
-         But the original implementation returns the first set of deadlocks and the fully deadlock
-         resolved expression, so here we do the same. *)
-      let (passed_act_ver, deadlocks, resolved) = detect_and_resolve fmt go_fixer_fmt eval exp in
-
-      if deadlocks = [] then (
-        fprintf fmt "\nNo deadlocks!\n";
+  (* Process Completeness Verification *)
+  let act_ver = main_act_verifier (lambdaTaggedToLambda exp) in
+  if false then (
+    LambdaTagged.printMode fmt exp true;
+    fprintf fmt "\n";
+    print_act_ver fmt act_ver;
+    (false, [], LNil)
+  ) else (
+    let (go_fixer_fmt, go_fixer_fmt_buffer) = (
+      let buffer = (Buffer.create 0) in
+      if !go then (
+        (Some(Format.formatter_of_buffer buffer), buffer)
       ) else (
-        fprintf fmt "\nDeadlocks:\n";
-        List.iter (print_state fmt) deadlocks;
-      );
+        (None, buffer)
+      )
+    ) in
 
-      let (_, _, resolved) = detect_and_resolve_loop go_fixer_fmt eval (passed_act_ver, deadlocks, resolved) None in
+    (* Ideally, we would just loop until no dealdock is found and discard the intermediary results.
+       But the original implementation returns the first set of deadlocks and the fully deadlock
+       resolved expression, so here we do the same. *)
+    let (passed_act_ver, deadlocks, resolved) = detect_and_resolve fmt go_fixer_fmt eval exp in
 
-      if deadlocks <> [] then (
-        fprintf fmt "Resolved: %b \n" (has_miss_acts act_ver);
-        LambdaTagged.printMode fmt resolved true
-      );
-      Option.iter (
-        fun go_fixer_fmt ->
-          Format.pp_print_flush go_fixer_fmt ();
-          Format.printf "\n\n%s" (Buffer.contents go_fixer_fmt_buffer);
-      ) go_fixer_fmt;
-      (passed_act_ver, List.map stateToLambda deadlocks, lambdaTaggedToLambda resolved)
-    )
-  with
-  | _ -> Printexc.print_backtrace stdout; exit 1
+    if deadlocks = [] then (
+      fprintf fmt "\nNo deadlocks!\n";
+    ) else (
+      fprintf fmt "\nDeadlocks:\n";
+      List.iter (print_state fmt) deadlocks;
+    );
+
+    let (_, _, resolved) = detect_and_resolve_loop go_fixer_fmt eval (passed_act_ver, deadlocks, resolved) None in
+
+    if deadlocks <> [] then (
+      fprintf fmt "Resolved: \n";
+      LambdaTagged.printMode fmt resolved true
+    );
+
+    (* Print and execute Go fixer *)
+    Option.iter (
+      fun go_fixer_fmt ->
+        Format.pp_print_flush go_fixer_fmt ();
+        Format.fprintf fmt "\n\n%s\n" (Buffer.contents go_fixer_fmt_buffer);
+        Format.pp_print_flush fmt ();
+
+        let (pipe_out, pipe_in) = Unix.pipe () in
+        Unix.set_close_on_exec pipe_in;
+        let pipe_in_channel = Unix.out_channel_of_descr pipe_in in
+        let fixerPID = Unix.create_process "fixer" (Array.of_list ["fixer"]) pipe_out Unix.stdout Unix.stderr in
+        Unix.close pipe_out;
+        Stdlib.output_bytes pipe_in_channel (Buffer.to_bytes go_fixer_fmt_buffer);
+        Stdlib.close_out pipe_in_channel;
+        ignore (Unix.waitpid [] fixerPID)
+    ) go_fixer_fmt;
+
+    (passed_act_ver, List.map stateToLambda deadlocks, lambdaTaggedToLambda resolved)
+  )
