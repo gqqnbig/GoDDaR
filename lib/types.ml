@@ -185,8 +185,7 @@ module Lambda_Base(Eta_base: Eta_type) =
 
   let print fmt exp =
     if !verbose then (
-      print_lambda fmt exp;
-      fprintf fmt " ---> %a" print_lambda_simple exp;
+      fprintf fmt "%a ---> %a" print_lambda_simple exp print_lambda exp;
     ) else (
       print_lambda_simple fmt exp;
     );

@@ -248,7 +248,8 @@ let main fmt (exp: LambdaTagged.t): bool * Lambda.t list * Lambda.t (*passed act
     Option.iter (
       fun go_fixer_fmt ->
         Format.pp_print_flush go_fixer_fmt ();
-        Format.fprintf fmt "\n\n%s\n" (Buffer.contents go_fixer_fmt_buffer);
+        Format.fprintf fmt "\n\n";
+        if !verbose then ( Format.fprintf fmt "%s\n\n" (Buffer.contents go_fixer_fmt_buffer););
         Format.pp_print_flush fmt ();
 
         let (pipe_out, pipe_in) = Unix.pipe () in
