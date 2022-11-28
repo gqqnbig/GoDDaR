@@ -100,9 +100,11 @@ let eval_sync ((lambdas, ctx) as state: state): state list =
       )
     | Sync(c), LOrE(a, b)::tl ->
       (
-        do_eval_sync (Sync(c)) (a::tl, conc_lvl ctx "&1")
+        do_eval_sync (Sync(c)) ([a], conc_lvl ctx "&1")
+          |> List.map (fun (lambdas, ctx) -> (lambdas@tl, ctx))
       ) @ (
-        do_eval_sync (Sync(c)) (b::tl, conc_lvl ctx "&2")
+        do_eval_sync (Sync(c)) ([b], conc_lvl ctx "&2")
+          |> List.map (fun (lambdas, ctx) -> (lambdas@tl, ctx))
       )
     | _, LPar(a, b)::tl ->
       do_eval_sync action (a::b::tl, ctx)
