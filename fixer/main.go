@@ -18,11 +18,10 @@ import (
 	"os"
 )
 
-var fset = token.NewFileSet()
-
 func main() {
+	fset := token.NewFileSet()
 	reader := bufio.NewReader(os.Stdin)
-	all_filenames := make(map[string]struct{})
+	allFilenames := make(map[string]struct{})
 	changes := []change.Change{
 		parallelize.NewParallelize(fset),
 		move.NewMove(fset),
@@ -43,13 +42,13 @@ func main() {
 			}
 			if filenames != nil {
 				for _, filename := range filenames {
-					all_filenames[filename] = struct{}{}
+					allFilenames[filename] = struct{}{}
 				}
 			}
 		}
 	}
 
-	err := processFile(all_filenames, changes)
+	err := processFile(allFilenames, fset, changes)
 	if err != nil {
 		panic(err)
 	}
@@ -57,7 +56,7 @@ func main() {
 
 const parserMode = parser.ParseComments
 
-func processFile(filenames map[string]struct{}, changes []change.Change) error {
+func processFile(filenames map[string]struct{}, fset *token.FileSet, changes []change.Change) error {
 	var f *os.File
 	var err error
 
@@ -67,7 +66,12 @@ func processFile(filenames map[string]struct{}, changes []change.Change) error {
 			if err != nil {
 				return err
 			}
-			defer f.Close()
+			defer func(f *os.File) {
+				err := f.Close()
+				if err != nil {
+					panic(err)
+				}
+			}(f)
 
 			src, err := io.ReadAll(f)
 			if err != nil {
@@ -78,24 +82,23 @@ func processFile(filenames map[string]struct{}, changes []change.Change) error {
 			if err != nil {
 				return err
 			}
-
-			file, err := parser.ParseFile(fset, filename, src, parserMode)
+			updatedFile, err := parser.ParseFile(fset, filename, src, parserMode)
 			if err != nil {
 				return err
 			}
 
 			for _, c := range changes {
-				file = c.Patch(filename, file)
+				updatedFile = c.Patch(filename, updatedFile)
 			}
 
-			newSrc, err := gofmtFile(file)
+			updatedSrc, err := gofmtFile(updatedFile, fset)
 			if err != nil {
 				return err
 			}
 
 			if true {
-				orig := gofmt(srcFile)
-				newSrc := string(newSrc)
+				orig := gofmt(srcFile, fset)
+				newSrc := string(updatedSrc)
 				edits := myers.ComputeEdits(span.URIFromPath(filename), orig, newSrc)
 				fmt.Print(gotextdiff.ToUnified(filename, "fixed/"+filename, orig, edits))
 				fmt.Print("\n\n")
@@ -103,8 +106,8 @@ func processFile(filenames map[string]struct{}, changes []change.Change) error {
 				return nil
 			}
 
-			// _, err = os.Stdout.Write(newSrc)
-			// return os.WriteFile(f.Name(), newSrc, 0)
+			// _, err = os.Stdout.Write(updatedSrc)
+			// return os.WriteFile(f.Name(), updatedSrc, 0)
 			if err != nil {
 				return err
 			}
@@ -120,7 +123,7 @@ func processFile(filenames map[string]struct{}, changes []change.Change) error {
 	return nil
 }
 
-func gofmtFile(f *ast.File) ([]byte, error) {
+func gofmtFile(f *ast.File, fset *token.FileSet) ([]byte, error) {
 	var buf bytes.Buffer
 	if err := format.Node(&buf, fset, f); err != nil {
 		return nil, err
@@ -128,7 +131,7 @@ func gofmtFile(f *ast.File) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func gofmt(n any) string {
+func gofmt(n any, fset *token.FileSet) string {
 	var gofmtBuf bytes.Buffer
 	if err := format.Node(&gofmtBuf, fset, n); err != nil {
 		return "<" + err.Error() + ">"
