@@ -57,21 +57,23 @@ let eval_sync ((lambdas, ctx) as state: state): state list =
         |> List.map (fun (lambdas, ctx) -> (b::l::lambdas, ctx))
       )
     | Sync(action), (LList(EEta(a, _), b) as l)::tl ->
-      if a = compl_action action then (
-        (* found match *)
-        [(b::tl, {level = ctx.level ^ "." ^ (actionToString a)})]
-        @
-        (do_eval_sync (Sync(action)) (tl, ctx))
-      ) else (
+      (
+        if a = compl_action action then (
+          (* found match *)
+          [(b::tl, {level = ctx.level ^ "." ^ (actionToString a)})]
+        ) else []
+      ) @ (
         (* Keep seaching*)
         (do_eval_sync (Sync(action)) (tl, ctx))
         |> List.map (fun (lambdas, ctx) -> (l::lambdas, ctx))
       )
     | Sync(action), (LRepl(EEta(a, _), b) as l)::tl ->
-      if a = compl_action action then (
-        (* found match *)
-        [(b::l::tl, {level = ctx.level ^ "." ^ (actionToString a)})]
-      ) else (
+      (
+        if a = compl_action action then (
+          (* found match *)
+          [(b::l::tl, {level = ctx.level ^ "." ^ (actionToString a)})]
+        ) else []
+      ) @ (
         (* Keep seaching*)
         (do_eval_sync (Sync(action)) (tl, ctx))
         |> List.map (fun (lambdas, ctx) -> (l::lambdas, ctx))

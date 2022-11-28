@@ -53,7 +53,6 @@ let print_res fmt (passed_act_ver, deadlocked, resolved) (passed_act_ver2, deadl
   )
 
 let test fmt (exp: string) = 
-  Format.printf "%s\n" exp;
   let proc = CCS.parse exp in
   Cmd.ds := 1;
   let result = convert_res (Deadlock_detector.main  null_fmt proc) in

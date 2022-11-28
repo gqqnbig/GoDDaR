@@ -1,6 +1,5 @@
 DEADLOCK_DETECTOR:
 a!.a?.0 || (b!.x?.0 + (b?.0 + c?.0) )
-a!.a?.0 || (b!.x?.0 + (b?.0 + c?.0) )
  passed_act_ver: true
  Deadlocked:
    (a!.a?.0 || b?.0)
@@ -10,7 +9,6 @@ a!.a?.0 || (b!.x?.0 + (b?.0 + c?.0) )
    (((((b!.0 || x?.0) + c?.0) + b?.0) || a!.0) || a?.0)
  Solved2:
    (((((b!.0 || x?.0) + (c!.0 || c?.0)) + (b!.0 || b?.0)) || a!.0) || a?.0)
-a!.a?.0 || (b!.0 + (b?.0 + c?.0) )
 a!.a?.0 || (b!.0 + (b?.0 + c?.0) )
  passed_act_ver: true
  Deadlocked:
@@ -22,7 +20,6 @@ a!.a?.0 || (b!.0 + (b?.0 + c?.0) )
  Solved2:
    ((((b!.0 + (c!.0 || c?.0)) + (b!.0 || b?.0)) || a!.0) || a?.0)
 a!.0 || (b!.0 + (b?.0 + c?.0) )
-a!.0 || (b!.0 + (b?.0 + c?.0) )
  passed_act_ver: true
  Deadlocked:
    (a!.0 || b?.0)
@@ -33,7 +30,6 @@ a!.0 || (b!.0 + (b?.0 + c?.0) )
  Solved2:
    (((b!.0 + (c!.0 || c?.0)) + (b!.0 || b?.0)) || a!.0)
 a!.0 || (b?.0 + c?.0)
-a!.0 || (b?.0 + c?.0)
  passed_act_ver: true
  Deadlocked:
    (a!.0 || b?.0)
@@ -42,7 +38,6 @@ a!.0 || (b?.0 + c?.0)
    ((c?.0 + b?.0) || a!.0)
  Solved2:
    (((c!.0 || c?.0) + (b!.0 || b?.0)) || a!.0)
-(a!.0 + a?.0) || (b?.0 + c?.0)
 (a!.0 + a?.0) || (b?.0 + c?.0)
  passed_act_ver: true
  Deadlocked:
@@ -55,7 +50,6 @@ a!.0 || (b?.0 + c?.0)
  Solved2:
    (((c!.0 || c?.0) + (b!.0 || b?.0)) || (a!.0 + (a!.0 || a?.0)))
 a!.0 || a?.0
-a!.0 || a?.0
  passed_act_ver: true
  Deadlocked:
  Solved:
@@ -63,14 +57,12 @@ a!.0 || a?.0
  Solved2:
    (a!.0 || a?.0)
 a!.b?.0 || a?.b!.0
-a!.b?.0 || a?.b!.0
  passed_act_ver: true
  Deadlocked:
  Solved:
    (a!.b?.0 || a?.b!.0)
  Solved2:
    (a!.b?.0 || a?.b!.0)
-(a!.0 + b!.0) || (a?.0 + b?.0)
 (a!.0 + b!.0) || (a?.0 + b?.0)
  passed_act_ver: true
  Deadlocked:
@@ -81,7 +73,6 @@ a!.b?.0 || a?.b!.0
  Solved2:
    ((b!.0 + a!.0) || ((b!.0 || b?.0) + (a!.0 || a?.0)))
 (a!.0 || b!.0) || (a?.0 + b?.0)
-(a!.0 || b!.0) || (a?.0 + b?.0)
  passed_act_ver: true
  Deadlocked:
    a!.0
@@ -91,14 +82,12 @@ a!.b?.0 || a?.b!.0
  Solved2:
    (((b?.0 + a?.0) || b!.0) || a!.0)
 (a!.0 || b!.0) || (a?.b?.0 + b?.a?.0)
-(a!.0 || b!.0) || (a?.b?.0 + b?.a?.0)
  passed_act_ver: true
  Deadlocked:
  Solved:
    (((b?.a?.0 + a?.b?.0) || b!.0) || a!.0)
  Solved2:
    (((b?.a?.0 + a?.b?.0) || b!.0) || a!.0)
-a!.0 || (a?.0 + 0)
 a!.0 || (a?.0 + 0)
  passed_act_ver: true
  Deadlocked:
@@ -108,14 +97,12 @@ a!.0 || (a?.0 + 0)
  Solved2:
    (a?.0 || a!.0)
 (a!.(b!.c!.0 || b?.c?.d?.0) || a?.d!.0)
-(a!.(b!.c!.0 || b?.c?.d?.0) || a?.d!.0)
  passed_act_ver: true
  Deadlocked:
  Solved:
    (a!.(b!.c!.0 || b?.c?.d?.0) || a?.d!.0)
  Solved2:
    (a!.(b!.c!.0 || b?.c?.d?.0) || a?.d!.0)
-a?.(c?.0 + d?.0) || a!.e!.0
 a?.(c?.0 + d?.0) || a!.e!.0
  passed_act_ver: true
  Deadlocked:
@@ -126,7 +113,6 @@ a?.(c?.0 + d?.0) || a!.e!.0
  Solved2:
    (a!.e!.0 || a?.((d!.0 || d?.0) + (c!.0 || c?.0)))
 (a!.a?.0 || b?.b!.0) + c!.c?.0
-(a!.a?.0 || b?.b!.0) + c!.c?.0
  passed_act_ver: true
  Deadlocked:
    c!.c?.0
@@ -135,7 +121,6 @@ a?.(c?.0 + d?.0) || a!.e!.0
    ((c!.0 || c?.0) + (((b!.0 || a!.0) || b?.0) || a?.0))
  Solved2:
    ((c!.0 || c?.0) + (((b!.0 || a!.0) || b?.0) || a?.0))
-(a!.a?.0 || b?.b!.c?.c!.0) + c!.c?.0
 (a!.a?.0 || b?.b!.c?.c!.0) + c!.c?.0
  passed_act_ver: true
  Deadlocked:
@@ -146,7 +131,6 @@ a?.(c?.0 + d?.0) || a!.e!.0
  Solved2:
    ((c!.0 || c?.0) + (((b!.0 || a!.0) || b?.c?.c!.0) || a?.0))
 a!.0 || (b!.b?.a?.0 + a?.0)
-a!.0 || (b!.b?.a?.0 + a?.0)
  passed_act_ver: true
  Deadlocked:
    (b!.b?.a?.0 || a!.0)
@@ -155,7 +139,6 @@ a!.0 || (b!.b?.a?.0 + a?.0)
  Solved2:
    (((b!.0 || b?.a?.0) + a?.0) || a!.0)
 a?.0
-a?.0
  passed_act_ver: true
  Deadlocked:
    a?.0
@@ -163,7 +146,6 @@ a?.0
    a?.0
  Solved2:
    (a!.0 || a?.0)
-a?.a!.0
 a?.a!.0
  passed_act_ver: true
  Deadlocked:
@@ -173,7 +155,6 @@ a?.a!.0
  Solved2:
    (a!.0 || a?.0)
 0 || 0
-0 || 0
  passed_act_ver: true
  Deadlocked:
  Solved:
@@ -181,14 +162,12 @@ a?.a!.0
  Solved2:
    0
 a?.0 || a!.0
-a?.0 || a!.0
  passed_act_ver: true
  Deadlocked:
  Solved:
    (a!.0 || a?.0)
  Solved2:
    (a!.0 || a?.0)
-a?.0 || b!.0
 a?.0 || b!.0
  passed_act_ver: true
  Deadlocked:
@@ -198,7 +177,6 @@ a?.0 || b!.0
  Solved2:
    ((b!.0 || a!.0) || a?.0)
 a?.b!.0 || a!.b?.0
-a?.b!.0 || a!.b?.0
  passed_act_ver: true
  Deadlocked:
  Solved:
@@ -206,14 +184,12 @@ a?.b!.0 || a!.b?.0
  Solved2:
    (a!.b?.0 || a?.b!.0)
 a?.b!.c?.0 || a!.b?.c!.0
-a?.b!.c?.0 || a!.b?.c!.0
  passed_act_ver: true
  Deadlocked:
  Solved:
    (a!.b?.c!.0 || a?.b!.c?.0)
  Solved2:
    (a!.b?.c!.0 || a?.b!.c?.0)
-a?.b!.c?.0 || a!.c!.b?.0
 a?.b!.c?.0 || a!.c!.b?.0
  passed_act_ver: true
  Deadlocked:
@@ -223,7 +199,6 @@ a?.b!.c?.0 || a!.c!.b?.0
  Solved2:
    (a!.(c!.0 || b?.0) || a?.(b!.0 || c?.0))
 a?.b?.0 || a!.b!.c!.0
-a?.b?.0 || a!.b!.c!.0
  passed_act_ver: true
  Deadlocked:
    c!.0
@@ -231,7 +206,6 @@ a?.b?.0 || a!.b!.c!.0
    (a!.b!.c!.0 || a?.b?.0)
  Solved2:
    (a!.b!.c!.0 || a?.b?.0)
-a?.0 || a!.b!.c!.0
 a?.0 || a!.b!.c!.0
  passed_act_ver: true
  Deadlocked:
@@ -241,7 +215,6 @@ a?.0 || a!.b!.c!.0
  Solved2:
    (a!.(c!.0 || b!.0) || a?.0)
 0 || a!.b!.c!.0
-0 || a!.b!.c!.0
  passed_act_ver: true
  Deadlocked:
    a!.b!.c!.0
@@ -250,7 +223,6 @@ a?.0 || a!.b!.c!.0
  Solved2:
    (b!.c!.0 || a!.0)
 a!.(0 || 0) || b!.0
-a!.(0 || 0) || b!.0
  passed_act_ver: true
  Deadlocked:
    (b!.0 || a!.0)
@@ -259,34 +231,29 @@ a!.(0 || 0) || b!.0
  Solved2:
    (b!.0 || a!.0)
 (a!.b?.c?.0 || a?.b!.0) || c!.0
-(a!.b?.c?.0 || a?.b!.0) || c!.0
  passed_act_ver: true
  Deadlocked:
  Solved:
    ((c!.0 || a!.b?.c?.0) || a?.b!.0)
  Solved2:
    ((c!.0 || a!.b?.c?.0) || a?.b!.0)
-a!.b?.0 || a?.0 || a?.a!.b!.0
 a!.b?.0 || a?.0 || a?.a!.b!.0
  passed_act_ver: true
  Deadlocked:
    (b?.0 || a?.a!.b!.0)
-   (a!.b!.0 || b?.0)
  Solved:
-   ((((b!.0 || a!.b?.0) || a!.0) || a?.0) || a?.0)
+   (((a!.b!.0 || a!.b?.0) || a?.0) || a?.0)
  Solved2:
-   ((((b!.0 || a!.0) || b?.0) || a?.a!.0) || a?.0)
-a!.0 || a?.0 || a?.a!.b!.0
+   (((a!.(b!.0 || b?.0) || a!.0) || a?.0) || a?.0)
 a!.0 || a?.0 || a?.a!.b!.0
  passed_act_ver: true
  Deadlocked:
    a?.a!.b!.0
-   a!.b!.0
+   b!.0
  Solved:
-   ((((b!.0 || a!.0) || a!.0) || a?.0) || a?.0)
+   (((a!.b!.0 || a!.0) || a?.0) || a?.0)
  Solved2:
-   ((a!.0 || a?.(b!.0 || a!.0)) || a?.0)
-b!.a!.0 || a?.0 || b?.0
+   (((a!.0 || a!.0) || a?.b!.0) || a?.0)
 b!.a!.0 || a?.0 || b?.0
  passed_act_ver: true
  Deadlocked:
@@ -295,14 +262,12 @@ b!.a!.0 || a?.0 || b?.0
  Solved2:
    ((b!.a!.0 || b?.0) || a?.0)
 0 || a?.0 || a!.0
-0 || a?.0 || a!.0
  passed_act_ver: true
  Deadlocked:
  Solved:
    (a!.0 || a?.0)
  Solved2:
    (a!.0 || a?.0)
-a?.0 || 0 || b!.0
 a?.0 || 0 || b!.0
  passed_act_ver: true
  Deadlocked:
@@ -312,7 +277,6 @@ a?.0 || 0 || b!.0
  Solved2:
    ((b!.0 || a!.0) || a?.0)
 a?.0 || 0 || a?.0
-a?.0 || 0 || a?.0
  passed_act_ver: true
  Deadlocked:
    (a?.0 || a?.0)
@@ -320,7 +284,6 @@ a?.0 || 0 || a?.0
    (a?.0 || a?.0)
  Solved2:
    (((a!.0 || a!.0) || a?.0) || a?.0)
-a?.a?.0 || 0 || a?.b!.0
 a?.a?.0 || 0 || a?.b!.0
  passed_act_ver: true
  Deadlocked:
@@ -330,7 +293,6 @@ a?.a?.0 || 0 || a?.b!.0
  Solved2:
    (((a!.0 || a!.0) || a?.b!.0) || a?.a?.0)
 a?.a?.0 || b?.c?.0 || a?.b!.0
-a?.a?.0 || b?.c?.0 || a?.b!.0
  passed_act_ver: true
  Deadlocked:
    ((b?.c?.0 || a?.b!.0) || a?.a?.0)
@@ -339,7 +301,6 @@ a?.a?.0 || b?.c?.0 || a?.b!.0
  Solved2:
    (((((b!.0 || a!.0) || a!.0) || b?.c?.0) || a?.a?.0) || a?.0)
 a?.(b!.0 || c?.d?.0) || b?.0 || a!.(c!.0 || d!.0)
-a?.(b!.0 || c?.d?.0) || b?.0 || a!.(c!.0 || d!.0)
  passed_act_ver: true
  Deadlocked:
  Solved:
@@ -347,24 +308,20 @@ a?.(b!.0 || c?.d?.0) || b?.0 || a!.(c!.0 || d!.0)
  Solved2:
    ((a!.(d!.0 || c!.0) || b?.0) || a?.(b!.0 || c?.d?.0))
 0 || 0 || 0
-0 || 0 || 0
  passed_act_ver: true
  Deadlocked:
  Solved:
    0
  Solved2:
    0
-b!.(0 || 0) || b?.0 || b?.b!.(a!.0 || a?.0)
 b!.(0 || 0) || b?.0 || b?.b!.(a!.0 || a?.0)
  passed_act_ver: true
  Deadlocked:
    b?.b!.(a!.0 || a?.0)
-   b!.(a!.0 || a?.0)
  Solved:
-   (((((b!.0 || b!.0) || a!.0) || b?.0) || b?.0) || a?.0)
+   (((b!.(a!.0 || a?.0) || b!.0) || b?.0) || b?.0)
  Solved2:
-   ((b!.0 || b?.((b!.0 || a!.0) || a?.0)) || b?.0)
-a!.0 || b!.0 || a?.0 || b?.0
+   (((b!.0 || b!.0) || b?.(a!.0 || a?.0)) || b?.0)
 a!.0 || b!.0 || a?.0 || b?.0
  passed_act_ver: true
  Deadlocked:
@@ -373,14 +330,12 @@ a!.0 || b!.0 || a?.0 || b?.0
  Solved2:
    (((b!.0 || a!.0) || b?.0) || a?.0)
 a!.(b!.(c!.0 || d?.0) || b?.0) || a?.c?.d!.0
-a!.(b!.(c!.0 || d?.0) || b?.0) || a?.c?.d!.0
  passed_act_ver: true
  Deadlocked:
  Solved:
    (a!.(b!.(c!.0 || d?.0) || b?.0) || a?.c?.d!.0)
  Solved2:
    (a!.(b!.(c!.0 || d?.0) || b?.0) || a?.c?.d!.0)
-a!.(b!.(c!.0 || d?.0) || b?.0) || a?.(c?.0 || e!.0)
 a!.(b!.(c!.0 || d?.0) || b?.0) || a?.(c?.0 || e!.0)
  passed_act_ver: true
  Deadlocked:
@@ -390,26 +345,21 @@ a!.(b!.(c!.0 || d?.0) || b?.0) || a?.(c?.0 || e!.0)
  Solved2:
    (a!.(b!.((d!.0 || c!.0) || d?.0) || b?.0) || a?.(e!.0 || c?.0))
 a!.(a!.(a?.0 || a?.0 ) || a!.0) || a?.(a?.0 || a?.0 || a!.0)
-a!.(a!.(a?.0 || a?.0 ) || a!.0) || a?.(a?.0 || a?.0 || a!.0)
  passed_act_ver: true
  Deadlocked:
    a?.0
    a!.(a?.0 || a?.0)
-   (a?.0 || a?.0)
-   (a!.(a?.0 || a?.0) || a!.0)
  Solved:
    (a!.(((a!.0 || a!.0) || a?.0) || a?.0) || a?.((a!.0 || a?.0) || a?.0))
  Solved2:
    (((((a!.0 || a!.0) || a!.0) || a?.(((a!.0 || a!.0) || a?.0) || a?.0)) || a?.0) || a?.0)
 a!.(a!.(b?.0 || c?.0 )) || a?.(a?.0 || b!.0 || c!.0)
-a!.(a!.(b?.0 || c?.0 )) || a?.(a?.0 || b!.0 || c!.0)
  passed_act_ver: true
  Deadlocked:
  Solved:
    (a!.a!.(c?.0 || b?.0) || a?.((c!.0 || b!.0) || a?.0))
  Solved2:
    (a!.a!.(c?.0 || b?.0) || a?.((c!.0 || b!.0) || a?.0))
-a!.b?.0 || c?.d?.a!.0 || c!.a?.0 || b!.d!.a?.0
 a!.b?.0 || c?.d?.a!.0 || c!.a?.0 || b!.d!.a?.0
  passed_act_ver: true
  Deadlocked:
@@ -418,14 +368,12 @@ a!.b?.0 || c?.d?.a!.0 || c!.a?.0 || b!.d!.a?.0
  Solved2:
    (((c!.a?.0 || b!.d!.a?.0) || a!.b?.0) || c?.d?.a!.0)
 (a!.0 || a?.0) + (b!.0 || b?.0)
-(a!.0 || a?.0) + (b!.0 || b?.0)
  passed_act_ver: true
  Deadlocked:
  Solved:
    ((b!.0 || b?.0) + (a!.0 || a?.0))
  Solved2:
    ((b!.0 || b?.0) + (a!.0 || a?.0))
-a!.(b?.0 + 0) || a?.b!.0
 a!.(b?.0 + 0) || a?.b!.0
  passed_act_ver: true
  Deadlocked:
@@ -434,7 +382,6 @@ a!.(b?.0 + 0) || a?.b!.0
    (a!.b?.0 || a?.b!.0)
  Solved2:
    (a!.b?.0 || a?.b!.0)
-a!.0 + b!.0 + c!.0
 a!.0 + b!.0 + c!.0
  passed_act_ver: true
  Deadlocked:
@@ -446,7 +393,6 @@ a!.0 + b!.0 + c!.0
  Solved2:
    ((c!.0 + b!.0) + a!.0)
 (a!.0 || a?.0) + (a!.0 || a?.b?.(c?.0 + d?.0) || b!.d!.0 )
-(a!.0 || a?.0) + (a!.0 || a?.b?.(c?.0 + d?.0) || b!.d!.0 )
  passed_act_ver: true
  Deadlocked:
    (d!.0 || c?.0)
@@ -454,7 +400,6 @@ a!.0 + b!.0 + c!.0
    (((b!.d!.0 || a!.0) || a?.b?.(d?.0 + c?.0)) + (a!.0 || a?.0))
  Solved2:
    (((b!.d!.0 || a!.0) || a?.b?.((c!.0 || c?.0) + d?.0)) + (a!.0 || a?.0))
-(a!.0 || a?.0) + (a!.0 || a?.b?.(c?.0 + d?.0) || c!.b!.d!.0 )
 (a!.0 || a?.0) + (a!.0 || a?.b?.(c?.0 + d?.0) || c!.b!.d!.0 )
  passed_act_ver: true
  Deadlocked:
@@ -464,7 +409,6 @@ a!.0 + b!.0 + c!.0
  Solved2:
    ((((d!.0 || c!.0) || a!.0) || a?.(b!.0 || b?.(d?.0 + c?.0))) + (a!.0 || a?.0))
 b?.((d?.0 || d!.0) + (c!.0 || c?.0)) || a?.b!.a!.0
-b?.((d?.0 || d!.0) + (c!.0 || c?.0)) || a?.b!.a!.0
  passed_act_ver: true
  Deadlocked:
    (b?.((d!.0 || d?.0) + (c!.0 || c?.0)) || a?.b!.a!.0)
@@ -473,27 +417,22 @@ b?.((d?.0 || d!.0) + (c!.0 || c?.0)) || a?.b!.a!.0
  Solved2:
    (((b!.0 || a!.0) || b?.((d!.0 || d?.0) + (c!.0 || c?.0))) || a?.0)
 a!.0 || a?.b!.0 || a?.b!.0 || b?.b?.0
-a!.0 || a?.b!.0 || a?.b!.0 || b?.b?.0
  passed_act_ver: true
  Deadlocked:
-   b?.0
    (b?.0 || a?.b!.0)
  Solved:
-   ((((b!.0 || a!.0) || b?.b?.0) || a?.b!.0) || a?.0)
+   (((((b!.0 || b!.0) || a!.0) || b?.b?.0) || a?.0) || a?.0)
  Solved2:
-   (((a!.0 || b?.(b!.0 || b?.0)) || a?.b!.0) || a?.0)
-a!.a!.0 || a?.b?.0 || a?.0 + b!.0
+   ((((a!.0 || a!.0) || b?.(b!.0 || b?.0)) || a?.b!.0) || a?.0)
 a!.a!.0 || a?.b?.0 || a?.0 + b!.0
  passed_act_ver: true
  Deadlocked:
    b?.0
-   a!.0
    b!.0
  Solved:
    (((a!.a!.0 || a?.b?.0) || a?.0) + b!.0)
  Solved2:
    (((a!.a!.0 || a?.(b!.0 || b?.0)) || a?.0) + b!.0)
-a!.0 || b!.0 || a?.c!.0 + b?.c!.0 || c?.0
 a!.0 || b!.0 || a?.c!.0 + b?.c!.0 || c?.0
  passed_act_ver: true
  Deadlocked:
@@ -504,7 +443,6 @@ a!.0 || b!.0 || a?.c!.0 + b?.c!.0 || c?.0
  Solved2:
    ((((c!.0 || b!.0) || c?.0) || b?.0) + ((b!.0 || a!.0) || a?.c!.0))
 a!.0 || b!.0 || a?.c!.(a?.c!.0 + b?.c!.0) + b?.c!.(a?.c!.0 + b?.c!.0) || c?.c?.0
-a!.0 || b!.0 || a?.c!.(a?.c!.0 + b?.c!.0) + b?.c!.(a?.c!.0 + b?.c!.0) || c?.c?.0
  passed_act_ver: true
  Deadlocked:
    (c?.c?.0 || b?.c!.(b?.c!.0 + a?.c!.0))
@@ -514,7 +452,6 @@ a!.0 || b!.0 || a?.c!.(a?.c!.0 + b?.c!.0) + b?.c!.(a?.c!.0 + b?.c!.0) || c?.c?.0
  Solved2:
    ((((c!.0 || b!.0) || c?.c?.0) || b?.(b?.c!.0 + a?.c!.0)) + ((b!.0 || a!.0) || a?.((b?.c!.0 + a?.c!.0) || c!.0)))
 a!.0 || b!.0 || a?.c!.b?.c!.0 + b?.c!.a?.c!.0 || c?.c?.0
-a!.0 || b!.0 || a?.c!.b?.c!.0 + b?.c!.a?.c!.0 || c?.c?.0
  passed_act_ver: true
  Deadlocked:
    (c?.c?.0 || b?.c!.a?.c!.0)
@@ -523,7 +460,6 @@ a!.0 || b!.0 || a?.c!.b?.c!.0 + b?.c!.a?.c!.0 || c?.c?.0
    ((((c!.(c!.0 || a?.0) || c?.0) || c?.0) || b?.0) + ((b!.0 || a!.0) || a?.(c!.0 || b?.c!.0)))
  Solved2:
    ((((c!.0 || b!.0) || c?.c?.0) || b?.a?.c!.0) + ((b!.0 || a!.0) || a?.(c!.0 || b?.c!.0)))
-a!.0 || b!.0 || (a?.c!.0 + b!.c!.0 + 0) || (c?.0 + 0)
 a!.0 || b!.0 || (a?.c!.0 + b!.c!.0 + 0) || (c?.0 + 0)
  passed_act_ver: true
  Deadlocked:
@@ -536,7 +472,6 @@ a!.0 || b!.0 || (a?.c!.0 + b!.c!.0 + 0) || (c?.0 + 0)
  Solved2:
    ((((c!.0 || c?.0) || (b!.0 + a?.c!.0)) || b!.0) || a!.0)
 a!.0 || b!.0 || a?.c!.(a?.c!.0 + b?.c!.0 + 0) + b?.c!.(a?.c!.0 + b?.c!.0 + 0) + 0 || c?.c?.0
-a!.0 || b!.0 || a?.c!.(a?.c!.0 + b?.c!.0 + 0) + b?.c!.(a?.c!.0 + b?.c!.0 + 0) + 0 || c?.c?.0
  passed_act_ver: true
  Deadlocked:
    b?.c!.(b?.c!.0 + a?.c!.0)
@@ -547,7 +482,6 @@ a!.0 || b!.0 || a?.c!.(a?.c!.0 + b?.c!.0 + 0) + b?.c!.(a?.c!.0 + b?.c!.0 + 0) + 
  Solved2:
    (((c!.0 || c?.c?.0) + (b!.0 || b?.(b?.c!.0 + a?.c!.0))) + ((b!.0 || a!.0) || a?.((b?.c!.0 + a?.c!.0) || c!.0)))
 b!.b!.0 + b!.0 || a?.0 + b?.b?.0
-b!.b!.0 + b!.0 || a?.0 + b?.b?.0
  passed_act_ver: true
  Deadlocked:
    b?.b?.0
@@ -557,7 +491,6 @@ b!.b!.0 + b!.0 || a?.0 + b?.b?.0
    (((b!.0 || b!.0) + (b?.0 || b?.0)) + (b!.0 || a?.0))
  Solved2:
    (((b!.0 || b?.b?.0) + ((b!.0 || a!.0) || a?.0)) + b!.0)
-(b!.(b!.0 + a!.0) + a!.(b!.0 + a!.0)) || (a?.0 + b?.b?.0)
 (b!.(b!.0 + a!.0) + a!.(b!.0 + a!.0)) || (a?.0 + b?.b?.0)
  passed_act_ver: true
  Deadlocked:
@@ -571,7 +504,6 @@ b!.b!.0 + b!.0 || a?.0 + b?.b?.0
  Solved2:
    (((a!.0 || b!.0) + ((b!.0 + a!.0) || a!.0)) || ((b!.0 || b?.(b!.0 || b?.0)) + (a!.0 || a?.0)))
 b?.a!.0 + c!.0 || c?.0 + b!.a!.0 || a?.a?.0
-b?.a!.0 + c!.0 || c?.0 + b!.a!.0 || a?.a?.0
  passed_act_ver: true
  Deadlocked:
    b?.a!.0
@@ -580,7 +512,6 @@ b?.a!.0 + c!.0 || c?.0 + b!.a!.0 || a?.a?.0
    (((c!.0 || c?.0) + (a!.0 || b?.0)) + (((b!.0 || a!.0) || a?.0) || a?.0))
  Solved2:
    (((c!.0 || c?.0) + (b!.0 || b?.a!.0)) + ((b!.0 || a!.0) || a?.a?.0))
-b?.a!.0 + c!.(b?.a!.0 + c!.0) || c?.(c?.0 + b!.a!.0) + b!.a!.0 || a?.a?.0
 b?.a!.0 + c!.(b?.a!.0 + c!.0) || c?.(c?.0 + b!.a!.0) + b!.a!.0 || a?.a?.0
  passed_act_ver: true
  Deadlocked:
@@ -594,7 +525,6 @@ b?.a!.0 + c!.(b?.a!.0 + c!.0) || c?.(c?.0 + b!.a!.0) + b!.a!.0 || a?.a?.0
  Solved2:
    ((((c!.0 + (b!.0 || b?.a!.0)) || c?.((b!.0 || a!.0) + (c!.0 || c?.0))) + (b!.0 || b?.a!.0)) + ((b!.0 || a!.0) || a?.a?.0))
 a?.0 + b?.0 || a?.0 + b?.0 || a!.(a!.0 + b!.0) + b!.0
-a?.0 + b?.0 || a?.0 + b?.0 || a!.(a!.0 + b!.0) + b!.0
  passed_act_ver: true
  Deadlocked:
    a?.0
@@ -605,7 +535,6 @@ a?.0 + b?.0 || a?.0 + b?.0 || a!.(a!.0 + b!.0) + b!.0
    ((((((b!.0 + a!.0) || a!.0) || b?.0) + (b?.0 || a?.0)) + b!.0) + a?.0)
  Solved2:
    ((((((0 || b!.0) || a!.0) || b?.0) + (a!.0 || a?.0)) + (((b!.0 || a!.0) || b?.0) || a?.0)) + b!.0)
-a?.a!.0 + b!.a!.0 + c?.a!.0 + a!.0
 a?.a!.0 + b!.a!.0 + c?.a!.0 + a!.0
  passed_act_ver: true
  Deadlocked:
@@ -618,7 +547,6 @@ a?.a!.0 + b!.a!.0 + c?.a!.0 + a!.0
  Solved2:
    ((((b!.0 || a!.0) + (c!.0 || c?.0)) + (a!.0 || a?.a!.0)) + a!.0)
 b?.b!.b?.b!.0 || b?.b!.0
-b?.b!.b?.b!.0 || b?.b!.0
  passed_act_ver: true
  Deadlocked:
    (b?.b!.b?.b!.0 || b?.b!.0)
@@ -627,7 +555,6 @@ b?.b!.b?.b!.0 || b?.b!.0
  Solved2:
    (((b!.0 || b!.0) || b?.b?.b!.0) || b?.0)
 b!.b?.b!.b?.0 || b!.b?.0
-b!.b?.b!.b?.0 || b!.b?.0
  passed_act_ver: true
  Deadlocked:
    (b!.b?.b!.b?.0 || b!.b?.0)
@@ -635,7 +562,6 @@ b!.b?.b!.b?.0 || b!.b?.0
    (((b!.0 || b!.0) || b?.(b!.0 || b?.0)) || b?.0)
  Solved2:
    (((b!.0 || b!.0) || b?.b!.b?.0) || b?.0)
-(b!.a!.0 + b?.a!.0) + a?.0
 (b!.a!.0 + b?.a!.0) + a?.0
  passed_act_ver: true
  Deadlocked:
@@ -647,7 +573,6 @@ b!.b?.b!.b?.0 || b!.b?.0
  Solved2:
    (((b!.0 || a!.0) + (b!.0 || b?.0)) + (a!.0 || a?.0))
 (b!.0 + a!.0) || (b?.0 + a?.0)
-(b!.0 + a!.0) || (b?.0 + a?.0)
  passed_act_ver: true
  Deadlocked:
    (b!.0 || a?.0)
@@ -657,14 +582,12 @@ b!.b?.b!.b?.0 || b!.b?.0
  Solved2:
    ((b!.0 + a!.0) || ((b!.0 || b?.0) + (a!.0 || a?.0)))
 a!.a!.a!.b!.0 || a?.a?.a?.b?.0
-a!.a!.a!.b!.0 || a?.a?.a?.b?.0
  passed_act_ver: true
  Deadlocked:
  Solved:
    (a!.a!.a!.b!.0 || a?.a?.a?.b?.0)
  Solved2:
    (a!.a!.a!.b!.0 || a?.a?.a?.b?.0)
-(a!.0 + (b?.a!.0 || b!.0)) || a?.0
 (a!.0 + (b?.a!.0 || b!.0)) || a?.0
  passed_act_ver: true
  Deadlocked:
@@ -673,7 +596,6 @@ a!.a!.a!.b!.0 || a?.a?.a?.b?.0
  Solved2:
    (((b!.0 || b?.a!.0) + a!.0) || a?.0)
 a!.0 || b!.0 || (a?.c!.b?.c!.0 + b?.c!.a?.c!.0) || c?.c?.0
-a!.0 || b!.0 || (a?.c!.b?.c!.0 + b?.c!.a?.c!.0) || c?.c?.0
  passed_act_ver: true
  Deadlocked:
  Solved:
@@ -681,16 +603,13 @@ a!.0 || b!.0 || (a?.c!.b?.c!.0 + b?.c!.a?.c!.0) || c?.c?.0
  Solved2:
    ((((b?.c!.a?.c!.0 + a?.c!.b?.c!.0) || b!.0) || a!.0) || c?.c?.0)
 a!.0 || a?.b!.0 || a?.b!.0 || b?.b?.0
-a!.0 || a?.b!.0 || a?.b!.0 || b?.b?.0
  passed_act_ver: true
  Deadlocked:
-   b?.0
    (b?.0 || a?.b!.0)
  Solved:
-   ((((b!.0 || a!.0) || b?.b?.0) || a?.b!.0) || a?.0)
+   (((((b!.0 || b!.0) || a!.0) || b?.b?.0) || a?.0) || a?.0)
  Solved2:
-   (((a!.0 || b?.(b!.0 || b?.0)) || a?.b!.0) || a?.0)
-a!.0 || a?.b!.0 || b?.0
+   ((((a!.0 || a!.0) || b?.(b!.0 || b?.0)) || a?.b!.0) || a?.0)
 a!.0 || a?.b!.0 || b?.0
  passed_act_ver: true
  Deadlocked:
@@ -699,7 +618,6 @@ a!.0 || a?.b!.0 || b?.0
  Solved2:
    ((a!.0 || b?.0) || a?.b!.0)
 a?.0 || b?.c?.a!.0 || b!.0 || c!.0
-a?.0 || b?.c?.a!.0 || b!.0 || c!.0
  passed_act_ver: true
  Deadlocked:
  Solved:
@@ -707,14 +625,12 @@ a?.0 || b?.c?.a!.0 || b!.0 || c!.0
  Solved2:
    (((c!.0 || b!.0) || b?.c?.a!.0) || a?.0)
 a?.0 || a!.0
-a?.0 || a!.0
  passed_act_ver: true
  Deadlocked:
  Solved:
    (a!.0 || a?.0)
  Solved2:
    (a!.0 || a?.0)
-a!.0 || b!.0 || (a?.(a?.0 + b?.0) + b?.(a?.0 + b?.0))
 a!.0 || b!.0 || (a?.(a?.0 + b?.0) + b?.(a?.0 + b?.0))
  passed_act_ver: true
  Deadlocked:
@@ -725,7 +641,6 @@ a!.0 || b!.0 || (a?.(a?.0 + b?.0) + b?.(a?.0 + b?.0))
  Solved2:
    (((b?.((b!.0 || b?.0) + a?.0) + a?.((a!.0 || a?.0) + b?.0)) || b!.0) || a!.0)
 a!.0 || b!.0 || (a?.b?.0 + b?.a?.0)
-a!.0 || b!.0 || (a?.b?.0 + b?.a?.0)
  passed_act_ver: true
  Deadlocked:
  Solved:
@@ -733,16 +648,13 @@ a!.0 || b!.0 || (a?.b?.0 + b?.a?.0)
  Solved2:
    (((b?.a?.0 + a?.b?.0) || b!.0) || a!.0)
 a?.b!.0 || a!.0 || a!.0 || b?.b?.0
-a?.b!.0 || a!.0 || a!.0 || b?.b?.0
  passed_act_ver: true
  Deadlocked:
-   b?.0
    (a!.0 || b?.0)
  Solved:
    (((a!.0 || a!.0) || b?.b?.0) || a?.b!.0)
  Solved2:
    (((a!.0 || a!.0) || b?.(b!.0 || b?.0)) || a?.0)
-a!.a!.a!.0 || a?.a?.a?.a?.0
 a!.a!.a!.0 || a?.a?.a?.a?.0
  passed_act_ver: true
  Deadlocked:
@@ -752,7 +664,6 @@ a!.a!.a!.0 || a?.a?.a?.a?.0
  Solved2:
    (a!.a!.0 || a?.a?.a?.(a!.0 || a?.0))
 a!.a!.a!.0 || a?.a?.a?.0
-a!.a!.a!.0 || a?.a?.a?.0
  passed_act_ver: true
  Deadlocked:
  Solved:
@@ -760,18 +671,16 @@ a!.a!.a!.0 || a?.a?.a?.0
  Solved2:
    (a!.a!.a!.0 || a?.a?.a?.0)
 a!.0 || b!.0 || a?.c!.0 || b?.c!.0 || c?.d?.0 || a?.d!.0 || b?.d!.0
-a!.0 || b!.0 || a?.c!.0 || b?.c!.0 || c?.d?.0 || a?.d!.0 || b?.d!.0
  passed_act_ver: true
  Deadlocked:
-   a?.d!.0
-   b?.d!.0
+   ((((d!.0 || d!.0) || c?.d?.0) || b?.c!.0) || a?.c!.0)
+   (b?.d!.0 || a?.c!.0)
+   (b?.c!.0 || a?.d!.0)
    (((c!.0 || d?.0) || b?.d!.0) || a?.d!.0)
-   ((d!.0 || d!.0) || c?.d?.0)
  Solved:
-   (((((((((d!.0 || d!.0) || b!.0) || a!.0) || d?.0) || c?.0) || b?.c!.0) || b?.0) || a?.c!.0) || a?.0)
+   (((((((((((d!.0 || d!.0) || c!.0) || c!.0) || b!.0) || a!.0) || d?.0) || c?.0) || b?.0) || b?.0) || a?.0) || a?.0)
  Solved2:
-   (((((((c!.0 || b!.0) || a!.0) || c?.(d!.0 || d?.0)) || b?.d!.0) || b?.c!.0) || a?.d!.0) || a?.c!.0)
-a!.0 || b!.0 ||(a?.0 + b?.0)
+   (((((((((c!.0 || b!.0) || b!.0) || a!.0) || a!.0) || c?.(d!.0 || d?.0)) || b?.d!.0) || b?.c!.0) || a?.d!.0) || a?.c!.0)
 a!.0 || b!.0 ||(a?.0 + b?.0)
  passed_act_ver: true
  Deadlocked:
@@ -782,16 +691,13 @@ a!.0 || b!.0 ||(a?.0 + b?.0)
  Solved2:
    (((b?.0 + a?.0) || b!.0) || a!.0)
 a!.a!.a!.a!.a!.a!.0 || a?.b?.c?.0 || a?.b!.a?.a?.b!.0 || b?.c!.0
-a!.a!.a!.a!.a!.a!.0 || a?.b?.c?.0 || a?.b!.a?.a?.b!.0 || b?.c!.0
  passed_act_ver: true
  Deadlocked:
    a!.a!.0
-   ((c!.0 || b!.0) || a!.a!.a!.0)
  Solved:
-   (((a!.a!.a!.((a!.0 || a!.0) || a!.0) || b?.c!.0) || a?.b!.a?.a?.b!.0) || a?.b?.c?.0)
+   (((a!.a!.a!.a!.(a!.0 || a!.0) || b?.c!.0) || a?.b!.a?.a?.b!.0) || a?.b?.c?.0)
  Solved2:
-   (((a!.a!.a!.((a!.0 || a!.0) || a!.0) || b?.c!.0) || a?.b!.a?.a?.b!.0) || a?.b?.c?.0)
-a!.0 || a?.0
+   (((a!.a!.a!.a!.(a!.0 || a!.0) || b?.c!.0) || a?.b!.a?.a?.b!.0) || a?.b?.c?.0)
 a!.0 || a?.0
  passed_act_ver: true
  Deadlocked:
@@ -799,7 +705,6 @@ a!.0 || a?.0
    (a!.0 || a?.0)
  Solved2:
    (a!.0 || a?.0)
-a!.0 & a?.0
 a!.0 & a?.0
  passed_act_ver: true
  Deadlocked:
@@ -809,7 +714,6 @@ a!.0 & a?.0
  Solved2:
    ((a!.0 || a?.0) & a!.0)
 a!.a?.0 & a?.a!.0
-a!.a?.0 & a?.a!.0
  passed_act_ver: true
  Deadlocked:
    (a!.a?.0 & a?.a!.0)
@@ -818,7 +722,6 @@ a!.a?.0 & a?.a!.0
  Solved2:
    ((a!.0 || a?.0) & (a!.0 || a?.0))
 a!.0 || ( a?.0 & a?.0)
-a!.0 || ( a?.0 & a?.0)
  passed_act_ver: true
  Deadlocked:
  Solved:
@@ -826,14 +729,12 @@ a!.0 || ( a?.0 & a?.0)
  Solved2:
    ((a?.0 & a?.0) || a!.0)
 a!.0 || ( (a?.a?.0 || a!.0) & a?.0)
-a!.0 || ( (a?.a?.0 || a!.0) & a?.0)
  passed_act_ver: true
  Deadlocked:
  Solved:
    (((a!.0 || a?.a?.0) & a?.0) || a!.0)
  Solved2:
    (((a!.0 || a?.a?.0) & a?.0) || a!.0)
-a!.0 || ( (a?.a?.0 || a!.b?.b!.0) & a?.0)
 a!.0 || ( (a?.a?.0 || a!.b?.b!.0) & a?.0)
  passed_act_ver: true
  Deadlocked:
@@ -843,14 +744,12 @@ a!.0 || ( (a?.a?.0 || a!.b?.b!.0) & a?.0)
  Solved2:
    (((a!.(b!.0 || b?.0) || a?.a?.0) & a?.0) || a!.0)
 a?.0 || (c?.c!.a!.0 & a!.0)
-a?.0 || (c?.c!.a!.0 & a!.0)
  passed_act_ver: true
  Deadlocked:
  Solved:
    ((a!.0 & c?.c!.a!.0) || a?.0)
  Solved2:
    ((a!.0 & c?.c!.a!.0) || a?.0)
-a?.0 || (c?.c!.a!.0 & c?.c!.a!.0)
 a?.0 || (c?.c!.a!.0 & c?.c!.a!.0)
  passed_act_ver: true
  Deadlocked:
@@ -860,7 +759,6 @@ a?.0 || (c?.c!.a!.0 & c?.c!.a!.0)
  Solved2:
    ((((c!.0 || c?.a!.0) & (c!.0 || c?.0)) || a!.0) || a?.0)
 a?.0 || ((c?.a!.0 || c!.0) & b!.b?.a!.0)
-a?.0 || ((c?.a!.0 || c!.0) & b!.b?.a!.0)
  passed_act_ver: true
  Deadlocked:
  Solved:
@@ -868,14 +766,12 @@ a?.0 || ((c?.a!.0 || c!.0) & b!.b?.a!.0)
  Solved2:
    (((c!.0 || c?.a!.0) & b!.b?.a!.0) || a?.0)
 a!.0 || (a?.0 & (a?.0 + b!.b?.a?.0))
-a!.0 || (a?.0 & (a?.0 + b!.b?.a?.0))
  passed_act_ver: true
  Deadlocked:
  Solved:
    (((b!.b?.a?.0 + a?.0) & a?.0) || a!.0)
  Solved2:
    (((b!.b?.a?.0 + a?.0) & a?.0) || a!.0)
-a!.0 || (a?.0 & (a?.0 + a?.b!.b?.0))
 a!.0 || (a?.0 & (a?.0 + a?.b!.b?.0))
  passed_act_ver: true
  Deadlocked:
@@ -884,7 +780,6 @@ a!.0 || (a?.0 & (a?.0 + a?.b!.b?.0))
    (((a?.(b!.0 || b?.0) + a?.0) & a?.0) || a!.0)
  Solved2:
    (((a?.(b!.0 || b?.0) + a?.0) & a?.0) || a!.0)
-a!.0 || (a?.0 & (a?.b!.b?.0 + a?.c!.c?.0))
 a!.0 || (a?.0 & (a?.b!.b?.0 + a?.c!.c?.0))
  passed_act_ver: true
  Deadlocked:
@@ -895,14 +790,12 @@ a!.0 || (a?.0 & (a?.b!.b?.0 + a?.c!.c?.0))
  Solved2:
    (((a?.(c!.0 || c?.0) + a?.(b!.0 || b?.0)) & a?.0) || a!.0)
 (a!.0 + b!.0) || (b?.0 & a?.0)
-(a!.0 + b!.0) || (b?.0 & a?.0)
  passed_act_ver: true
  Deadlocked:
  Solved:
    ((b?.0 & a?.0) || (b!.0 + a!.0))
  Solved2:
    ((b?.0 & a?.0) || (b!.0 + a!.0))
-(b?.0 & a?.0) || (a!.0 + b!.0)
 (b?.0 & a?.0) || (a!.0 + b!.0)
  passed_act_ver: true
  Deadlocked:
