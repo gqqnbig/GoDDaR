@@ -1,4 +1,4 @@
-module fixer
+module GoDDaR_fixer
 
 go 1.19
 

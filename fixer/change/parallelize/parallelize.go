@@ -1,8 +1,8 @@
 package parallelize
 
 import (
+	"GoDDaR_fixer/change"
 	"bufio"
-	"fixer/change"
 	"go/ast"
 	"go/token"
 	"golang.org/x/tools/go/ast/astutil"

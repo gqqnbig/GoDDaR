@@ -254,7 +254,7 @@ let main fmt (exp: LambdaTagged.t): bool * Lambda.t list * Lambda.t (*passed act
         let (pipe_out, pipe_in) = Unix.pipe () in
         Unix.set_close_on_exec pipe_in;
         let pipe_in_channel = Unix.out_channel_of_descr pipe_in in
-        let fixerPID = Unix.create_process "fixer" (Array.of_list ["fixer"]) pipe_out Unix.stdout Unix.stderr in
+        let fixerPID = Unix.create_process "GoDDaR_fixer" (Array.of_list ["GoDDaR_fixer"]) pipe_out Unix.stdout Unix.stderr in
         Unix.close pipe_out;
         Stdlib.output_bytes pipe_in_channel (Buffer.to_bytes go_fixer_fmt_buffer);
         Stdlib.close_out pipe_in_channel;

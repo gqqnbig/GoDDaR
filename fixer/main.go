@@ -1,11 +1,11 @@
 package main
 
 import (
+	"GoDDaR_fixer/change"
+	"GoDDaR_fixer/change/move"
+	"GoDDaR_fixer/change/parallelize"
 	"bufio"
 	"bytes"
-	"fixer/change"
-	"fixer/change/move"
-	"fixer/change/parallelize"
 	"fmt"
 	"github.com/hexops/gotextdiff"
 	"github.com/hexops/gotextdiff/myers"
