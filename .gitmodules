@@ -1,0 +1,3 @@
+[submodule "test/data/bug-collection"]
+	path = test/data/bug-collection
+	url = https://github.com/JorgeGCoelho/go-deadlock-bug-collection.git

@@ -22,7 +22,7 @@ list_files "main.go" $@ |
 		cd "$DIR";
 
 		if ! [ -e "main.migo" ]; then
-			~/go/bin/migoinfer main.go > main.migo;
+			migoinfer main.go > main.migo;
 		fi
 		cd "$BASE_PATH"
 	done
