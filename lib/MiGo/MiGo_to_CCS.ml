@@ -79,11 +79,12 @@ let rec do_migo_to_ccs migo_defs (stack: stack_entry list): LambdaTagged.t =
         ) else (
           Format.sprintf "(%s)" (String.concat " + " (other_case_expr::tau_case_strings))
         ) *)
-      | MiGo_Types.Lock(_)
-      | MiGo_Types.Unlock(_)
+      | MiGo_Types.Newchan(_, _, capacity) (* TODO: Check if channel names are unique *) -> 
+        if capacity > 0 then (failwith "This tool does not support async channels") else (
+          do_migo_to_ccs migo_defs ((fun_name, stmt_tl, var_map)::tl)
+        )
       | MiGo_Types.Prefix(Tau)
-      | MiGo_Types.Close(_)
-      | MiGo_Types.Newchan(_) (* TODO: Check if channel names are unique *) -> 
+      | MiGo_Types.Close(_) -> 
         do_migo_to_ccs migo_defs ((fun_name, stmt_tl, var_map)::tl)
 
 let migo_to_ccs (migo_defs: MiGo_Types.migo_def list): LambdaTagged.t = 
