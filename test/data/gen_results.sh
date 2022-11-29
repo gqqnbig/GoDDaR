@@ -37,8 +37,8 @@ list_files "*.migo" $@ |
 		cd "$DIR";
 		docker run --rm -v "$PWD":/root/go nickng/gong:popl17ae /bin/bash -c "time Gong -A /root/go/$FILENAME.migo" |& tee "$FILENAME".gong || true
 		docker run -t --rm -v $(pwd):/root jgabet/godel2:latest /bin/sh -c "Godel -T $FILENAME.migo; Godel $FILENAME.migo" |& tee $FILENAME.godel2 || true
-		dune exec dlock -- -ds 1 -s -m "$FILENAME".migo &> "$FILENAME".dlock.ds1 || true
-		timeout 10 dune exec dlock -- -ds 2 -s -m "$FILENAME".migo &> "$FILENAME".dlock.ds2 || true
+		dune exec dlock -- -ds 1 -m "$FILENAME".migo &> "$FILENAME".dlock.ds1 || true
+		timeout 10 dune exec dlock -- -ds 2 -m "$FILENAME".migo &> "$FILENAME".dlock.ds2 || true
 		dune exec dlock-orig -- -ds 1 -s -m "$FILENAME".migo &> "$FILENAME".dlock-orig.ds1 || true
 		dune exec dlock-orig -- -ds 2 -s -m "$FILENAME".migo &> "$FILENAME".dlock-orig.ds2 || true
 		cd "$BASE_PATH"
@@ -51,8 +51,8 @@ list_files "*.ccs" $@ |
 		BASENAME="$(basename ${FILE})"
 		FILENAME="${BASENAME%.*}"
 		cd "$DIR";
-		dune exec dlock -- -ds 1 -s -p "$(cat "$FILENAME.ccs" | tr '\n' ' ')" &> "$FILENAME".ccs.dlock.ds1 || true
-		timeout 10 dune exec dlock -- -ds 2 -s -p "$(cat "$FILENAME.ccs" | tr '\n' ' ')" &> "$FILENAME".ccs.dlock.ds2 || true
+		dune exec dlock -- -ds 1 -p "$(cat "$FILENAME.ccs" | tr '\n' ' ')" &> "$FILENAME".ccs.dlock.ds1 || true
+		timeout 10 dune exec dlock -- -ds 2 -p "$(cat "$FILENAME.ccs" | tr '\n' ' ')" &> "$FILENAME".ccs.dlock.ds2 || true
 		dune exec dlock-orig -- -ds 1 -s -p "$(cat "$FILENAME.ccs" | tr '\n' ' ')" &> "$FILENAME".ccs.dlock-orig.ds1 || true
 		dune exec dlock-orig -- -ds 2 -s -p "$(cat "$FILENAME.ccs" | tr '\n' ' ')" &> "$FILENAME".ccs.dlock-orig.ds2 || true
 		cd "$BASE_PATH"
