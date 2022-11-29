@@ -20,7 +20,7 @@ let stateToLambda (lambdas, ctx: state): Lambda.t =
   Lambda.assocLeftList (List.map lambdaTaggedToLambda lambdas)
 
 let print_state fmt (lambdas, ctx: state) = 
-  Format.fprintf fmt "%a\n    %a\n"
+  Format.fprintf fmt "%a\n    %a"
     printCtxLevel ctx
   LambdaTagged.print (LambdaTagged.assocLeftList (lambdas));
   flush stdout
@@ -158,7 +158,7 @@ let eval fmt (lambda: LambdaTagged.t) =
     match states with
     | [] -> List.rev deadlocks
     | (((lambdas, ctx) as state), prev_states)::tl -> 
-      print_state fmt state;
+      fprintf fmt "%a\n" print_state state;
       (* Strip LNil processes *)
       let lambdas = List.map (LambdaTagged.remLNils) lambdas in
       if (List.for_all is_LNil_or_LRepl lambdas) then
@@ -191,7 +191,7 @@ let eval fmt (lambda: LambdaTagged.t) =
               if dupl = [] then (
                 [((lambdas, ctx), prev_states)]
               ) else (
-                print_state fmt state;
+                fprintf fmt "%a\n" print_state state;
                 Format.fprintf fmt "    DUPLICATES: \n";
                 List.map (
                   fun (remaining, (common, common_ctx)) ->
@@ -239,7 +239,10 @@ let main fmt (exp: LambdaTagged.t): bool * Lambda.t list * Lambda.t (*passed act
       fprintf fmt "\nNo deadlocks!\n";
     ) else (
       fprintf fmt "\nDeadlocks:\n";
-      List.iter (print_state fmt) deadlocks;
+      List.iter (fun deadlock -> 
+        let top_env = Deadlock_resolver.top_environment deadlock in
+        fprintf fmt "%a --- %a\n" print_state deadlock EtaTagged.print_etalist2 top_env;
+      ) deadlocks;
     );
 
     let (_, _, resolved) = detect_and_resolve_loop go_fixer_fmt eval (passed_act_ver, deadlocks, resolved) None in

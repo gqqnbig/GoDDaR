@@ -81,6 +81,14 @@ module EtaTagged =
       | [] -> ()
       | hd::[] -> fprintf fmt "%a" print_eta hd
       | hd::tl -> fprintf fmt "%a | " print_eta hd; print_etalist fmt tl
+  let print_eta2 fmt (e: eta) = 
+      match e with
+      | EEta(a, i) -> fprintf fmt "(%a, %s)" print_action_simple a i
+  let rec print_etalist2 fmt lst =
+      match lst with
+      | [] -> ()
+      | hd::[] -> fprintf fmt "%a" print_eta2 hd
+      | hd::tl -> fprintf fmt "%a | " print_eta2 hd; print_etalist2 fmt tl
   end
 
 
