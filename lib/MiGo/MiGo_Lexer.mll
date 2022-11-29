@@ -33,8 +33,11 @@ rule read = parse
     | "select"   { (* Format.fprintf fmt "SELECT ";             *) SELECT }
     | "case"     { (* Format.fprintf fmt "CASE ";               *) CASE }
     | "endselect"{ (* Format.fprintf fmt "ENDSELECT ";          *) ENDSELECT }
-    | "lock"     { (* Format.fprintf fmt "LOCK ";               *) LOCK }
-    | "unlock"   { (* Format.fprintf fmt "UNLOCK ";             *) UNLOCK }
+    | "lock"[^'\n']*'\n'   { (* Format.fprintf fmt "LOCK ";               *) read lexbuf }
+    | "unlock"[^'\n']*'\n' { (* Format.fprintf fmt "UNLOCK ";             *) read lexbuf }
+    | "letmem"[^'\n']*'\n' { (* Format.fprintf fmt "LETMEM ";             *) read lexbuf }
+    | "write"[^'\n']*'\n'  { (* Format.fprintf fmt "WRITE ";              *) read lexbuf }
+    | "read"[^'\n']*'\n'   { (* Format.fprintf fmt "READ ";               *) read lexbuf }
     | "--"[^'\n']*'\n' { (* Format.fprintf fmt "COMMENT ";      *) Lexing.new_line lexbuf; read lexbuf }
     | digit      { (* Format.fprintf fmt "DIGIT ";              *) DIGIT (int_of_string (Lexing.lexeme lexbuf)) }
     | identifier { (* Format.fprintf fmt "IDENTIFIER %s " (Lexing.lexeme lexbuf); *) IDENTIFIER (Lexing.lexeme lexbuf) }
