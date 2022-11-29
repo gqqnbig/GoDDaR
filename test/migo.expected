@@ -143,17 +143,23 @@ def main.main$1(messages):
 (t1?.0 || t1!.0)
 ==================================================
 benchmark/go_by_example_select/main.migo
-there was an error: Dlock.MiGo_Parser.MenhirBasics.Error
+there was an error: Dlock.MiGo_Parser.MenhirBasics.ErrorCalled from unknown location
+Called from unknown location
+
 benchmark/go_by_example_select/main.migo: lineNum:Char 17:4
 FAILED TO PARSE MIGO
 ==================================================
 benchmark/gomela-x-sender-x-receiver/main.migo
-there was an error: Dlock.MiGo_Parser.MenhirBasics.Error
+there was an error: Dlock.MiGo_Parser.MenhirBasics.ErrorCalled from unknown location
+Called from unknown location
+
 benchmark/gomela-x-sender-x-receiver/main.migo: lineNum:Char 11:4
 FAILED TO PARSE MIGO
 ==================================================
 benchmark/gomela-x-sender-x-receiver+1/main.migo
-there was an error: Dlock.MiGo_Parser.MenhirBasics.Error
+there was an error: Dlock.MiGo_Parser.MenhirBasics.ErrorCalled from unknown location
+Called from unknown location
+
 benchmark/gomela-x-sender-x-receiver+1/main.migo: lineNum:Char 11:4
 FAILED TO PARSE MIGO
 ==================================================

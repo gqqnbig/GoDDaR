@@ -63,44 +63,129 @@ let deadlock_solver_2_dfs (go_fixer_fmt: formatter option) (lambda: LambdaTagged
     res
 
 let deadlock_solver_2 = deadlock_solver_2_dfs
+let get_top_layer (lambdas: LambdaTagged.t list) : LambdaTagged.t list = 
+  let rec do_get_top_layer (lambda: LambdaTagged.t) : LambdaTagged.t list =
+    match lambda with
+    | LList(eta, _)
+    | LRepl(eta, _) as l ->
+      [l]
+    | LOrE(a, b)
+    | LOrI(a, b)
+    | LPar(a, b) ->
+      (do_get_top_layer a)@(do_get_top_layer b)
+    | LNil ->
+      []
+  in
+  lambdas |>
+  List.map do_get_top_layer
+  |> List.flatten
 
-let rec top_environment ((lambdas: LambdaTagged.t list), print_ctx): EtaTagged.eta list =
-  match lambdas with
-  | [] -> []
-  | LList(eta, _)::tl
-  | LRepl(eta, _)::tl -> (* TODO *)
-    eta::(top_environment (tl, print_ctx))
-  | LOrE(a, b)::tl
-  | LOrI(a, b)::tl ->
-    (top_environment ([a], print_ctx))@(top_environment ([b], print_ctx))@top_environment (tl, print_ctx)
-  | LPar(a, b)::tl ->
-    top_environment (a::b::tl, print_ctx)
-  | LNil::tl ->
-    top_environment (tl, print_ctx)
+let get_next_layer (lambdas: LambdaTagged.t list) : LambdaTagged.t list =
+  let rec do_get_next_layer (lambda: LambdaTagged.t) : LambdaTagged.t list =
+    match lambda with
+    | LList(eta, l)
+    | LRepl(eta, l) ->
+      get_top_layer [l]
+    | LOrE(a, b)
+    | LOrI(a, b)
+    | LPar(a, b) ->
+      (do_get_next_layer a)@(do_get_next_layer b)
+    | LNil ->
+      []
+  in
+  lambdas |>
+  List.map do_get_next_layer
+  |> List.flatten
+
+let get_top_eta lambda =
+  match lambda with
+  | LambdaTagged.LList(eta, _)
+  | LRepl(eta, _) -> eta
+  | _ -> failwith "This should not happen!"
+
+let get_Etas_by_layer lambda: (Eta.eta, int) Hashtbl.t = 
+  let etas_by_layer = Hashtbl.create (0) in
+  let add_or_replace_min (eta: Eta.eta) (layer: int) =
+    match Hashtbl.find_opt etas_by_layer eta with
+    | Some(old_layer) -> if layer < old_layer then Hashtbl.replace etas_by_layer eta layer
+    | None -> Hashtbl.add etas_by_layer eta layer
+  in
+  let rec get_layers lambda layer =
+    if lambda <> [] then (
+      List.iter (
+        fun lambda ->
+          add_or_replace_min (etaTaggedToEta (get_top_eta lambda)) layer
+      ) lambda;
+      let new_lambda = get_next_layer lambda in
+      get_layers new_lambda (layer+1)
+    )
+  in
+  get_layers (get_top_layer lambda) 0;
+  etas_by_layer
+
 
 (* A single iteration of a deadlock detection and resolution *)
 let rec detect_and_resolve fmt (go_fixer_fmt: formatter option) eval lambdaTaggedExp =
-  (* Format.printf "DaR: \n";
-  lambdaTaggedToLambda lambdaTaggedExp
-  |> toProc
-  |> print_lambda_simple Format.std_formatter; *)
+  Format.fprintf debug_fmt "DaR: %a\n" LambdaTagged.print lambdaTaggedExp;
   let deadlocked_states = (eval fmt lambdaTaggedExp) in
   Format.fprintf fmt "\n";
   if deadlocked_states = [] then (
     (true, [], lambdaTaggedExp)
   ) else (
-    let deadlocked_top_environments =
-      deadlocked_states
-      |> List.map top_environment
-      |> List.flatten
-      (* Remove Duplicates *)
-      |> List.fold_left ( fun tl hd -> (if List.mem hd tl then tl else hd :: tl)) []
+    let get_blocked_eta_scores ((lambdas, ctx): state) = 
+      let etas_by_layer = get_Etas_by_layer lambdas in
+      Format.fprintf debug_fmt "etas_by_layer:\n";
+      Hashtbl.iter (
+        fun eta layer -> Format.fprintf debug_fmt "- %a: %i\n" Eta.print_eta eta layer) etas_by_layer;
+      get_top_layer lambdas
+      |> List.filter_map (
+        fun lambda -> (
+          let blocked_eta = get_top_eta lambda in
+          let blocked_eta_score = 
+          get_next_layer [lambda]
+          |> List.map (fun l -> l |> get_top_eta |> EtaTagged.compl_eta) (* List of compl etas of second layer*)
+          |> List.filter_map (
+            fun compl_eta ->
+              Hashtbl.find_opt etas_by_layer compl_eta
+              |> Option.map ( fun (layer) -> (compl_eta, layer))
+          )
+          |> List.map (
+            fun (compl_eta, layer) ->
+              Format.fprintf debug_fmt "blocked: %a; compl_eta: %a; layer: %i\n"
+                EtaTagged.print_eta_simple blocked_eta
+                Eta.print_eta_simple compl_eta
+                layer;
+              layer
+          )
+          |> List.fold_left (min) max_int
+          in
+          if blocked_eta_score = max_int then
+            None
+          else 
+            Some(blocked_eta, blocked_eta_score)
+        )
+      )
     in
-    (* List.iter (fun eta -> (print_eta_tagged fmt eta; fprintf fmt "\n")) deadlocked_top_environments; *)
-    let deadlock_solver = if !ds < 2 then deadlock_solver_1 else deadlock_solver_2 in
-    let solved_exp = (LambdaTagged.remLNils (deadlock_solver go_fixer_fmt lambdaTaggedExp deadlocked_top_environments)) in
+    let (best_eta, layer) =
+        deadlocked_states
+        |> List.map get_blocked_eta_scores
+        |> List.flatten
+        |> List.fold_left (
+          fun (eta1, score1) (eta2, score2) -> (
+            if score1 < score2 then (eta1, score1) else (eta2, score2)
+          )
+        ) (EtaTagged.EEta(AIn("a"), ""), max_int)
+    in
 
-    (true, deadlocked_states, solved_exp)
+    if (layer = max_int ) then
+      (true, deadlocked_states, lambdaTaggedExp)
+    else (
+      (* List.iter (fun eta -> (print_eta_tagged fmt eta; fprintf fmt "\n")) deadlocked_top_environments; *)
+      let deadlock_solver = if !ds < 2 then deadlock_solver_1 else deadlock_solver_2 in
+      let solved_exp = (LambdaTagged.remLNils (deadlock_solver go_fixer_fmt lambdaTaggedExp [best_eta])) in
+
+      (true, deadlocked_states, solved_exp)
+    )
   )
 
 let rec detect_and_resolve_loop (go_fixer_fmt: formatter option) eval (passed_act_ver, deadlocked, resolved) (last_resolved: LambdaTagged.t list)= 

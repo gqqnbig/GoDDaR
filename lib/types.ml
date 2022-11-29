@@ -2,6 +2,7 @@ open Cmd
 open Format
 
 let null_fmt = Format.make_formatter ( fun _ _ _ -> () ) (fun _ -> ())
+let debug_fmt = null_fmt
 
 (* ---------- Types ----------  *)
 
@@ -63,6 +64,14 @@ module Eta =
       | hd::[] -> fprintf fmt "%a" print_eta hd
       | hd::tl -> fprintf fmt "%a | " print_eta hd; print_etalist fmt tl
 
+  let compl_action action = 
+      match action with
+      | AIn(k) -> AOut(k)
+      | AOut(k) -> AIn(k)
+
+  let compl_eta (eta: eta): eta =
+      match eta with
+      | EEta(action) -> EEta(compl_action action)
   end
 
 
@@ -89,8 +98,16 @@ module EtaTagged =
       | [] -> ()
       | hd::[] -> fprintf fmt "%a" print_eta2 hd
       | hd::tl -> fprintf fmt "%a | " print_eta2 hd; print_etalist2 fmt tl
-  end
 
+  let compl_action action = 
+      match action with
+      | AIn(k) -> AOut(k)
+      | AOut(k) -> AIn(k)
+
+  let compl_eta (eta: eta): Eta.eta =
+      match eta with
+      | EEta(action, _) -> EEta(compl_action action)
+  end
 
 module Lambda_Base(Eta_base: Eta_type) =
     struct
@@ -262,15 +279,6 @@ let next_ctx ctx = {level = ctx.level ^ ".1"}
 
 let conc_lvl ctx lvl = {level = ctx.level ^ "." ^ lvl}
 
-let compl_action action = 
-    match action with
-    | AIn(k) -> AOut(k)
-    | AOut(k) -> AIn(k)
-
-let compl_eta (eta: Eta.eta): Eta.eta =
-    match eta with
-    | EEta(action) -> EEta(compl_action action)
-
 
 (** This is an attempt to provide a canonical version of the lambda type, such that it can be compared
 and sorted correctly *)
@@ -366,3 +374,7 @@ match exp1, exp2 with
 | LOrE(l), LOrE(r) -> List.for_all2 (fun l r -> eta_equals_eta_tagged l r) l r
 | LNil, LNil -> true
 | _, _ -> false
+
+type state =
+  (LambdaTagged.t list) *     (* List of the parallel compositions *)
+  ctx

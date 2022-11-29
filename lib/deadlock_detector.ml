@@ -9,10 +9,6 @@ open Deadlock_resolver
 
 exception RuntimeException of string
 
-type state =
-  (LambdaTagged.t list) *     (* List of the parallel compositions *)
-  ctx
-
 type prev_state = (LambdaC.t list * ctx)
   
 
@@ -58,7 +54,7 @@ let eval_sync ((lambdas, ctx) as state: state): state list =
       )
     | Sync(action), (LList(EEta(a, _), b) as l)::tl ->
       (
-        if a = compl_action action then (
+        if a = EtaTagged.compl_action action then (
           (* found match *)
           [(b::tl, {level = ctx.level ^ "." ^ (actionToString a)})]
         ) else []
@@ -69,7 +65,7 @@ let eval_sync ((lambdas, ctx) as state: state): state list =
       )
     | Sync(action), (LRepl(EEta(a, _), b) as l)::tl ->
       (
-        if a = compl_action action then (
+        if a = EtaTagged.compl_action action then (
           (* found match *)
           [(b::l::tl, {level = ctx.level ^ "." ^ (actionToString a)})]
         ) else []
@@ -214,6 +210,7 @@ let eval fmt (lambda: LambdaTagged.t) =
 
 
 let main fmt (exp: LambdaTagged.t): bool * Lambda.t list * Lambda.t (*passed act_ver * deadlocked processes * resolved process*) =
+  let exp = LambdaTagged.remLNils exp in
   (* Process Completeness Verification *)
   let act_ver = main_act_verifier (lambdaTaggedToLambda exp) in
   if false then (
@@ -239,8 +236,8 @@ let main fmt (exp: LambdaTagged.t): bool * Lambda.t list * Lambda.t (*passed act
       fprintf fmt "\nNo deadlocks!\n";
     ) else (
       fprintf fmt "\nDeadlocks:\n";
-      List.iter (fun deadlock -> 
-        let top_env = Deadlock_resolver.top_environment deadlock in
+      List.iter (fun ((lambdas, _) as deadlock )-> 
+        let top_env = lambdas |> Deadlock_resolver.get_top_layer |> List.map Deadlock_resolver.get_top_eta in
         fprintf fmt "%a | top env: %a\n" print_state deadlock EtaTagged.print_etalist2 top_env;
       ) deadlocks;
     );
