@@ -30,8 +30,11 @@ let deadlock_solver_2_dfs (go_fixer_fmt: formatter option) (lambda: LambdaTagged
     match lambda with
     | LList((EEta(AOut(_), t) as eta), l) when List.mem_assoc eta !dte ->
       Option.iter (fun fmt -> Format.fprintf fmt "PARALLELIZE\n%s\n" t;) go_fixer_fmt;
-      LPar(LList(eta, LNil), do_deadlock_solver_2 l)
-
+      if (l = LNil) then (
+        LList(eta, do_deadlock_solver_2 l)
+      ) else (
+        LPar(LList(eta, LNil), do_deadlock_solver_2 l)
+      )
     | LList( EEta(AOut(c1), _) as eta, l) when List.exists (is_co_input c1) !dte ->
       let (eta_input, _) = List.find (is_co_input c1) !dte in
       dte := (List.remove_assoc eta_input !dte);
@@ -100,20 +103,20 @@ let rec detect_and_resolve fmt (go_fixer_fmt: formatter option) eval lambdaTagge
     (true, deadlocked_states, solved_exp)
   )
 
-let rec detect_and_resolve_loop (go_fixer_fmt: formatter option) eval (passed_act_ver, deadlocked, resolved) (last_resolved: LambdaTagged.t option)= 
-  if !go || !ds > 1 then (
+let rec detect_and_resolve_loop (go_fixer_fmt: formatter option) eval (passed_act_ver, deadlocked, resolved) (last_resolved: LambdaTagged.t list)= 
+  if !go then (
     (* In go or ds=2 mode just loop once *)
     (* TODO: fix looping when ds=2 *)
     (passed_act_ver, deadlocked, resolved)
   ) else (
     match last_resolved with
+    | [] when deadlocked = [] -> 
+      (passed_act_ver, deadlocked, resolved)
     (* When resolved program remains the same then exit loop*)
-    | Some(last_resolved) when last_resolved = resolved ->
+    | _ when List.mem resolved last_resolved ->
       (passed_act_ver, deadlocked, resolved)
     (* When no deadlocks are found then exit loop*)
-    | _ when deadlocked = [] -> 
-      (passed_act_ver, deadlocked, resolved)
     | _ -> 
       let res = detect_and_resolve null_fmt go_fixer_fmt eval resolved in
-      detect_and_resolve_loop go_fixer_fmt eval res (Some(resolved))
+      detect_and_resolve_loop go_fixer_fmt eval res (resolved::last_resolved)
   )

@@ -241,11 +241,11 @@ let main fmt (exp: LambdaTagged.t): bool * Lambda.t list * Lambda.t (*passed act
       fprintf fmt "\nDeadlocks:\n";
       List.iter (fun deadlock -> 
         let top_env = Deadlock_resolver.top_environment deadlock in
-        fprintf fmt "%a --- %a\n" print_state deadlock EtaTagged.print_etalist2 top_env;
+        fprintf fmt "%a | top env: %a\n" print_state deadlock EtaTagged.print_etalist2 top_env;
       ) deadlocks;
     );
 
-    let (_, _, resolved) = detect_and_resolve_loop go_fixer_fmt eval (passed_act_ver, deadlocks, resolved) None in
+    let (_, _, resolved) = detect_and_resolve_loop go_fixer_fmt eval (passed_act_ver, deadlocks, resolved) [] in
 
     if deadlocks <> [] then (
       fprintf fmt "Resolved:\n%a\n" LambdaTagged.print resolved
@@ -256,7 +256,7 @@ let main fmt (exp: LambdaTagged.t): bool * Lambda.t list * Lambda.t (*passed act
       fun go_fixer_fmt ->
         Format.pp_print_flush go_fixer_fmt ();
         Format.fprintf fmt "\n\n";
-        if !verbose then ( Format.fprintf fmt "%s\n\n" (Buffer.contents go_fixer_fmt_buffer););
+        Format.fprintf fmt "%s\n\n" (Buffer.contents go_fixer_fmt_buffer);
         Format.pp_print_flush fmt ();
 
         let (pipe_out, pipe_in) = Unix.pipe () in

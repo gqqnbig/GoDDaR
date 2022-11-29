@@ -139,14 +139,6 @@ module Lambda_Base(Eta_base: Eta_type) =
     | hd::tl::[] -> LOrE(hd, tl)
     | hd::md::tl -> LOrE(hd, LOrE(md, assocLOrEList tl))
   
-  let rec hasLNil exp =
-    match exp with
-    | LNil -> false
-    | LPar(a, b) -> (a = LNil) || (b = LNil)
-    | LOrE(a, b) | LOrI(a, b) ->
-      hasLNil a || hasLNil b
-    | LList(_, l) | LRepl(_, l) -> hasLNil l
-
   (** Strips the expression from containing [LNil] located inside [LPar] *)
   let rec remLNils exp =
     let rec rem exp =
@@ -161,8 +153,10 @@ module Lambda_Base(Eta_base: Eta_type) =
       | LRepl(e, l) -> LRepl(e, rem l)
       | LNil -> LNil
     in
+    let prevExp = ref LNil in
     let currExp = ref exp in
-    while hasLNil !currExp && !currExp <> LNil do
+    while currExp <> prevExp && !currExp <> LNil do
+        prevExp := !currExp;
         currExp := rem !currExp
     done; 
     !currExp
@@ -214,7 +208,7 @@ module LambdaTagged =
 type ctx = { level   :   string; }
 
 let printCtxLevel fmt ctx =
-    fprintf fmt "---- %s ----" ctx.level
+    fprintf fmt "--- %s ---" ctx.level
 
 (* ---------- Functions ----------  *)
 

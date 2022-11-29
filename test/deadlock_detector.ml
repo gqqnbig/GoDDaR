@@ -60,6 +60,7 @@ let test fmt (exp: string) =
   let result2 = convert_res (Deadlock_detector.main  null_fmt proc) in
   (
     fprintf fmt "%s\n" exp;
+    pp_print_flush fmt ();
     print_res fmt result result2
   )
 
