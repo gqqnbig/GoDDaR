@@ -110,88 +110,100 @@ let get_Etas_by_layer lambda: (Eta.eta, int) Hashtbl.t =
     | Some(old_layer) -> if layer < old_layer then Hashtbl.replace etas_by_layer eta layer
     | None -> Hashtbl.add etas_by_layer eta layer
   in
-  let rec get_layers lambda layer =
+  let rec iterate_layers lambda layer =
     if lambda <> [] then (
       List.iter (
         fun lambda ->
           add_or_replace_min (etaTaggedToEta (get_top_eta lambda)) layer
       ) lambda;
       let new_lambda = get_next_layer lambda in
-      get_layers new_lambda (layer+1)
+      iterate_layers new_lambda (layer+1)
     )
   in
-  get_layers (get_top_layer lambda) 0;
+  iterate_layers (get_top_layer lambda) 0;
   etas_by_layer
 
+(* Receives a deadlocked state.
+   For each problematic action return a score (heuristic indicating how good a choice that ) *)
+let get_blocked_eta_scores ((lambdas, ctx): state): (EtaTagged.eta * int) list = 
+  (* Hashmap of eta to layer number*)
+  let etas_by_layer = get_Etas_by_layer lambdas in
+
+  Format.fprintf debug_fmt "etas_by_layer:\n";
+  Hashtbl.iter (
+    fun eta layer -> Format.fprintf debug_fmt "- %a: %i\n" Eta.print_eta eta layer) etas_by_layer;
+
+  get_top_layer lambdas
+  |> List.filter_map (
+    fun lambda -> (
+      let blocked_eta = get_top_eta lambda in
+      let compl_eta_scores: (Eta.eta * int) list =
+        get_next_layer [lambda]
+        (* List of compl etas of the etas directly bellow the blocked eta *)
+        |> List.map (fun l -> l |> get_top_eta |> EtaTagged.compl_eta)
+        (* make a pair of the compl_eta and the layer number where the compl_eta is located *)
+        |> List.filter_map (
+          fun compl_eta ->
+            Hashtbl.find_opt etas_by_layer compl_eta
+            |> Option.map ( fun (layer) -> (compl_eta, layer))
+        )
+      in
+
+      (* Debug print *)
+      List.iter (
+        fun (compl_eta, layer) ->
+          Format.fprintf debug_fmt "blocked: %a; compl_eta: %a; layer: %i\n"
+            EtaTagged.print_eta_simple blocked_eta
+            Eta.print_eta_simple compl_eta
+            layer
+      ) compl_eta_scores;
+
+      let blocked_eta_score = 
+        compl_eta_scores
+        |> List.map ( fun (compl_eta, layer) -> layer)
+        (* Get the eta *)
+        |> List.fold_left (min) max_int
+      in
+      if blocked_eta_score = max_int then
+        None
+      else 
+        Some(blocked_eta, blocked_eta_score)
+    )
+  )
 
 (* A single iteration of a deadlock detection and resolution *)
 let rec detect_and_resolve fmt (go_fixer_fmt: formatter option) eval lambdaTaggedExp =
   Format.fprintf debug_fmt "DaR: %a\n" LambdaTagged.print lambdaTaggedExp;
   let deadlocked_states = (eval fmt lambdaTaggedExp) in
   Format.fprintf fmt "\n";
-  if deadlocked_states = [] then (
-    (true, [], lambdaTaggedExp)
-  ) else (
-    let get_blocked_eta_scores ((lambdas, ctx): state) = 
-      let etas_by_layer = get_Etas_by_layer lambdas in
-      Format.fprintf debug_fmt "etas_by_layer:\n";
-      Hashtbl.iter (
-        fun eta layer -> Format.fprintf debug_fmt "- %a: %i\n" Eta.print_eta eta layer) etas_by_layer;
-      get_top_layer lambdas
-      |> List.filter_map (
-        fun lambda -> (
-          let blocked_eta = get_top_eta lambda in
-          let blocked_eta_score = 
-          get_next_layer [lambda]
-          |> List.map (fun l -> l |> get_top_eta |> EtaTagged.compl_eta) (* List of compl etas of second layer*)
-          |> List.filter_map (
-            fun compl_eta ->
-              Hashtbl.find_opt etas_by_layer compl_eta
-              |> Option.map ( fun (layer) -> (compl_eta, layer))
-          )
-          |> List.map (
-            fun (compl_eta, layer) ->
-              Format.fprintf debug_fmt "blocked: %a; compl_eta: %a; layer: %i\n"
-                EtaTagged.print_eta_simple blocked_eta
-                Eta.print_eta_simple compl_eta
-                layer;
-              layer
-          )
-          |> List.fold_left (min) max_int
-          in
-          if blocked_eta_score = max_int then
-            None
-          else 
-            Some(blocked_eta, blocked_eta_score)
-        )
-      )
-    in
-    let (best_eta, layer) =
-        deadlocked_states
-        |> List.map get_blocked_eta_scores
-        |> List.flatten
-        |> List.fold_left (
-          fun (eta1, score1) (eta2, score2) -> (
-            if score1 < score2 then (eta1, score1) else (eta2, score2)
-          )
-        ) (EtaTagged.EEta(AIn("a"), ""), max_int)
-    in
+  let best_eta_layer =
+    deadlocked_states
+    |> List.map get_blocked_eta_scores
+    |> List.flatten
+    |> List.map Option.some
+    |> List.fold_left (
+      fun p1 p2 -> (
+        match p1, p2 with
+        | Some(eta1, score1), Some (eta2, score2) ->
+          if score1 < score2 then Some(eta1, score1) else Some(eta2, score2)
+        | None, None -> None
+        | None, Some _ -> p2
+        | Some _, None -> p1
+      )) None
+  in
+  match best_eta_layer with
+  | None ->
+    (true, deadlocked_states, lambdaTaggedExp)
+  | Some(best_eta, _) ->  (
+    let deadlock_solver = if !ds < 2 then deadlock_solver_1 else deadlock_solver_2 in
+    let solved_exp = (LambdaTagged.remLNils (deadlock_solver go_fixer_fmt lambdaTaggedExp [best_eta])) in
 
-    if (layer = max_int ) then
-      (true, deadlocked_states, lambdaTaggedExp)
-    else (
-      (* List.iter (fun eta -> (print_eta_tagged fmt eta; fprintf fmt "\n")) deadlocked_top_environments; *)
-      let deadlock_solver = if !ds < 2 then deadlock_solver_1 else deadlock_solver_2 in
-      let solved_exp = (LambdaTagged.remLNils (deadlock_solver go_fixer_fmt lambdaTaggedExp [best_eta])) in
-
-      (true, deadlocked_states, solved_exp)
-    )
+    (true, deadlocked_states, solved_exp)
   )
 
 let rec detect_and_resolve_loop (go_fixer_fmt: formatter option) eval (passed_act_ver, deadlocked, resolved) (last_resolved: LambdaTagged.t list)= 
   if !go then (
-    (* In go or ds=2 mode just loop once *)
-    (* TODO: fix looping when ds=2 *)
+    (* In go mode just loop once *)
     (passed_act_ver, deadlocked, resolved)
   ) else (
     match last_resolved with
