@@ -193,25 +193,25 @@ let rec detect_and_resolve fmt (go_fixer_fmt: formatter option) eval lambdaTagge
   in
   match best_eta_layer with
   | None ->
-    (true, deadlocked_states, lambdaTaggedExp)
+    (deadlocked_states, lambdaTaggedExp)
   | Some(best_eta, _) ->  (
     let deadlock_solver = if !ds < 2 then deadlock_solver_1 else deadlock_solver_2 in
     let solved_exp = (LambdaTagged.remLNils (deadlock_solver go_fixer_fmt lambdaTaggedExp [best_eta])) in
 
-    (true, deadlocked_states, solved_exp)
+    (deadlocked_states, solved_exp)
   )
 
-let rec detect_and_resolve_loop (go_fixer_fmt: formatter option) eval (passed_act_ver, deadlocked, resolved) (last_resolved: LambdaTagged.t list)= 
+let rec detect_and_resolve_loop (go_fixer_fmt: formatter option) eval (deadlocked, resolved) (last_resolved: LambdaTagged.t list)= 
   if !go then (
     (* In go mode just loop once *)
-    (passed_act_ver, deadlocked, resolved)
+    (deadlocked, resolved)
   ) else (
     match last_resolved with
     | [] when deadlocked = [] -> 
-      (passed_act_ver, deadlocked, resolved)
+      (deadlocked, resolved)
     (* When resolved program remains the same then exit loop*)
     | _ when List.mem resolved last_resolved ->
-      (passed_act_ver, deadlocked, resolved)
+      (deadlocked, resolved)
     (* When no deadlocks are found then exit loop*)
     | _ -> 
       let res = detect_and_resolve null_fmt go_fixer_fmt eval resolved in

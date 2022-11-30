@@ -230,7 +230,7 @@ let main fmt (exp: LambdaTagged.t): bool * Lambda.t list * Lambda.t (*passed act
     (* Ideally, we would just loop until no dealdock is found and discard the intermediary results.
        But the original implementation returns the first set of deadlocks and the fully deadlock
        resolved expression, so here we do the same. *)
-    let (passed_act_ver, deadlocks, resolved) = detect_and_resolve fmt go_fixer_fmt eval exp in
+    let (deadlocks, resolved) = detect_and_resolve fmt go_fixer_fmt eval exp in
 
     if deadlocks = [] then (
       fprintf fmt "\nNo deadlocks!\n";
@@ -242,7 +242,7 @@ let main fmt (exp: LambdaTagged.t): bool * Lambda.t list * Lambda.t (*passed act
       ) deadlocks;
     );
 
-    let (_, _, resolved) = detect_and_resolve_loop go_fixer_fmt eval (passed_act_ver, deadlocks, resolved) [] in
+    let (_, resolved) = detect_and_resolve_loop go_fixer_fmt eval (deadlocks, resolved) [] in
 
     if deadlocks <> [] then (
       fprintf fmt "Resolved:\n%a\n" LambdaTagged.print resolved
@@ -266,5 +266,5 @@ let main fmt (exp: LambdaTagged.t): bool * Lambda.t list * Lambda.t (*passed act
         ignore (Unix.waitpid [] fixerPID)
     ) go_fixer_fmt;
 
-    (passed_act_ver, List.map stateToLambda deadlocks, lambdaTaggedToLambda resolved)
+    (true, List.map stateToLambda deadlocks, lambdaTaggedToLambda resolved)
   )
