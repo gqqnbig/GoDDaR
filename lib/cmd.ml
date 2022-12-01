@@ -5,3 +5,5 @@ let verbose = ref false
 let ds = ref 0
 
 let go = ref false
+
+let all_etas = ref false

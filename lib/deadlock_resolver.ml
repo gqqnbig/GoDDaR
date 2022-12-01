@@ -125,7 +125,7 @@ let get_Etas_by_layer lambda: (Eta.eta, int) Hashtbl.t =
 
 (* Receives a deadlocked state.
    For each problematic action return a score (heuristic indicating how good a choice that ) *)
-let get_blocked_eta_scores ((lambdas, ctx): state): (EtaTagged.eta * int) list = 
+let get_blocked_eta_scores ((lambdas, ctx): state): (EtaTagged.eta * Eta.eta * int) list = 
   (* Hashmap of eta to layer number*)
   let etas_by_layer = get_Etas_by_layer lambdas in
 
@@ -134,7 +134,7 @@ let get_blocked_eta_scores ((lambdas, ctx): state): (EtaTagged.eta * int) list =
     fun eta layer -> Format.fprintf debug_fmt "- %a: %i\n" Eta.print_eta eta layer) etas_by_layer;
 
   get_top_layer lambdas
-  |> List.filter_map (
+  |> List.map (
     fun lambda -> (
       let blocked_eta = get_top_eta lambda in
       let compl_eta_scores: (Eta.eta * int) list =
@@ -158,60 +158,70 @@ let get_blocked_eta_scores ((lambdas, ctx): state): (EtaTagged.eta * int) list =
             layer
       ) compl_eta_scores;
 
-      let blocked_eta_score = 
-        compl_eta_scores
-        |> List.map ( fun (compl_eta, layer) -> layer)
-        (* Get the eta *)
-        |> List.fold_left (min) max_int
-      in
-      if blocked_eta_score = max_int then
-        None
-      else 
-        Some(blocked_eta, blocked_eta_score)
+      compl_eta_scores
+      |> List.map ( fun (compl_eta, layer) -> (blocked_eta, compl_eta, layer))
     )
   )
+  |> List.flatten
 
 (* A single iteration of a deadlock detection and resolution *)
 let rec detect_and_resolve fmt (go_fixer_fmt: formatter option) eval lambdaTaggedExp =
   Format.fprintf debug_fmt "DaR: %a\n" LambdaTagged.print lambdaTaggedExp;
   let deadlocked_states = (eval fmt lambdaTaggedExp) in
   Format.fprintf fmt "\n";
-  let best_eta_layer =
+  let best_etas: EtaTagged.eta list =
     deadlocked_states
     |> List.map get_blocked_eta_scores
     |> List.flatten
-    |> List.map Option.some
-    |> List.fold_left (
-      fun p1 p2 -> (
-        match p1, p2 with
-        | Some(eta1, score1), Some (eta2, score2) ->
-          if score1 < score2 then Some(eta1, score1) else Some(eta2, score2)
-        | None, None -> None
-        | None, Some _ -> p2
-        | Some _, None -> p1
-      )) None
+    (* |> List.sort (fun (eta1, _, layer1) (eta2, _, layer2) -> layer1 - layer2)
+    |> List.map (
+        fun ((blocked_eta, compl_eta, layer) as elem) -> (
+          Format.fprintf debug_fmt "blocked: %a; compl_eta: %a; layer: %i\n"
+            EtaTagged.print_eta_simple blocked_eta
+            Eta.print_eta_simple compl_eta
+            layer
+        );
+        elem
+      )
+    |> fun list -> List.nth_opt list 0 *)
+    |> if (!all_etas) then (
+      List.map (fun (best_eta, _, _) -> best_eta)
+    ) else (
+      fun x -> (
+        x
+        |> (List.map Option.some)
+        |> List.fold_left (
+          fun p1 p2 -> (
+            match p1, p2 with
+            | Some(eta1, compl_eta1, score1), Some (eta2, compl_eta2, score2) ->
+              if score1 < score2 then Some(eta1, compl_eta1, score1) else Some(eta2, compl_eta2, score2)
+            | None, None -> None
+            | None, (Some _ as p2) -> p2
+            | (Some _ as p1), None -> p1
+          )) None
+        |> Option.map (fun (best_eta, _, _) -> best_eta)
+        |> Option.to_list
+      )
+    )
   in
-  match best_eta_layer with
-  | None ->
+  match best_etas with
+  | [] ->
     (deadlocked_states, lambdaTaggedExp)
-  | Some(best_eta, _) ->  (
+  | _ ->  (
     let deadlock_solver = if !ds < 2 then deadlock_solver_1 else deadlock_solver_2 in
-    let solved_exp = (LambdaTagged.remLNils (deadlock_solver go_fixer_fmt lambdaTaggedExp [best_eta])) in
+    let solved_exp = (LambdaTagged.remLNils (deadlock_solver go_fixer_fmt lambdaTaggedExp best_etas)) in
 
     (deadlocked_states, solved_exp)
   )
 
 let rec detect_and_resolve_loop (go_fixer_fmt: formatter option) eval (deadlocked, resolved) (last_resolved: LambdaTagged.t list)= 
-  if !go then (
-    (* In go mode just loop once *)
-    (deadlocked, resolved)
-  ) else (
+  (
     match last_resolved with
     | [] when deadlocked = [] -> 
-      (deadlocked, resolved)
+      (true, deadlocked, resolved)
     (* When resolved program remains the same then exit loop*)
     | _ when List.mem resolved last_resolved ->
-      (deadlocked, resolved)
+      (deadlocked = [], deadlocked, resolved)
     (* When no deadlocks are found then exit loop*)
     | _ -> 
       let res = detect_and_resolve null_fmt go_fixer_fmt eval resolved in

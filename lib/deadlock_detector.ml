@@ -242,10 +242,10 @@ let main fmt (exp: LambdaTagged.t): bool * Lambda.t list * Lambda.t (*passed act
       ) deadlocks;
     );
 
-    let (_, resolved) = detect_and_resolve_loop go_fixer_fmt eval (deadlocks, resolved) [] in
+    let (fully_resolved, _, resolved) = detect_and_resolve_loop go_fixer_fmt eval (deadlocks, resolved) [] in
 
     if deadlocks <> [] then (
-      fprintf fmt "Resolved:\n%a\n" LambdaTagged.print resolved
+      fprintf fmt "%sResolved:\n%a\n" (if fully_resolved then "Fully " else "") LambdaTagged.print resolved
     );
 
     (* Print and execute Go fixer *)

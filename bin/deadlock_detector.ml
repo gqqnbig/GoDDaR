@@ -13,6 +13,7 @@ let go_file = ref ""
 
 let speclist =
     [("-v", Arg.Set verbose, "Output debug information");
+     ("-a", Arg.Set all_etas, "Resolve all etas");
      ("-ds", Arg.Int (fun i -> if (i!=1 && i!= 2) then raise (Arg.Bad ("Bad argument: Select deadlock resolution algorithm (1 or 2)")) else ds:=i), "Select deadlock resolution algorithm (1 or 2)");
      ("--go", Arg.Set go, "Output patched Go code");
      ("-p", Arg.Set_string process, "Process this process");
