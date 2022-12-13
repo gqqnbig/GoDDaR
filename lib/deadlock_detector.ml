@@ -237,7 +237,7 @@ let main fmt (exp: LambdaTagged.t): bool * Lambda.t list * Lambda.t (*passed act
     ) else (
       fprintf fmt "\nDeadlocks:\n";
       List.iter (fun ((lambdas, _) as deadlock )-> 
-        let top_env = lambdas |> Deadlock_resolver.get_top_layer |> List.map Deadlock_resolver.get_top_eta in
+        let top_env = lambdas |> Deadlock_resolver_heuristics.get_top_layer |> List.map Deadlock_resolver_heuristics.get_top_eta in
         fprintf fmt "%a | top env: %a\n" print_state deadlock EtaTagged.print_etalist2 top_env;
       ) deadlocks;
     );

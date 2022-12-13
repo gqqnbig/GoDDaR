@@ -26,6 +26,8 @@ let print_action_simple fmt a =
 module type Eta_type =
   sig 
     type eta
+    type t
+    val compare: t -> t -> int
     val print_eta: formatter -> eta -> unit
     val print_eta_simple: formatter -> eta -> unit
     val print_etalist: formatter -> eta list -> unit
@@ -37,6 +39,8 @@ module Eta =
   type eta =
     | EEta of action
 
+  type t = eta
+  let compare = compare
   let print_eta fmt e = 
       match e with
       | EEta(a) -> fprintf fmt "EEta(%a)" print_action a
@@ -79,9 +83,11 @@ module EtaTagged =
   struct
   type eta =
     | EEta of action * string
+  type t = eta
+  let compare = compare
   let print_eta fmt (e: eta) = 
       match e with
-      | EEta(a, i) -> fprintf fmt "EEtaTagged(%a, %s)" print_action a i
+      | EEta(a, i) -> fprintf fmt "EEtaT(%a, %s)" print_action a i
   let print_eta_simple fmt e = 
       match e with
       | EEta(a, _) -> print_action_simple fmt a

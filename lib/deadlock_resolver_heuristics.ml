@@ -1,0 +1,289 @@
+open Types
+
+let get_top_layer (lambdas: LambdaTagged.t list) : LambdaTagged.t list = 
+  let rec do_get_top_layer (lambda: LambdaTagged.t) : LambdaTagged.t list =
+    match lambda with
+    | LList(eta, _)
+    | LRepl(eta, _) as l ->
+      [l]
+    | LOrE(a, b)
+    | LOrI(a, b)
+    | LPar(a, b) ->
+      (do_get_top_layer a)@(do_get_top_layer b)
+    | LNil ->
+      []
+  in
+  lambdas |>
+  List.map do_get_top_layer
+  |> List.flatten
+
+let get_next_layer (lambdas: LambdaTagged.t list) : LambdaTagged.t list =
+  let rec do_get_next_layer (lambda: LambdaTagged.t) : LambdaTagged.t list =
+    match lambda with
+    | LList(eta, l)
+    | LRepl(eta, l) ->
+      get_top_layer [l]
+    | LOrE(a, b)
+    | LOrI(a, b)
+    | LPar(a, b) ->
+      (do_get_next_layer a)@(do_get_next_layer b)
+    | LNil ->
+      []
+  in
+  lambdas |>
+  List.map do_get_next_layer
+  |> List.flatten
+
+let get_top_eta lambda =
+  match lambda with
+  | LambdaTagged.LList(eta, _)
+  | LRepl(eta, _) -> eta
+  | _ -> failwith "This should not happen!"
+
+module type Deadlock_resolver_heuristic =
+  sig
+    type score
+    type eta_score = (EtaTagged.eta * score)
+    val best_etas: LambdaTagged.t -> state list -> eta_score list
+    val print_eta_score: Format.formatter -> eta_score list -> unit
+    val best_eta: LambdaTagged.t -> eta_score list -> EtaTagged.eta list
+  end
+
+
+module Heuristic_by_layer: Deadlock_resolver_heuristic =
+struct
+  type score = (Eta.eta * int)
+  type eta_score = (EtaTagged.eta * score)
+  let get_Etas_by_layer lambda: (Eta.eta, int) Hashtbl.t = 
+    let etas_by_layer = Hashtbl.create (0) in
+    let add_or_replace_min (eta: Eta.eta) (layer: int) =
+      match Hashtbl.find_opt etas_by_layer eta with
+      | Some(old_layer) -> if layer < old_layer then Hashtbl.replace etas_by_layer eta layer
+      | None -> Hashtbl.add etas_by_layer eta layer
+    in
+    let rec iterate_layers lambda layer =
+      if lambda <> [] then (
+        List.iter (
+          fun lambda ->
+            add_or_replace_min (etaTaggedToEta (get_top_eta lambda)) layer
+        ) lambda;
+        let new_lambda = get_next_layer lambda in
+        iterate_layers new_lambda (layer+1)
+      )
+    in
+    iterate_layers (get_top_layer lambda) 0;
+    etas_by_layer
+
+  (* Receives a deadlocked state.
+     For each problematic action return a score (heuristic indicating how good a choice that ) *)
+  let get_blocked_eta_score ((lambdas, ctx): state): eta_score list = 
+    (* Hashmap of eta to layer number*)
+    let etas_by_layer = get_Etas_by_layer lambdas in
+
+    Format.fprintf debug_fmt "etas_by_layer:\n";
+    Hashtbl.iter (
+      fun eta layer -> Format.fprintf debug_fmt "- %a: %i\n" Eta.print_eta eta layer) etas_by_layer;
+
+    get_top_layer lambdas
+    |> List.map (
+      fun lambda -> (
+        let blocked_eta = get_top_eta lambda in
+        let compl_eta_score: (Eta.eta * int) list =
+          get_next_layer [lambda]
+          (* List of compl etas of the etas directly bellow the blocked eta *)
+          |> List.map (fun l -> l |> get_top_eta |> EtaTagged.compl_eta)
+          (* make a pair of the compl_eta and the layer number where the compl_eta is located *)
+          |> List.filter_map (
+            fun compl_eta ->
+              Hashtbl.find_opt etas_by_layer compl_eta
+              |> Option.map ( fun (layer) -> (compl_eta, layer))
+          )
+        in
+
+        (* Debug print *)
+        List.iter (
+          fun (compl_eta, layer) ->
+            Format.fprintf debug_fmt "blocked: %a; compl_eta: %a; layer: %i\n"
+              EtaTagged.print_eta_simple blocked_eta
+              Eta.print_eta_simple compl_eta
+              layer
+        ) compl_eta_score;
+
+        compl_eta_score
+        |> List.map ( fun e -> (blocked_eta, e))
+      )
+    )
+    |> List.flatten
+
+
+  let best_etas exp deadlocked_states: eta_score list =
+    deadlocked_states
+    |> List.map get_blocked_eta_score
+    |> List.flatten
+
+  let print_eta_score fmt (eta_scores: eta_score list) =
+  eta_scores
+  |> List.sort (fun (eta1, (_, layer1)) (eta2, (_, layer2)) -> layer1 - layer2)
+  |> List.iter (
+      fun (blocked_eta, (compl_eta, layer)) -> (
+        Format.fprintf fmt "blocked: %a; compl_eta: %a; layer: %i\n"
+          EtaTagged.print_eta_simple blocked_eta
+          Eta.print_eta_simple compl_eta
+          layer
+      );
+    )
+
+
+  let best_eta exp (best_etas: eta_score list): (EtaTagged.eta list) = 
+    best_etas
+    |> (List.map Option.some)
+    |> List.fold_left (
+      fun p1 p2 -> (
+        match p1, p2 with
+        | Some(eta1, (compl_eta1, score1)), Some (eta2, (compl_eta2, score2)) ->
+          if score1 < score2 then Some(eta1, (compl_eta1, score1)) else Some(eta2, (compl_eta2, score2))
+        | None, None -> None
+        | None, (Some _ as p2) -> p2
+        | (Some _ as p1), None -> p1
+      )) None
+    |> Option.map (fun (best_eta, (_, _)) -> (best_eta))
+    |> Option.to_list
+end
+
+module Heuristic_NOP: Deadlock_resolver_heuristic =
+struct
+  type score = unit
+  type eta_score = (EtaTagged.eta * score)
+
+  let best_etas exp (deadlocked_states: state list): eta_score list =
+    deadlocked_states
+    |> List.map (fun (lambdas, _) -> lambdas)
+    |> List.map get_top_layer
+    |> List.flatten
+    |> List.map get_top_eta
+    |> List.map (fun eta -> (eta, ()))
+
+  let print_eta_score fmt (eta_scores: eta_score list): unit =
+  ()
+
+  let best_eta eta (best_etas: eta_score list): (EtaTagged.eta list) = 
+    best_etas
+    |> List.map (fun (eta, _) -> eta)
+end
+
+
+module Heuristic_New: Deadlock_resolver_heuristic =
+struct
+  type eta_sequence = Eta.eta list
+  type etaT_sequence = EtaTagged.eta list
+
+  module EtaTSequence =
+  struct
+    type t = EtaTagged.eta list
+    let compare = compare
+    let print fmt (sequence: t) =
+      Format.fprintf fmt "[";
+      sequence
+      |> List.iter (Format.fprintf fmt "%a," EtaTagged.print_eta);
+      Format.fprintf fmt "]";
+  end
+  module EtaTSequenceSet = Set.Make(EtaTSequence)
+
+  type score = (etaT_sequence list)
+  type eta_score = (EtaTagged.eta * score)
+
+  let [@warning "-8"] rec find_eta_sequence (lambda: LambdaTagged.t) ((eta::etas_tl) as etas: eta_sequence): (etaT_sequence) list =
+    match lambda with
+    | LList(e, l)
+    | LRepl(e, l) -> (
+      if eta = etaTaggedToEta e then (
+        if etas_tl = [] then (
+          [[e]]
+        ) else (
+          find_eta_sequence l etas_tl
+          |> List.map (fun tl -> e::tl)
+        )
+      ) else (
+        find_eta_sequence l etas
+      )
+    )
+    | LOrI(a, b)
+    | LOrE(a, b)
+    | LPar(a, b) ->
+      (find_eta_sequence a etas)
+      @
+      (find_eta_sequence b etas)
+    | LNil -> []
+
+  let find_inverted lambda lambdas =
+    let first_eta = get_top_eta lambda in
+    let second_etas =
+      [lambda]
+      |> get_next_layer
+      |> List.map get_top_eta
+    in
+    let compl_eta_sequences_list: etaT_sequence list =
+      second_etas
+      |> List.map (
+        fun (second_eta) ->
+          lambdas
+          |> List.map (
+            fun l -> (
+              if l = lambda then
+                []
+              else
+                find_eta_sequence l [EtaTagged.compl_eta second_eta; EtaTagged.compl_eta first_eta]
+            )
+          )
+        |> List.flatten
+      )
+      |> List.flatten
+    in
+    (first_eta, compl_eta_sequences_list)
+
+
+  let best_etas exp deadlocked_states: eta_score list =
+    let eta_scores = Hashtbl.create 16 in
+    deadlocked_states
+    |> List.map (fun (lambdas, _) -> lambdas)
+    |> List.map get_top_layer
+    |> List.iter (fun lambdas -> (
+      lambdas
+      |> List.iter (
+        fun lambda -> (
+          let (first_eta, compl_eta_sequences_list) = find_inverted lambda lambdas in
+            let list = Hashtbl.find_opt eta_scores first_eta in
+            match list with
+            | None -> Hashtbl.add eta_scores first_eta (EtaTSequenceSet.of_list compl_eta_sequences_list)
+            | Some(seq) -> 
+              Hashtbl.replace eta_scores first_eta
+                (EtaTSequenceSet.union seq (EtaTSequenceSet.of_list compl_eta_sequences_list) )
+          )
+        )
+    ));
+    Hashtbl.to_seq eta_scores
+    |> Seq.map (
+      fun ((first_eta: EtaTagged.eta), eta_sequence_set) ->
+        (first_eta, EtaTSequenceSet.elements eta_sequence_set)
+    )
+    |> List.of_seq
+
+  let print_eta_score fmt (eta_scores: eta_score list): unit =
+    eta_scores
+    |> List.sort (fun (eta1, seq1) (eta2, seq2) -> (List.length seq2) - (List.length seq1))
+    |> List.iter (
+      fun (first_eta, sequences) -> (
+        Format.fprintf fmt "%a (%d):" EtaTagged.print_eta first_eta (List.length sequences);
+        sequences 
+        |> List.iter (Format.fprintf fmt " %a" EtaTSequence.print);
+        Format.fprintf fmt "\n"
+      )
+    )
+
+  let best_eta eta (best_etas: eta_score list): (EtaTagged.eta list) = 
+    best_etas
+    |> List.sort (fun (eta1, seq1) (eta2, seq2) -> (List.length seq2) - (List.length seq1))
+    |> (fun list -> List.nth_opt list 0)
+    |> Option.to_list
+    |> List.map (fun (eta, seq) -> eta)
+end
