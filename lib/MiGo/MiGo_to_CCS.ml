@@ -22,48 +22,49 @@ let rec rename_param c stack =
 
 
 
-let rec do_migo_to_ccs migo_defs (stack: stack_entry list): LambdaTagged.t =
+let rec do_migo_to_ccs migo_defs (stack: stack_entry list) (deps: (dependency list) ref): LambdaTagged.t =
   match stack with 
   | [] -> Format.fprintf debug_fmt "No more stack\n"; LNil
   | (fun_name, stmts, var_map)::tl ->
     match stmts with
-    | [] -> Format.fprintf debug_fmt "No stmts\n"; do_migo_to_ccs migo_defs (tl)
+    | [] -> Format.fprintf debug_fmt "No stmts\n"; do_migo_to_ccs migo_defs (tl) deps
     | stmt::stmt_tl ->
       match stmt with
       | MiGo_Types.Prefix(Send(c, tag)) ->
         LList(
           EEta(AOut(rename_param c stack), tag),
-          (do_migo_to_ccs migo_defs ((fun_name, stmt_tl, var_map)::tl))
+          (do_migo_to_ccs migo_defs ((fun_name, stmt_tl, var_map)::tl) deps)
         )
-      | MiGo_Types.Prefix(Receive(c, tag)) ->
+      | MiGo_Types.Prefix(Receive(c, tag, dependencies)) ->
+        if dependencies <> [] then deps := (tag, dependencies)::!deps;
         LList(
           EEta(AIn(rename_param c stack), tag),
-          (do_migo_to_ccs migo_defs ((fun_name, stmt_tl, var_map)::tl))
+          (do_migo_to_ccs migo_defs ((fun_name, stmt_tl, var_map)::tl) deps)
         )
       | MiGo_Types.If(t, f) -> 
         LOrI(
-          (do_migo_to_ccs migo_defs ((fun_name, t@stmt_tl, var_map)::tl)),
-          (do_migo_to_ccs migo_defs ((fun_name, f@stmt_tl, var_map)::tl))
+          (do_migo_to_ccs migo_defs ((fun_name, t@stmt_tl, var_map)::tl) deps),
+          (do_migo_to_ccs migo_defs ((fun_name, f@stmt_tl, var_map)::tl) deps)
         )
       | MiGo_Types.Call(call_name, call_params) -> 
         check_has_been_called call_name stack;
         let MiGo_Types.Def(def_name, def_params, def_stmts) = Hashtbl.find migo_defs call_name in
         let call_var_map = List.combine def_params call_params in
-          do_migo_to_ccs migo_defs ((def_name, def_stmts, call_var_map)::(fun_name, stmt_tl, var_map)::tl)
+          do_migo_to_ccs migo_defs ((def_name, def_stmts, call_var_map)::(fun_name, stmt_tl, var_map)::tl) deps
       | MiGo_Types.Spawn(call_name, call_params) -> 
         check_has_been_called call_name stack;
         let MiGo_Types.Def(def_name, def_params, def_stmts) = Hashtbl.find migo_defs call_name in
         let stack_without_stmts = List.map (fun (fun_name, stmts, var_map) -> (fun_name, [], var_map)) stack in
         let call_var_map = List.combine def_params call_params in
         LPar(
-          (do_migo_to_ccs migo_defs ((fun_name, stmt_tl, var_map)::tl)),
-          (do_migo_to_ccs migo_defs ((def_name, def_stmts, call_var_map)::stack_without_stmts))
+          (do_migo_to_ccs migo_defs ((fun_name, stmt_tl, var_map)::tl)) deps,
+          (do_migo_to_ccs migo_defs ((def_name, def_stmts, call_var_map)::stack_without_stmts)) deps
         )
       | MiGo_Types.Select(cases) -> 
         let (tau_cases, other_cases) = List.partition (fun (prefix, _) -> prefix = MiGo_Types.Tau) cases in
         let gen_case = List.map (
           fun (prefix, stmts) -> 
-            do_migo_to_ccs migo_defs ((fun_name, Prefix(prefix)::stmts, var_map)::tl)
+            do_migo_to_ccs migo_defs ((fun_name, Prefix(prefix)::stmts, var_map)::tl) deps
         ) in
         let tau_cases = gen_case tau_cases in
         let other_cases = gen_case other_cases in
@@ -81,13 +82,13 @@ let rec do_migo_to_ccs migo_defs (stack: stack_entry list): LambdaTagged.t =
         ) *)
       | MiGo_Types.Newchan(_, _, capacity) (* TODO: Check if channel names are unique *) -> 
         if capacity > 0 then (failwith "This tool does not support async channels") else (
-          do_migo_to_ccs migo_defs ((fun_name, stmt_tl, var_map)::tl)
+          do_migo_to_ccs migo_defs ((fun_name, stmt_tl, var_map)::tl) deps
         )
       | MiGo_Types.Prefix(Tau)
       | MiGo_Types.Close(_) -> 
-        do_migo_to_ccs migo_defs ((fun_name, stmt_tl, var_map)::tl)
+        do_migo_to_ccs migo_defs ((fun_name, stmt_tl, var_map)::tl) deps
 
-let migo_to_ccs (migo_defs: MiGo_Types.migo_def list): LambdaTagged.t = 
+let migo_to_ccs (migo_defs: MiGo_Types.migo_def list): (LambdaTagged.t * dependency list)= 
   let migo_def_hashtbl = Hashtbl.create (List.length migo_defs) in
   List.iter (
     fun (MiGo_Types.Def(name, params, stmts) as def) -> (
@@ -96,5 +97,6 @@ let migo_to_ccs (migo_defs: MiGo_Types.migo_def list): LambdaTagged.t =
   ) migo_defs;
   let Def(_, params, stmts) = (Hashtbl.find migo_def_hashtbl "main.main") in
   assert (params = []);
-  do_migo_to_ccs migo_def_hashtbl [("main.main", stmts, [])]
-
+  let deps = ref [] in
+  let ccs = do_migo_to_ccs migo_def_hashtbl [("main.main", stmts, [])] deps in
+    (ccs, !deps)

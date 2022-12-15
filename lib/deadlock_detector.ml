@@ -209,7 +209,7 @@ let eval fmt (lambda: LambdaTagged.t) =
 
 
 
-let main fmt (exp: LambdaTagged.t): bool * Lambda.t list * Lambda.t (*passed act_ver * deadlocked processes * resolved process*) =
+let main fmt ((exp, deps): LambdaTagged.t * dependency list): bool * Lambda.t list * Lambda.t (*passed act_ver * deadlocked processes * resolved process*) =
   let exp = LambdaTagged.remLNils exp in
   (* Process Completeness Verification *)
   let act_ver = main_act_verifier (lambdaTaggedToLambda exp) in
@@ -230,7 +230,7 @@ let main fmt (exp: LambdaTagged.t): bool * Lambda.t list * Lambda.t (*passed act
     (* Ideally, we would just loop until no dealdock is found and discard the intermediary results.
        But the original implementation returns the first set of deadlocks and the fully deadlock
        resolved expression, so here we do the same. *)
-    let (deadlocks, resolved) = detect_and_resolve fmt go_fixer_fmt eval exp in
+    let (deadlocks, resolved) = detect_and_resolve fmt go_fixer_fmt eval exp deps in
 
     if deadlocks = [] then (
       fprintf fmt "\nNo deadlocks!\n";
@@ -242,7 +242,7 @@ let main fmt (exp: LambdaTagged.t): bool * Lambda.t list * Lambda.t (*passed act
       ) deadlocks;
     );
 
-    let (fully_resolved, _, resolved) = detect_and_resolve_loop go_fixer_fmt eval (deadlocks, resolved) [] in
+    let (fully_resolved, _, resolved) = detect_and_resolve_loop go_fixer_fmt eval (deadlocks, resolved) deps [] in
 
     if deadlocks <> [] then (
       fprintf fmt "%sResolved:\n%a\n" (if fully_resolved then "Fully " else "") LambdaTagged.print resolved

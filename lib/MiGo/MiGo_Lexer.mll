@@ -32,6 +32,7 @@ rule read = parse
     | "endif"    { (* Format.fprintf fmt "ENDIF ";              *) ENDIF }
     | "select"   { (* Format.fprintf fmt "SELECT ";             *) SELECT }
     | "case"     { (* Format.fprintf fmt "CASE ";               *) CASE }
+    | "->"       { (* Format.fprintf fmt "ARROW ";              *) ARROW }
     | "endselect"{ (* Format.fprintf fmt "ENDSELECT ";          *) ENDSELECT }
     | "lock"[^'\n']*'\n'   { (* Format.fprintf fmt "LOCK ";               *) read lexbuf }
     | "unlock"[^'\n']*'\n' { (* Format.fprintf fmt "UNLOCK ";             *) read lexbuf }

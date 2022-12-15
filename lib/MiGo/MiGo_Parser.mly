@@ -25,6 +25,7 @@ open MiGo_Types
 %token ENDIF
 %token SELECT
 %token CASE
+%token ARROW
 %token ENDSELECT
 %token EOF
 
@@ -57,12 +58,20 @@ def_body2:
 
 prefix:
     | SEND; id = IDENTIFIER; tag = prefix_tag { Send(id, tag) }
-    | RECEIVE; id = IDENTIFIER; tag = prefix_tag { Receive(id, tag) }
+    | RECEIVE; id = IDENTIFIER; tag = prefix_tag; deps = prefix_deps { Receive(id, tag, deps) }
     | TAU { Tau }
 
 prefix_tag:
     | LPAREN; tag = TAG; RPAREN { tag }
     | { "" }
+
+prefix_deps:
+    | ARROW; deps = prefix_deps_list; {deps}
+    | { [] }
+
+prefix_deps_list:
+    | LPAREN; tag = TAG; RPAREN; tags = prefix_deps_list { tag::tags }
+    | { [] }
 
 def_stmt:
     | p = prefix; SEMICOLON { Prefix(p) }

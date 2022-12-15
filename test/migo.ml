@@ -20,14 +20,19 @@ Sys.chdir "data";
         if Sys.file_exists migo_file then (
           (
             try 
+              let fmt = Format.std_formatter in
               let migo = MiGo.parse_file migo_file in
-              MiGo_Types.print_migo_list Format.std_formatter migo;
+              MiGo_Types.print_migo_list fmt migo;
               Format.printf "%s\n" (String.make 10 '=');
               (
                 try 
-                  let ccs = (MiGo_to_CCS.migo_to_ccs migo) in
-                  Lambda.print_lambda_simple Format.std_formatter (Types.lambdaTaggedToLambda ccs);
+                  let (ccs, deps) = (MiGo_to_CCS.migo_to_ccs migo) in
+                  Lambda.print_lambda_simple fmt (Types.lambdaTaggedToLambda ccs);
                   Format.printf "\n";
+                  if deps <> [] then (
+                    Format.fprintf fmt "DEPS:\n"; 
+                    List.iter (fun dep -> Format.fprintf fmt "%a\n" Types.print_dependecy dep) deps;
+                  )
                 with
                 | MiGo_to_CCS.Fail(reason) -> Format.printf "FAILED TO CONVERT: %s\n" reason;
               );

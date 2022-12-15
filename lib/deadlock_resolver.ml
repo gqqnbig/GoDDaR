@@ -67,25 +67,43 @@ let deadlock_solver_2 = deadlock_solver_2_dfs
 
 
 (* A single iteration of a deadlock detection and resolution *)
-let rec detect_and_resolve fmt (go_fixer_fmt: formatter option) eval exp =
+let rec detect_and_resolve fmt (go_fixer_fmt: formatter option) eval exp (deps: dependency list) =
   let deadlock_solver = if !ds < 2 then deadlock_solver_1 else deadlock_solver_2 in
 
   Format.fprintf debug_fmt "DaR: %a\n" LambdaTagged.print exp;
   let deadlocked_states = (eval fmt exp) in
   Format.fprintf fmt "\n";
 
+  let all_deps =
+    deps
+    |> List.map (fun (a, b) -> a::b)
+    |> List.flatten
+  in
+
   let best_eta = (
     if !all_etas then (
       let best_etas = Heuristic_NOP.best_etas exp deadlocked_states in
       Heuristic_NOP.print_eta_score debug_fmt best_etas;
-      Heuristic_NOP.best_eta exp best_etas
+      best_etas
+      |> List.map (fun (eta, _) -> eta)
     ) else (
       (* let best_etas = Heuristic_by_layer.best_etas exp deadlocked_states in
       Heuristic_by_layer.print_eta_score debug_fmt best_etas;
       Heuristic_by_layer.best_eta exp best_etas *)
       let best_etas = Heuristic_New.best_etas exp deadlocked_states in
       Heuristic_New.print_eta_score debug_fmt best_etas;
-      Heuristic_New.best_eta exp best_etas
+      best_etas
+      (* Find the eta that doesn't have a dependency*)
+      |> List.find_map (
+        fun (EtaTagged.EEta(_, t) as eta, _) ->(
+          if (List.mem t all_deps) then
+            None
+          else
+            Some(eta)
+        )
+      ) 
+      (* |> List.find_map (fun (eta, _) -> Some(eta)) *)
+      |> Option.to_list
     )
   ) in
   match best_eta with
@@ -98,7 +116,7 @@ let rec detect_and_resolve fmt (go_fixer_fmt: formatter option) eval exp =
 
 
 
-let rec detect_and_resolve_loop (go_fixer_fmt: formatter option) eval (deadlocked, resolved) (last_resolved: LambdaTagged.t list)= 
+let rec detect_and_resolve_loop (go_fixer_fmt: formatter option) eval (deadlocked, resolved) deps (last_resolved: LambdaTagged.t list)= 
   (
     match last_resolved with
     | [] when deadlocked = [] -> 
@@ -108,6 +126,6 @@ let rec detect_and_resolve_loop (go_fixer_fmt: formatter option) eval (deadlocke
       (deadlocked = [], deadlocked, resolved)
     (* When no deadlocks are found then exit loop*)
     | _ -> 
-      let res = detect_and_resolve null_fmt go_fixer_fmt eval resolved in
-      detect_and_resolve_loop go_fixer_fmt eval res (resolved::last_resolved)
+      let res = detect_and_resolve null_fmt go_fixer_fmt eval resolved deps in
+      detect_and_resolve_loop go_fixer_fmt eval res deps (resolved::last_resolved)
   )

@@ -46,7 +46,6 @@ module type Deadlock_resolver_heuristic =
     type eta_score = (EtaTagged.eta * score)
     val best_etas: LambdaTagged.t -> state list -> eta_score list
     val print_eta_score: Format.formatter -> eta_score list -> unit
-    val best_eta: LambdaTagged.t -> eta_score list -> EtaTagged.eta list
   end
 
 
@@ -115,11 +114,14 @@ struct
     )
     |> List.flatten
 
+  let sort_eta_score  (eta1, (_, layer1)) (eta2, (_, layer2)) = 
+    layer1 - layer2
 
   let best_etas exp deadlocked_states: eta_score list =
     deadlocked_states
     |> List.map get_blocked_eta_score
     |> List.flatten
+    |> List.sort sort_eta_score
 
   let print_eta_score fmt (eta_scores: eta_score list) =
   eta_scores
@@ -132,21 +134,6 @@ struct
           layer
       );
     )
-
-  let best_eta exp (best_etas: eta_score list): (EtaTagged.eta list) = 
-    best_etas
-    |> (List.map Option.some)
-    |> List.fold_left (
-      fun p1 p2 -> (
-        match p1, p2 with
-        | Some(eta1, (compl_eta1, score1)), Some (eta2, (compl_eta2, score2)) ->
-          if score1 < score2 then Some(eta1, (compl_eta1, score1)) else Some(eta2, (compl_eta2, score2))
-        | None, None -> None
-        | None, (Some _ as p2) -> p2
-        | (Some _ as p1), None -> p1
-      )) None
-    |> Option.map (fun (best_eta, (_, _)) -> (best_eta))
-    |> Option.to_list
 end
 
 module Heuristic_NOP: Deadlock_resolver_heuristic =
@@ -164,10 +151,6 @@ struct
 
   let print_eta_score fmt (eta_scores: eta_score list): unit =
   ()
-
-  let best_eta eta (best_etas: eta_score list): (EtaTagged.eta list) = 
-    best_etas
-    |> List.map (fun (eta, _) -> eta)
 end
 
 
@@ -185,7 +168,6 @@ struct
       Format.fprintf fmt "]";
   end
   module EtaTSequenceSet = Set.Make(EtaTSequence)
-  module EtaTaggedSet = Set.Make(EtaTagged)
 
   type score = (EtaTSequence.t list)
   type eta_score = (EtaTagged.eta * score)
@@ -306,6 +288,7 @@ struct
         (first_eta, EtaTSequenceSet.elements eta_sequence_set)
     )
     |> List.of_seq
+    |> List.sort sort_eta_score
 
   let print_eta_score fmt (eta_scores: eta_score list): unit =
     eta_scores
@@ -318,11 +301,4 @@ struct
         Format.fprintf fmt "\n"
       )
     )
-
-  let best_eta eta (best_etas: eta_score list): (EtaTagged.eta list) = 
-    best_etas
-    |> List.sort sort_eta_score
-    |> (fun list -> List.nth_opt list 0)
-    |> Option.to_list
-    |> List.map (fun (eta, seq) -> eta)
 end

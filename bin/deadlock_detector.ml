@@ -26,9 +26,9 @@ let cmdParse = Arg.parse speclist (fun x -> raise (Arg.Bad ("Bad argument: " ^ x
 ;;
 
 
-let ccs =
+let ccs: (LambdaTagged.t * dependency list) =
   if (!process <> "") then
-    CCS.parse (!process)
+    (CCS.parse (!process), [])
   else if (!go_file <> "") then (
     let (pipe_out, pipe_in) = Unix.pipe () in
     let pipe_out_channel = Unix.in_channel_of_descr pipe_out in

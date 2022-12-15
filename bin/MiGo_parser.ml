@@ -24,5 +24,6 @@ in
     fun migo -> 
       MiGo_Types.print_migo_list Format.std_formatter migo;
       Format.printf "\n\n\n";
-      LambdaTagged.print_lambda_simple Format.std_formatter (MiGo_to_CCS.migo_to_ccs migo);
+      let (lambda, deps) = MiGo_to_CCS.migo_to_ccs migo in
+      LambdaTagged.print_lambda_simple Format.std_formatter lambda;
   ) migo;

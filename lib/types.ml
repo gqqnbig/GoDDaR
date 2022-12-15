@@ -12,6 +12,12 @@ type action =
     | AIn of chan
     | AOut of chan
 
+(* (Receive, Send list) *)
+type dependency = string * string list
+
+let print_dependecy fmt ((receive, sends): dependency) = 
+  Format.fprintf fmt "%s: %s" receive (String.concat " " sends)
+
 let print_action fmt a =
     match a with
     | AIn(a) -> fprintf fmt "AIn(%s)" a
@@ -114,6 +120,7 @@ module EtaTagged =
       match eta with
       | EEta(action, _) -> EEta(compl_action action)
   end
+module EtaTaggedSet = Set.Make(EtaTagged)
 
 module Lambda_Base(Eta_base: Eta_type) =
     struct

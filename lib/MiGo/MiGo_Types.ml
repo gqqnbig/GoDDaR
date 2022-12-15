@@ -10,14 +10,25 @@ and  migo_stmt =
   | Select of (migo_prefix * migo_stmt list) list
 and migo_prefix = 
   | Send of string * string
-  | Receive of string * string
+  | Receive of string * string * (string list)
   | Tau
 
 let indentation_space_multiplier = 4
 let print_migo_prefix fmt prefix = 
+  let print_tag fmt tag = 
+    if tag <> "" then
+      Format.fprintf fmt " (%s)" tag
+  in
+  let print_deps fmt deps = 
+    if deps = [] then
+      ()
+    else
+      let deps = List.map (fun dep -> Format.sprintf "(%s)" dep) deps in
+      Format.fprintf fmt " -> %s" (String.concat " " deps);
+  in
   match prefix with
-  | Send(c, tag)    -> Format.fprintf fmt "send %s" c; if tag <> "" then Format.fprintf fmt " (%s)" tag;
-  | Receive(c, tag) -> Format.fprintf fmt "recv %s" c; if tag <> "" then Format.fprintf fmt " (%s)" tag;
+  | Send(c, tag)    -> Format.fprintf fmt "send %s%a" c print_tag tag; 
+  | Receive(c, tag, deps) -> Format.fprintf fmt "recv %s%a%a" c print_tag tag print_deps deps;
   | Tau -> Format.fprintf fmt "tau"
 
 let rec print_migo_stmts fmt indent stmts: unit =

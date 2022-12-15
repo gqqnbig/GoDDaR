@@ -57,9 +57,9 @@ let test fmt (exp: string) =
   pp_print_flush fmt ();
   let proc = CCS.parse exp in
   Cmd.ds := 1;
-  let result = convert_res (Deadlock_detector.main  null_fmt proc) in
+  let result = convert_res (Deadlock_detector.main  null_fmt (proc, [])) in
   Cmd.ds := 2;
-  let result2 = convert_res (Deadlock_detector.main  null_fmt proc) in
+  let result2 = convert_res (Deadlock_detector.main  null_fmt (proc, [])) in
   (
     print_res fmt result result2
   )
