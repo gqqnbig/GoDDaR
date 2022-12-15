@@ -312,7 +312,7 @@ module LambdaC_base(Eta_base: Eta_type) =
       let rec do_lambdaLOrIToLambdaCLOrI (exp: Lambda_Base(Eta_base).t): t list = 
         match exp with
         | LOrI(l, r) -> (do_lambdaLOrIToLambdaCLOrI l) @ (do_lambdaLOrIToLambdaCLOrI r)
-        | LNil -> []
+        | LNil -> [LNil]
         | _ -> [lambdaToLambdaC exp]
       in
       LOrI(List.sort compare (do_lambdaLOrIToLambdaCLOrI exp))
@@ -320,7 +320,7 @@ module LambdaC_base(Eta_base: Eta_type) =
       let rec do_lambdaLOrEToLambdaCLOrE (exp: Lambda_Base(Eta_base).t): t list = 
         match exp with
         | LOrE(l, r) -> (do_lambdaLOrEToLambdaCLOrE l) @ (do_lambdaLOrEToLambdaCLOrE r)
-        | LNil -> []
+        | LNil -> [LNil]
         | _ -> [lambdaToLambdaC exp]
       in
       LOrE(List.sort compare (do_lambdaLOrEToLambdaCLOrE exp))

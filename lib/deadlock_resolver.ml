@@ -84,7 +84,7 @@ let rec detect_and_resolve fmt (go_fixer_fmt: formatter option) eval exp =
       Heuristic_by_layer.print_eta_score debug_fmt best_etas;
       Heuristic_by_layer.best_eta exp best_etas *)
       let best_etas = Heuristic_New.best_etas exp deadlocked_states in
-      Heuristic_New.print_eta_score fmt best_etas;
+      Heuristic_New.print_eta_score debug_fmt best_etas;
       Heuristic_New.best_eta exp best_etas
     )
   ) in
