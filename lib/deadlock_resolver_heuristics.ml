@@ -133,7 +133,6 @@ struct
       );
     )
 
-
   let best_eta exp (best_etas: eta_score list): (EtaTagged.eta list) = 
     best_etas
     |> (List.map Option.some)
@@ -175,8 +174,6 @@ end
 module Heuristic_New: Deadlock_resolver_heuristic =
 struct
   type eta_sequence = Eta.eta list
-  type etaT_sequence = EtaTagged.eta list
-
   module EtaTSequence =
   struct
     type t = EtaTagged.eta list
@@ -188,70 +185,111 @@ struct
       Format.fprintf fmt "]";
   end
   module EtaTSequenceSet = Set.Make(EtaTSequence)
+  module EtaTaggedSet = Set.Make(EtaTagged)
 
-  type score = (etaT_sequence list)
+  type score = (EtaTSequence.t list)
   type eta_score = (EtaTagged.eta * score)
+  let sort_eta_score (eta1, seq1) (eta2, seq2) =
+    let res = (List.length seq2) - (List.length seq1) in
+    if res = 0 then
+      compare eta1 eta2
+    else
+      res
 
-  let [@warning "-8"] rec find_eta_sequence (lambda: LambdaTagged.t) ((eta::etas_tl) as etas: eta_sequence): (etaT_sequence) list =
+  let [@warning "-8"] rec find_eta_sequence
+      eta_location_cache ((eta::etas_tl) as etas) visited (lambda: LambdaTagged.t): (EtaTSequence.t) list =
     match lambda with
     | LList(e, l)
     | LRepl(e, l) -> (
-      if eta = etaTaggedToEta e then (
-        if etas_tl = [] then (
-          [[e]]
+      if (EtaTaggedSet.mem e visited) then
+        []
+      else (
+        let visited = EtaTaggedSet.add e visited in
+        if eta = etaTaggedToEta e then (
+          (* Found next eta in the sequence *)
+          if etas_tl = [] then (
+            [[e]] (* Found all etas in the sequence*)
+          ) else (
+            (* Still need to find the remaining *)
+            find_eta_sequence eta_location_cache etas_tl visited l
+            |> List.map (fun tl -> e::tl)
+          )
         ) else (
-          find_eta_sequence l etas_tl
-          |> List.map (fun tl -> e::tl)
+          (* Is not the next eta in the sequence*)
+          (find_eta_sequence eta_location_cache etas visited l)
+          @
+          (
+            (* try follow a transitive dependecy *)
+            Hashtbl.find_all eta_location_cache (EtaTagged.compl_eta e)
+            |> List.map (find_eta_sequence eta_location_cache etas visited)
+            |> List.flatten
+          )
         )
-      ) else (
-        find_eta_sequence l etas
       )
     )
     | LOrI(a, b)
     | LOrE(a, b)
     | LPar(a, b) ->
-      (find_eta_sequence a etas)
+      (find_eta_sequence eta_location_cache etas visited a)
       @
-      (find_eta_sequence b etas)
+      (find_eta_sequence eta_location_cache etas visited b)
     | LNil -> []
 
-  let find_inverted lambda lambdas =
+  let find_inverted lambda lambdas eta_location_cache =
     let first_eta = get_top_eta lambda in
     let second_etas =
       [lambda]
       |> get_next_layer
       |> List.map get_top_eta
     in
-    let compl_eta_sequences_list: etaT_sequence list =
+    let compl_eta_sequences_list: EtaTSequence.t list =
       second_etas
       |> List.map (
         fun (second_eta) ->
+          let eta_seq = [EtaTagged.compl_eta second_eta; EtaTagged.compl_eta first_eta] in
           lambdas
-          |> List.map (
-            fun l -> (
-              if l = lambda then
-                []
-              else
-                find_eta_sequence l [EtaTagged.compl_eta second_eta; EtaTagged.compl_eta first_eta]
-            )
-          )
+          |> List.filter (fun l ->  l <> lambda) (* Filter itself *)
+          |> List.map (find_eta_sequence eta_location_cache eta_seq (EtaTaggedSet.empty))
         |> List.flatten
       )
       |> List.flatten
     in
     (first_eta, compl_eta_sequences_list)
+  
+  let rec poppulate_eta_location_cache eta_location_cache (exp: LambdaTagged.t) = 
+    match exp with
+    | LRepl(a, l)
+    | LList(a, l) -> 
+      let a = etaTaggedToEta a in
+      Hashtbl.add eta_location_cache a l;
+      poppulate_eta_location_cache eta_location_cache l
+    | LOrI(a, b)
+    | LOrE(a, b)
+    | LPar(a, b) ->
+      poppulate_eta_location_cache eta_location_cache a;
+      poppulate_eta_location_cache eta_location_cache b;
+    | LNil -> ()
 
 
   let best_etas exp deadlocked_states: eta_score list =
     let eta_scores = Hashtbl.create 16 in
     deadlocked_states
-    |> List.map (fun (lambdas, _) -> lambdas)
-    |> List.map get_top_layer
-    |> List.iter (fun lambdas -> (
+    |> List.map (fun (lambdas, _) -> get_top_layer lambdas)
+    |> List.map (fun (lambdas) -> (
+      (* For each deadlocked state found, build the eta_location_cache for that state *)
+      let eta_location_cache = Hashtbl.create 16 in
+      List.iter (poppulate_eta_location_cache eta_location_cache) lambdas;
+      (lambdas, eta_location_cache) 
+    ))
+    |> List.iter (fun (lambdas, eta_location_cache) -> (
+      (* For each deadlocked state*)
       lambdas
       |> List.iter (
         fun lambda -> (
-          let (first_eta, compl_eta_sequences_list) = find_inverted lambda lambdas in
+          (* For each lamdba in each deadlocked state, find *)
+          let (first_eta, compl_eta_sequences_list) = find_inverted lambda lambdas eta_location_cache in
+            (* Aggregate the results in a hast able, where the key is the first eta,
+               and the value a Set of all the inverted sequences it found, without duplicates of course *)
             let list = Hashtbl.find_opt eta_scores first_eta in
             match list with
             | None -> Hashtbl.add eta_scores first_eta (EtaTSequenceSet.of_list compl_eta_sequences_list)
@@ -261,6 +299,7 @@ struct
           )
         )
     ));
+    (* Transform the Hastable and Set to lists *)
     Hashtbl.to_seq eta_scores
     |> Seq.map (
       fun ((first_eta: EtaTagged.eta), eta_sequence_set) ->
@@ -270,7 +309,7 @@ struct
 
   let print_eta_score fmt (eta_scores: eta_score list): unit =
     eta_scores
-    |> List.sort (fun (eta1, seq1) (eta2, seq2) -> (List.length seq2) - (List.length seq1))
+    |> List.sort sort_eta_score
     |> List.iter (
       fun (first_eta, sequences) -> (
         Format.fprintf fmt "%a (%d):" EtaTagged.print_eta first_eta (List.length sequences);
@@ -282,7 +321,7 @@ struct
 
   let best_eta eta (best_etas: eta_score list): (EtaTagged.eta list) = 
     best_etas
-    |> List.sort (fun (eta1, seq1) (eta2, seq2) -> (List.length seq2) - (List.length seq1))
+    |> List.sort sort_eta_score
     |> (fun list -> List.nth_opt list 0)
     |> Option.to_list
     |> List.map (fun (eta, seq) -> eta)
