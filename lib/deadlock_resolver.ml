@@ -1,5 +1,4 @@
 open Types
-open Cmd
 open Format
 open Deadlock_resolver_heuristics
 
@@ -68,7 +67,7 @@ let deadlock_solver_2 = deadlock_solver_2_dfs
 
 (* A single iteration of a deadlock detection and resolution *)
 let rec detect_and_resolve fmt (go_fixer_fmt: formatter option) eval exp (deps: dependency list) =
-  let deadlock_solver = if !ds < 2 then deadlock_solver_1 else deadlock_solver_2 in
+  let deadlock_solver = if !Cmd.ds < 2 then deadlock_solver_1 else deadlock_solver_2 in
 
   Format.fprintf debug_fmt "DaR: %a\n" LambdaTagged.print exp;
   let deadlocked_states = (eval fmt exp) in
@@ -81,7 +80,7 @@ let rec detect_and_resolve fmt (go_fixer_fmt: formatter option) eval exp (deps: 
   in
 
   let best_eta = (
-    if !all_etas then (
+    if !Cmd.all_etas then (
       let best_etas = Heuristic_NOP.best_etas exp deadlocked_states in
       Heuristic_NOP.print_eta_score debug_fmt best_etas;
       best_etas

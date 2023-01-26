@@ -220,7 +220,7 @@ let main fmt ((exp, deps): LambdaTagged.t * dependency list): bool * Lambda.t li
   ) else (
     let (go_fixer_fmt, go_fixer_fmt_buffer) = (
       let buffer = (Buffer.create 0) in
-      if !go then (
+      if !patch then (
         (Some(Format.formatter_of_buffer buffer), buffer)
       ) else (
         (None, buffer)
@@ -237,8 +237,9 @@ let main fmt ((exp, deps): LambdaTagged.t * dependency list): bool * Lambda.t li
     ) else (
       fprintf fmt "\nDeadlocks:\n";
       List.iter (fun ((lambdas, _) as deadlock )-> 
-        let top_env = lambdas |> Deadlock_resolver_heuristics.get_top_layer |> List.map Deadlock_resolver_heuristics.get_top_eta in
-        fprintf fmt "%a | top env: %a\n" print_state deadlock EtaTagged.print_etalist2 top_env;
+        (* let top_env = lambdas |> Deadlock_resolver_heuristics.get_top_layer |> List.map Deadlock_resolver_heuristics.get_top_eta in
+        fprintf fmt "%a | top env: %a\n" print_state deadlock EtaTagged.print_etalist2 top_env; *)
+        fprintf fmt "%a\n" print_state deadlock;
       ) deadlocks;
     );
 
