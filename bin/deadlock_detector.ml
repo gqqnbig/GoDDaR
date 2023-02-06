@@ -20,7 +20,7 @@ let global_spec_list: (Arg.key * Arg.spec * Arg.doc) list =
      (* ("-a", Arg.Set all_etas, "Resolve all etas"); *)
     ]
 
-let usage_msg = "Usage: ./GoDDaR [-v | -ds ] [ccs <process> | migo <MiGo file> | Go [-patch] <Go file>]"
+let usage_msg = "Usage: ./GoDDaR [-v | -ds ] [ccs <process> | migo <MiGo file> | go [-patch] <Go file>]"
 
 let spec_list = ref global_spec_list
 
