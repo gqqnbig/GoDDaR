@@ -3,7 +3,7 @@ open CCS_Parser
 }
 
 let whitespace = [' ' '\t']+
-let identifier = ['a'-'z' 'A'-'Z']['a'-'z' 'A'-'Z' '0'-'9']*
+let identifier = ['a'-'z' 'A'-'Z']['a'-'z' 'A'-'Z' '0'-'9''_']*
 
 rule read = parse
     | whitespace { (* Format.eprintf "Whitespace ";          *) read lexbuf }

@@ -95,7 +95,12 @@ let migo_to_ccs (migo_defs: MiGo_Types.migo_def list): (LambdaTagged.t * depende
       Hashtbl.add migo_def_hashtbl name def
     )
   ) migo_defs;
-  let Def(_, params, stmts) = (Hashtbl.find migo_def_hashtbl "main.main") in
+  let Def(_, params, stmts) = (
+    try
+      Hashtbl.find migo_def_hashtbl "main.main"
+    with
+    | Not_found -> failwith "Could not find entrypoint function (main.main) in MiGo"
+  ) in
   assert (params = []);
   let deps = ref [] in
   let ccs = do_migo_to_ccs migo_def_hashtbl [("main.main", stmts, [])] deps in

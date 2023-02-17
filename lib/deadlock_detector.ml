@@ -81,8 +81,8 @@ let eval_sync ((lambdas, ctx) as state: state): state list =
       let res1 = (do_eval_sync action (a::tl, conc_lvl ctx "+1")) in
       let res2 = (do_eval_sync action (b::tl, conc_lvl ctx "+2")) in
       res1 @ res2
-    | NoSync  , LOrE(a, b)::tl
-    | MustSync, LOrE(a, b)::tl ->
+    | NoSync  , (LOrE(a, b) as l)::tl
+    | MustSync, (LOrE(a, b) as l)::tl ->
       (
         if action = NoSync then (
           (do_eval_sync action ([a], conc_lvl ctx "&1"))
@@ -90,6 +90,9 @@ let eval_sync ((lambdas, ctx) as state: state): state list =
         ) @ (
           (do_eval_sync action ([b], conc_lvl ctx "&2")) 
           |> List.map (fun (lambdas, ctx) -> (LambdaTagged.LOrE(a, (LambdaTagged.assocLeftList lambdas))::tl, ctx))
+        ) @ (
+          (do_eval_sync NoSync (tl, ctx))
+          |> List.map (fun (lambdas, ctx) -> (l::lambdas, ctx))
         ) else []
       ) @ (
         do_eval_sync MustSync (a::tl, ctx)

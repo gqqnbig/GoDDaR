@@ -4,7 +4,24 @@ A tool for static **D**eadlock **D**etection **a**nd **R**esolution in **Go** Pr
 This is the implementation of the tool, developed as part of my master's thesis, for statically
 detecting and resolving deadlocks in Go programs.
 
-## Pipeline
+## Features
+
+* Fully automated workflow
+* Deadlock analysis with no code annotations required
+* Supports the most commonly used Go features
+  * Synchronous channels
+  * Select statement
+  * Recursion/loops
+* Deadlock resolution on the original Go code
+  * With heuristic to prevent changing the program in undesired ways
+
+
+### Still unsupported features:
+* Asynchronous channels
+* Channel passing (channels inside channels)
+* Channel closure
+
+## Workflow
 
 <p align="center"> <img src="assets/pipeline.svg" alt="GoDDaR pipeline" title="GoDDaR pipeline" /> </p>
 
@@ -38,6 +55,7 @@ For Go, only the `go` tool is required.
 
 * Install ocaml/opam/dune
 * Build and install migoinfer (included in gospal): https://github.com/JorgeGCoelho/gospal
+  * Make sure the `migoinfer` binary is located in `$PATH`
 * Clone GoDDaR git repository
 ```
 $ git clone https://github.com/JorgeGCoelho/GoDDaR.git
@@ -60,13 +78,15 @@ Make sure the resulting `GoDDaR_fixer` executable is in `$PATH`
 
 GoDDaR is can analyse programs in three different representations: Go, MiGo and CCS.
 The tool has a subcommand to process each representation:
-|       |                           |
-|-------|---------------------------|
-| Go    | `GoDDaR go <process>`     |
-| MiGo  | `GoDDaR migo <MiGo file>` |
-| CCS   | `GoDDaR ccs <Go file>`    |
+| Representation | Command                   |
+|----------------|---------------------------|
+| Go             | `GoDDaR go <Go file>`     |
+| MiGo           | `GoDDaR migo <MiGo file>` |
+| CCS            | `GoDDaR ccs <process>`    |
 
 ### Example usage
+TODO: explain output
+
 ```
 Usage: ./GoDDaR [-v | -ds ] [ccs <process> | migo <MiGo file> | go [-patch] <Go file>]
   -v Output extra information
@@ -128,3 +148,9 @@ Fully Resolved:
         }()
         b <- struct{}{}
 ```
+
+For more examples check the directory `tests/` (TODO)
+
+## Publications
+
+* [Master's thesis](assets/Jorge%20Coelho%20-%20Master's%20Dissertation.pdf)
