@@ -73,13 +73,14 @@ export PATH=$PATH:~/gospal/cmd/migoinfer
 ```
 * Clone GoDDaR git repository
 ```
-$ git clone https://github.com/JorgeGCoelho/GoDDaR.git
+git clone https://github.com/JorgeGCoelho/GoDDaR.git
 ```
 * Build GoDDaR
 ```
-$ cd GoDDaR
-$ dune build
-$ dune exec -- GoDDaR
+cd GoDDaR
+opam install menhir
+dune build
+dune exec -- GoDDaR --help
 ```
 * (Optional) For automatic patching of Go code, installation of the `fixer` program is necessary.
 ```
