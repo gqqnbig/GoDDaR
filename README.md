@@ -76,6 +76,10 @@ git checkout v2.0.2
 cd gospal/cmd/migoinfer
 go build
 ```
+
+Caution about your `GOPATH` environment variable.
+
+
 * Clone GoDDaR git repository
 ```
 $ git clone https://github.com/JorgeGCoelho/GoDDaR.git
@@ -83,6 +87,7 @@ $ git clone https://github.com/JorgeGCoelho/GoDDaR.git
 * Build GoDDaR
 ```
 $ cd GoDDaR
+opam install menhir
 $ dune build
 $ dune exec -- GoDDaR
 ```
