@@ -54,6 +54,14 @@ For Go, only the `go` tool is required.
 ### Installation:
 
 * Install ocaml/opam/dune
+```
+sudo apt update & sudo apt install gcc build-essential curl unzip bubblewrap
+sudo bash -c "sh <(curl -fsSL https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh)"
+opam init
+eval $(opam env --switch=default)
+opam install dune
+```
+
 * Build and install migoinfer (included in gospal): https://github.com/JorgeGCoelho/gospal
   * Make sure the `migoinfer` binary is located in `$PATH`
 * Clone GoDDaR git repository
