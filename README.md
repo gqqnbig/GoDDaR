@@ -70,7 +70,11 @@ git -C go/src/golang.org/x/sys/ checkout v0.1.0
 git -C go/src/golang.org/x/tools checkout v0.1.0
 git -C go/src/go.uber.org/zap/internal/pool checkout v1.25.0
 git -C go/src/go.uber.org/multierr checkout v1.5.0
-git -C go/src/go.uber.org/atomic checkout v1.6.0 
+git -C go/src/go.uber.org/atomic checkout v1.6.0
+
+git checkout v2.0.2
+cd gospal/cmd/migoinfer
+go build
 ```
 * Clone GoDDaR git repository
 ```
