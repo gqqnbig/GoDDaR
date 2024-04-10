@@ -71,6 +71,12 @@ opam install dune
 * Build and install migoinfer (included in gospal): https://github.com/JorgeGCoelho/gospal
   * Make sure the `migoinfer` binary is located in `$PATH`
 ```
+git clone https://github.com/JorgeGCoelho/gospal
+cd gospal/migoinfer/
+git checkout v2.0.2 
+go build
+
+
 go get github.com/jujuyuki/gospal/cmd/...
 git -C go/src/golang.org/x/sys/ checkout v0.1.0
 git -C go/src/golang.org/x/tools checkout v0.1.0
