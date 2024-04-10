@@ -72,21 +72,10 @@ opam install dune
   * Make sure the `migoinfer` binary is located in `$PATH`
 ```
 git clone https://github.com/JorgeGCoelho/gospal
-cd gospal/migoinfer/
+cd gospal/cmd/migoinfer/
 git checkout v2.0.2 
 go build
-
-
-go get github.com/jujuyuki/gospal/cmd/...
-git -C go/src/golang.org/x/sys/ checkout v0.1.0
-git -C go/src/golang.org/x/tools checkout v0.1.0
-git -C go/src/go.uber.org/zap/internal/pool checkout v1.25.0
-git -C go/src/go.uber.org/multierr checkout v1.5.0
-git -C go/src/go.uber.org/atomic checkout v1.6.0
-
-git checkout v2.0.2
-cd gospal/cmd/migoinfer
-go build
+export PATH=$PATH:~/gospal/cmd/migoinfer 
 ```
 
 Caution about your `GOPATH` environment variable.
