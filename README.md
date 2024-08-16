@@ -71,6 +71,10 @@ git checkout v2.0.2
 go build
 export PATH=$PATH:~/gospal/cmd/migoinfer 
 ```
+
+Caution about your `GOPATH` environment variable.
+
+
 * Clone GoDDaR git repository
 ```
 git clone https://github.com/JorgeGCoelho/GoDDaR.git
