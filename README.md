@@ -61,7 +61,7 @@ export PATH=$PATH:/usr/local/go/bin
 
 * Install ocaml/opam/dune
 ```
-sudo apt update & sudo apt install gcc build-essential curl unzip bubblewrap
+sudo apt update && sudo apt install gcc build-essential curl unzip bubblewrap
 sudo bash -c "sh <(curl -fsSL https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh)"
 opam init
 eval $(opam env --switch=default)
